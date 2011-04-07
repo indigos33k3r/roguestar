@@ -11,7 +11,7 @@ clean:
 	(cd roguestar-engine && cabal clean ${OPTS})
 	(cd roguestar-gl && cabal clean ${OPTS})
 	(cd roguestar-glut && cabal clean ${OPTS})
-	(cd roguestar-gtk && cabal clean ${OPTS})
+	#(cd roguestar-gtk && cabal clean ${OPTS})
 	(cd roguestar && cabal clean ${OPTS})
 	rm -rf roguestar-sdist
 
@@ -23,10 +23,10 @@ config:
 	(cd roguestar-engine && cabal configure ${OPTS})
 	(cd roguestar-gl && cabal configure ${OPTS})
 	(cd roguestar-glut && cabal configure ${OPTS})
-	(cd roguestar-gtk && cabal configure ${OPTS})
+	#(cd roguestar-gtk && cabal configure ${OPTS})
 	(cd roguestar && cabal configure ${OPTS})
 
-install: roguestar roguestar-gtk roguestar-glut roguestar-engine rsagl-demos
+install: roguestar roguestar-glut roguestar-engine rsagl-demos
 
 rsagl-math:
 	(cd rsagl-math && cabal install --reinstall ${OPTS})
@@ -69,7 +69,7 @@ sdist:
 	(cd roguestar-engine && cabal check && cabal sdist ${OPTS})
 	(cd roguestar-gl && cabal check && cabal sdist ${OPTS})
 	(cd roguestar-glut && cabal check && cabal sdist ${OPTS})
-	(cd roguestar-gtk && cabal check && cabal sdist ${OPTS})
+	#(cd roguestar-gtk && cabal check && cabal sdist ${OPTS})
 	(cd roguestar && cabal check && cabal sdist ${OPTS})
 	mkdir -p ./roguestar-sdist
 	cp rsagl-math/dist/*.tar.gz ./roguestar-sdist
@@ -79,12 +79,12 @@ sdist:
 	cp roguestar-engine/dist/*.tar.gz ./roguestar-sdist
 	cp roguestar-gl/dist/*.tar.gz ./roguestar-sdist
 	cp roguestar-glut/dist/*.tar.gz ./roguestar-sdist
-	cp roguestar-gtk/dist/*.tar.gz ./roguestar-sdist
+	#cp roguestar-gtk/dist/*.tar.gz ./roguestar-sdist
 	cp roguestar/dist/*.tar.gz ./roguestar-sdist
 	(cd roguestar-sdist && tar xzf roguestar-engine-${VERSION}.tar.gz)
 	(cd roguestar-sdist && tar xzf roguestar-gl-${VERSION}.tar.gz)
 	(cd roguestar-sdist && tar xzf roguestar-glut-${VERSION}.tar.gz)
-	(cd roguestar-sdist && tar xzf roguestar-gtk-${VERSION}.tar.gz)
+	#(cd roguestar-sdist && tar xzf roguestar-gtk-${VERSION}.tar.gz)
 	(cd roguestar-sdist && tar xzf roguestar-${VERSION}.tar.gz)
 	(cd roguestar-sdist && tar xzf rsagl-math-${VERSION}.tar.gz)
 	(cd roguestar-sdist && tar xzf rsagl-frp-${VERSION}.tar.gz)
@@ -97,7 +97,7 @@ sdist:
 	(cd roguestar-sdist/rsagl-demos-${VERSION} && cabal configure && cabal install)
 	(cd roguestar-sdist/roguestar-gl-${VERSION} && cabal configure && cabal install)
 	(cd roguestar-sdist/roguestar-glut-${VERSION} && cabal configure && cabal install)
-	(cd roguestar-sdist/roguestar-gtk-${VERSION} && cabal configure && cabal install)
+	#(cd roguestar-sdist/roguestar-gtk-${VERSION} && cabal configure && cabal install)
 	(cd roguestar-sdist/roguestar-${VERSION} && cabal configure && cabal install)
 	ls roguestar-sdist
 
