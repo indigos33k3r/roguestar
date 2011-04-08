@@ -16,7 +16,7 @@ executable roguestar-engine
   main-is: Main.hs
   hs-source-dirs: src
   build-depends: hslogger >=1.1.0 ,
-               priority-sync >=0.2.1.0 && <0.3, PSQueue >=1.1 && <1.2,
+               priority-sync >=0.2.1.1 && <0.3, PSQueue >=1.1 && <1.2,
                bytestring >=0.9.1.5, parallel >=2.2.0.1 ,
                stm >=2.1.1.2, data-memocombinators >=0.4.0 && <0.5,
                MonadRandom >=0.1.4 && <0.2, MaybeT >=0.1.2 && <0.2,
