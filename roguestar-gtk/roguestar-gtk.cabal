@@ -1,5 +1,5 @@
 name:                roguestar-gtk
-version:             0.6.0.0
+version:             0.6.0.1
 cabal-version:       >=1.2
 license:             OtherLicense
 license-file:        LICENSE
@@ -18,9 +18,9 @@ Executable roguestar-gtk
   main-is:             Main.hs
   hs-source-dirs:      src
   build-depends:       base>=4&&<5,
-                       roguestar-gl==0.6.0.0,
+                       roguestar-gl==0.6.0.1,
                        GLUT>=2.2.2.0 && < 2.3,
-                       rsagl==0.6.0.0,
+                       rsagl==0.6.0.1,
                        gtk>=0.11.0,
                        gtkglext>=0.11.0,
                        OpenGL>=2.4 && < 2.5,
