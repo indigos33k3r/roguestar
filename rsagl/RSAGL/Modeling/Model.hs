@@ -1,10 +1,4 @@
-\section{Haskell as a 3D Modelling Language: RSAGL.Model}
-
-RSAGL.Model seeks to provide a complete set of high-level modelling primitives for OpenGL.
-
-\begin{code}
-{-# OPTIONS_GHC -fglasgow-exts #-}
-
+{-# LANGUAGE ExistentialQuantification, ScopedTypeVariables, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
 module RSAGL.Modeling.Model
     (Model,
      Modeling,
@@ -80,21 +74,16 @@ import Data.IORef
 import Control.Monad
 import RSAGL.Math.Types
 import RSAGL.Color
-\end{code}
 
-\subsection{Modeling Monad}
+-- A ModeledSurface consists of several essential fields: ms_surface is the geometric surface.
+-- ms_material defaults to invisible if no material is ever applied.  The functions pigment, transparent, emissive, and specular apply material properties to a surface.
 
-A ModeledSurface consists of several essential fields: \texttt{ms\_surface} is the geometric surface.
+-- Scope is controlled by 'model' and 'withAttribute'.  'model' creates a block of modeling operations that don't affect any surfaces outside of that block.  'withAttribute' restricts all operations to a subset of surfaces defined by attribute.
 
-\texttt{ms\_material} defaults to invisible if no material is ever applied.  The functions \texttt{pigment}, \texttt{transparent}, \texttt{emissive}, and \texttt{specular} apply material properties to a surface.
+-- 'ms_tesselation' describes how the model will be tesselated into polygons before being sent to OpenGL.
+-- By default, the 'adaptive' model is used, which adapts to the contour and material of each surface.
+-- 'fixed' can be used to crudely force the tesselation of objects.
 
-Scope is controlled by \texttt{model} and \texttt{withAttribute}.  \texttt{model} creates a block of modeling operations that don't affect any surfaces outside of that block.  \texttt{withAttribute} restricts all operations to a subset of surfaces defined by \texttt{attribute}.
-
-\texttt{ms\_tesselation} describes how the model will be tesselated into polygons before being sent to OpenGL.
-By default, the \texttt{adaptive} model is used, which adapts to the contour and material of each surface.
-\texttt{fixed} can be used to crudely force the tesselation of objects.
-
-\begin{code}
 type Model attr = [ModeledSurface attr]
 
 data ModeledSurface attr = ModeledSurface {
@@ -149,39 +138,29 @@ reverseOrientation modelingA = model $
     do modelingA
        State.modify $ map $ \m -> m { ms_surface = transposeSurface $ ms_surface m }
        deform $ \(SurfaceVertex3D p v) -> SurfaceVertex3D p $ vectorScale (-1) v
-\end{code}
 
-\subsection{Tesselation Hints}
-
-\begin{code}
 tesselationHintComplexity :: (Monoid attr) => Integer -> Modeling attr
 tesselationHintComplexity i = State.modify (map $ \m -> m { ms_tesselation_hint_complexity = i })
 
+-- | Tesselate models using an adaptive algorithm.
 adaptive :: Modeling attr
 adaptive = State.modify (map $ \m -> m { ms_tesselation = ms_tesselation m `State.mplus` (Just Adaptive) })
 
+-- | Tesselate models onto a fixed rectangle.
 fixed :: (Integer,Integer) -> Modeling attr
 fixed x = State.modify (map $ \m -> m { ms_tesselation = ms_tesselation m `State.mplus` (Just $ Fixed x) })
-\end{code}
 
-\texttt{regenerateNormals} is mostly used for debugging and strips and recomputes the normal vector data for
-every surface that is in scope.
-
-\begin{code}
+-- 'regenerateNormals' is mostly used for debugging and strips and recomputes the normal vector data for
+-- every surface that is in scope.  It isn't the most efficient way to compute normals.
 regenerateNormals :: (Monoid attr) => Modeling attr
 regenerateNormals = deform (id :: Point3D -> Point3D)
-\end{code}
 
-\subsection{Scoping Rules}
+-- The 'Modeling' monad has scoping rules that prevent nested modeling operations
+-- from affecting unrelated surfaces.
 
-The \texttt{Modeling} monad has scoping rules that prevent nested modeling operations
-from affecting unrelated surfaces.
-
-\texttt{model} brackets which surfaces are considered in scope.  
-\texttt{attribute} tags all surfaces that are in scope with a user attribute.
-\texttt{withAttribute} filters which surfaces are considered in scope.
-
-\begin{code}
+-- 'model' brackets which surfaces are considered in scope.
+-- 'attribute' tags all surfaces that are in scope with a user attribute.
+-- 'withAttribute' filters which surfaces are considered in scope.
 model :: Modeling attr -> Modeling attr
 model (ModelingM actions) = State.modify (State.execState actions [] ++)
 
@@ -193,18 +172,14 @@ withAttribute f actions = withFilter (f . ms_attributes) actions
 
 withFilter :: (ModeledSurface attr -> Bool) -> Modeling attr -> Modeling attr
 withFilter f (ModelingM actions) = State.modify (\m -> State.execState actions (filter f m) ++ filter (not . f) m)
-\end{code}
 
-\subsection{Materials}
-
-\begin{code}
 class MonadMaterial m where
     material :: MaterialM attr () -> m attr ()
 
 instance MonadMaterial ModelingM where
-    material (MaterialM actions) = 
+    material (MaterialM actions) =
         do finishModeling
-	   withFilter (materialIsEmpty . ms_material) $ mapM_ appendQuasimaterial $ State.execState actions []
+           withFilter (materialIsEmpty . ms_material) $ mapM_ appendQuasimaterial $ State.execState actions []
 
 instance MonadMaterial MaterialM where
     material (MaterialM actions) = State.modify (++ State.execState actions [])
@@ -233,11 +208,7 @@ transparent rgbaf = State.modify (++ [Quasimaterial rgbaf transparentLayer])
 
 filtering :: RGBFunction -> MaterialM attr ()
 filtering rgbf = State.modify (++ [Quasimaterial rgbf filteringLayer])
-\end{code}
 
-\subsection{Transformations of Surfaces and Materials}
-
-\begin{code}
 instance AffineTransformable (ModelingM attr ()) where
     transform mx m = model $ m >> affine (transform mx)
 
@@ -270,15 +241,11 @@ finishModeling = State.modify (map $ \m -> if isNothing (ms_affine_transform m) 
     where finishAffine m = m { ms_surface = fmap (\(SurfaceVertex3D p v) -> SurfaceVertex3D p (vectorNormalize v)) $
                                                      transformation (fromJust $ ms_affine_transform m) (ms_surface m),
                                ms_affine_transform = Nothing }
-\end{code}
 
-\subsection{Simple Geometric Shapes}
-
-\begin{code}
 sphere :: (Monoid attr) => Point3D -> RSdouble -> Modeling attr
 sphere (Point3D x y z) radius = model $ do
     generalSurface $ Right $
-        sphericalCoordinates $ (\(u,v) -> 
+        sphericalCoordinates $ (\(u,v) ->
             let sinev = sine v
                 cosinev = cosine v
                 sineu = sine u
@@ -299,7 +266,7 @@ hemisphere p v r = model $
     do generalSurface $ Right $ polarCoordinates $ \(a,d) -> let d_ = sqrt d
                                                                  x = cosine a*d_
                                                                  y = sqrt $ max 0 $ 1 - x*x - z*z
-								 z = sine a*d_
+                                                                 z = sine a*d_
                                                                  in (Point3D x y z,Vector3D x y z)
        affine $ translateToFrom p origin_point_3d . rotateToFrom v (Vector3D 0 1 0) . scale' r
 
@@ -355,7 +322,7 @@ openDisc p up_vector inner_radius outer_radius = model $
                 Vector3D 0 1 0)
        tesselationHintComplexity $ round $ (max outer_radius inner_radius / (abs $ outer_radius - inner_radius))
        affine $ translateToFrom p origin_point_3d . rotateToFrom up_vector (Vector3D 0 1 0)
- 
+
 closedDisc :: (Monoid attr) => Point3D -> Vector3D -> RSdouble -> Modeling attr
 closedDisc center up_vector radius = model $
     do generalSurface $ Right $ circularCoordinates (\(x,z) -> (Point3D x 0 z,Vector3D 0 1 0))
@@ -368,7 +335,7 @@ closedCone a b = model $
        openDisc (fst b) (vectorToFrom (fst b) (fst a)) 0 (snd b * (1 + recip (2^8)))
 
 quadralateral :: (Monoid attr) => Point3D -> Point3D -> Point3D -> Point3D -> Modeling attr
-quadralateral a b c d = model $ 
+quadralateral a b c d = model $
     do let degenerate_message = error $ "quadralateral: " ++ show (a,b,c,d) ++ " seems to be degenerate."
        normal_vector <- return $ fromMaybe (degenerate_message) $ newell [a,b,c,d]
        generalSurface $ Right $ surface $ \u v -> (lerpClamped v (lerpClamped u (a,b), lerpClamped u (d,c)),normal_vector)
@@ -402,11 +369,7 @@ tube c | radius <- fmap fst c
 
 prism :: (Monoid attr) => Vector3D -> (Point3D,RSdouble) -> (Point3D,RSdouble) -> Curve Point3D -> Modeling attr
 prism upish ara brb c = model $ generalSurface $ Left $ transformSurface2 id (clampCurve (0,1)) $ extrudePrism upish ara brb c
-\end{code}
 
-\subsection{Rendering Models to OpenGL}
-
-\begin{code}
 data BakedModel = BakedModel IntermediateModel -- this is just a newtype trick to keep track of what needs to be 'free'ed later.
 data IntermediateModel = IntermediateModel [IMSurface]
 data IMSurface = IMSurface {
@@ -519,26 +482,19 @@ selectLayers n layered = map (\k -> map (fmap (\(MultiMaterialSurfaceVertex3D sv
 layerToOpenGL :: IMLayer -> IO ()
 layerToOpenGL (IMLayer Nothing tesselation layer) = materialLayerToOpenGLWrapper layer (mapM_ (tesselatedElementToOpenGL $ not $ isPure $ materialLayerSurface layer) tesselation)
 layerToOpenGL (IMLayer (Just mvar_baked_surface) tesselation layer) = maybe (layerToOpenGL $ IMLayer Nothing tesselation layer) (surfaceToOpenGL) =<< readIORef mvar_baked_surface
-\end{code}
 
-\subsubsection{Seperating Opaque and Transparent Surfaces}
-
-\texttt{splitOpaques} breaks an \texttt{IntermediateModel} into a pair containing the completely opaque surfaces of the model and a list
-of transparent \texttt{IntermediateModel}s.
-
-\begin{code}
+-- | 'splitOpaques' breaks an IntermediateModel into a pair containing the completely opaque
+-- surfaces of the model and a list of transparent IntermediateModels.
+-- (In OpenGL, the transparent models need to be rendered last.)
 splitOpaques :: IntermediateModel -> (IntermediateModel,[IntermediateModel])
 splitOpaques (IntermediateModel ms) = (IntermediateModel opaques,map (\x -> IntermediateModel [x]) transparents)
     where opaques = filter isOpaque surfaces
           transparents = filter (not . isOpaque) surfaces
           isOpaque (IMSurface layers _) = any (isOpaqueLayer . imlayer_material) layers
-	  notEmpty (IMSurface layers _) = not $ null layers
-	  surfaces = filter notEmpty ms
-\end{code}
+          notEmpty (IMSurface layers _) = not $ null layers
+          surfaces = filter notEmpty ms
 
-\subsubsection{Vertex Clouds and Bounding Boxes for IntermediateModels}
-
-\begin{code}
+-- | Just a list of vertexes in the model.
 intermediateModelToVertexCloud :: IntermediateModel -> [SurfaceVertex3D]
 intermediateModelToVertexCloud (IntermediateModel ms) = concatMap intermediateModeledSurfaceToVertexCloud ms
 
@@ -546,17 +502,14 @@ instance Bound3D IntermediateModel where
     boundingBox (IntermediateModel ms) = boundingBox ms
 
 intermediateModeledSurfaceToVertexCloud :: IMSurface -> [SurfaceVertex3D]
-intermediateModeledSurfaceToVertexCloud (IMSurface layers _) = 
+intermediateModeledSurfaceToVertexCloud (IMSurface layers _) =
     fromMaybe [] $ fmap (map toVertex . tesselatedSurfaceToVertexCloud . imlayer_tesselated_surface) $ listToMaybe layers
         where toVertex (SingleMaterialSurfaceVertex3D sv3d _) = sv3d
 
 instance Bound3D IMSurface where
     boundingBox = boundingBox . intermediateModeledSurfaceToVertexCloud
-\end{code}
 
-\subsubsection{Rulers}
 
-\begin{code}
 sv3d_ruler :: SurfaceVertex3D -> SurfaceVertex3D -> RSdouble
 sv3d_ruler a b = sv3d_distance_ruler a b * (1.0 + sv3d_normal_ruler a b)
 
@@ -571,11 +524,7 @@ sv3d_normal_ruler (SurfaceVertex3D _ v1) (SurfaceVertex3D _ v2) =
 msv3d_ruler :: MultiMaterialSurfaceVertex3D -> MultiMaterialSurfaceVertex3D -> RSdouble
 msv3d_ruler (MultiMaterialSurfaceVertex3D p1 _) (MultiMaterialSurfaceVertex3D p2 _) =
     sv3d_ruler p1 p2
-\end{code}
 
-\subsubsection{Parallelism for IntermediateModels}
-
-\begin{code}
 instance NFData IntermediateModel where
     rnf (IntermediateModel ms) = rnf ms
 
@@ -593,4 +542,4 @@ instance NFData MaterialVertex3D where
 
 instance NFData BakedModel where
     rnf (BakedModel im) = rnf im
-\end{code}
+
