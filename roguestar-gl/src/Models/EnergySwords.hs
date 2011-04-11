@@ -8,7 +8,7 @@ import Models.LibraryData
 import Control.Monad
 import Models.Materials
 
-energySword :: EnergyColor -> Integer -> Quality -> Modeling ()
+energySword :: EnergyColor -> Integer -> Quality -> Modeling
 energySword energy_color size_count _ = model $
     do model $ do closedCone (Point3D 0 (negate $ realToFrac size_count) 0,1.0) (Point3D 0 3 0,1.0)
                   concordance_metal

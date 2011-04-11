@@ -170,7 +170,7 @@ absorbtionFilter c =
 -- The material assumes the origin as the eye point, tracing to the geometric point at each vertex.  Therefore,
 -- this material need not be applied to an exact sphere.
 --
-atmosphereScatteringMaterial :: Atmosphere -> [(Vector3D,RGB)] -> SkyFilter -> MaterialM attr ()
+atmosphereScatteringMaterial :: Atmosphere -> [(Vector3D,RGB)] -> SkyFilter -> MaterialM ()
 atmosphereScatteringMaterial [] _ _ = return ()
 atmosphereScatteringMaterial _ suns _ |
     all ((== 0) . linear_value . viewChannel channel_value . snd) suns =

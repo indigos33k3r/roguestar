@@ -7,7 +7,7 @@ import RSAGL.Modeling
 import Models.Materials
 import Quality
 
-portal :: Quality -> Modeling ()
+portal :: Quality -> Modeling
 portal q =
     do model $
            do model $

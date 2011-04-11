@@ -7,7 +7,7 @@ import RSAGL.Modeling
 import RSAGL.Math
 import Models.Materials
 
-recreant_factory :: Quality -> Modeling ()
+recreant_factory :: Quality -> Modeling
 recreant_factory _ = model $
     do quadralateral (Point3D (-0.5) 0 (-0.5))
                      (Point3D (-0.5) 0 0.5)

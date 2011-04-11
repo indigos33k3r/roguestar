@@ -42,7 +42,7 @@ import Models.Stargate
 -- |
 -- Get the modeling data for a named library model.
 --
-toModel :: LibraryModel -> Quality -> Modeling ()
+toModel :: LibraryModel -> Quality -> Modeling
 toModel (TerrainTile s) = terrainTile s
 toModel (SimpleModel LeafyBlob) = const $ leafy_blob
 toModel (SimpleModel TreeBranch) = const $ tree_branch

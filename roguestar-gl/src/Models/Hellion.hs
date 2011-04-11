@@ -11,12 +11,12 @@ import Models.Materials
 import RSAGL.Math.CurveExtras
 import RSAGL.Color.RSAGLColors
 
-hellion :: Quality -> Modeling ()
+hellion :: Quality -> Modeling
 hellion _ = model $
     do sphere (Point3D 0 0.6 0) 0.1
        hellion_skin
 
-hellion_appendage :: Quality -> Modeling ()
+hellion_appendage :: Quality -> Modeling
 hellion_appendage _ = model $ rotate (Vector3D 1 0 0) (fromDegrees 90) $
     do sor $ linearInterpolation $
            points2d [(0  ,0),
@@ -26,7 +26,7 @@ hellion_appendage _ = model $ rotate (Vector3D 1 0 0) (fromDegrees 90) $
                      (0.0,1.0)]
        hellion_skin
 
-hellion_eye :: Quality -> Modeling ()
+hellion_eye :: Quality -> Modeling
 hellion_eye _ = model $
     do model $
            do openCone (Point3D 0 0 (-0.1),0) (Point3D 0 0 0.1, 0.1)

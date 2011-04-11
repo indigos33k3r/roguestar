@@ -8,7 +8,7 @@ import RSAGL.Math.CurveExtras
 import RSAGL.Math
 import Models.Materials
 
-recreant_antenna_small :: Quality -> Modeling ()
+recreant_antenna_small :: Quality -> Modeling
 recreant_antenna_small _ = 
     do sor $ linearInterpolation $
            points2d $ reverse
@@ -17,7 +17,7 @@ recreant_antenna_small _ =
                      (2,6.5),
                      (1.5,6)]
                                      
-recreant_antenna_large :: Quality -> Modeling ()
+recreant_antenna_large :: Quality -> Modeling
 recreant_antenna_large _ = 
     do sor $ linearInterpolation $
            points2d $ reverse 
@@ -26,7 +26,7 @@ recreant_antenna_large _ =
                      (3,4.5),
                      (2.5,4)]
                                      
-recreant_body :: Quality -> Modeling ()
+recreant_body :: Quality -> Modeling
 recreant_body _ = 
     do sor $ linearInterpolation $
                   points2d $ reverse
@@ -36,7 +36,7 @@ recreant_body _ =
                             (7,1),
 			    (0,0)]
                             
-recreant :: Quality -> Modeling ()
+recreant :: Quality -> Modeling
 recreant q = scale' 0.05 $
     do recreant_antenna_small q
        recreant_antenna_large q

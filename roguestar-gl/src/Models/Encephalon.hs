@@ -9,7 +9,7 @@ import RSAGL.Modeling
 import RSAGL.Color.RSAGLColors
 import Models.Materials
 
-encephalon_head :: Quality -> Modeling ()
+encephalon_head :: Quality -> Modeling
 encephalon_head _ = model $
     do sor $ linearInterpolation $
            points2d $ reverse
@@ -26,12 +26,12 @@ encephalon_head _ = model $
        encephalon_skin
   where dfn (Point3D x y z) = Point3D x (min (abs x ** 4 + 7.5) y) z 
 
-encephalon_eye :: Quality -> Modeling ()
+encephalon_eye :: Quality -> Modeling
 encephalon_eye _ = model $
     do sphere origin_point_3d 0.4
        material $ pigment $ pure black
 
-encephalon_suit :: Quality -> Modeling ()
+encephalon_suit :: Quality -> Modeling
 encephalon_suit _ = model $ 
     do sor $ linearInterpolation $ 
            points2d $ reverse 
@@ -44,7 +44,7 @@ encephalon_suit _ = model $
 		     (0,0)]
        alliance_metal
                           
-encephalon :: Quality -> Modeling ()
+encephalon :: Quality -> Modeling
 encephalon q = model $ scale' (1/30) $
     do encephalon_head q
        encephalon_suit q

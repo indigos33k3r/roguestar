@@ -137,7 +137,7 @@ sunSize :: SunInfo -> RSdouble
 sunSize sun_info = base_star_size * (5800^2 / (realToFrac $ sun_info_kelvins sun_info ^2)) * 1.01 ** (realToFrac $ sun_info_size_adjustment sun_info)
 
 -- | 'makeSky' generates a sky sphere.
-makeSky :: SkyInfo -> Modeling ()
+makeSky :: SkyInfo -> Modeling
 makeSky sky_info | Just atmo <- snd $ biomeAtmosphere $ sky_info_biome sky_info = model $
     do hilly_silhouette
        model $
@@ -213,7 +213,7 @@ ambientSkyRadiation sky_info = abstractAverage $ map (atmosphereScattering atmos
 		 return $ Vector3D x 1 y
 
 -- 'makeSun' generates a perspectiveSphere of the sun.
-makeSun :: SunInfo -> Modeling ()
+makeSun :: SunInfo -> Modeling
 makeSun sun_info = model $
     do let size = sunSize sun_info
        let temp = sun_info_kelvins sun_info
@@ -228,7 +228,7 @@ makeSun sun_info = model $
                                                                            (0.9,temperaturePattern $ temp - 800),
                                                                            (1.0,temperaturePattern $ temp - 1000)]
 
-hilly_silhouette :: Modeling ()
+hilly_silhouette :: Modeling
 hilly_silhouette = model $
     do heightDisc (0,0) 8 (\(x,z) -> perlinNoise (Point3D x 0 z) - 6.9 + distanceBetween origin_point_3d (Point3D x 0 z))
        affine $ scale (Vector3D 1 0.2 1)

@@ -12,7 +12,7 @@ import RSAGL.Math.CurveExtras
 import Control.Monad
 
 -- | A phase weapon emitter.  Includes a specification of a phase guide length.
-phaseWeaponEmitter :: Integer -> Quality -> Modeling ()
+phaseWeaponEmitter :: Integer -> Quality -> Modeling
 phaseWeaponEmitter guide_length _ = model $
     do sor $ linearInterpolation $
                 points2d $ reverse 
@@ -37,7 +37,7 @@ phaseWeaponEmitter guide_length _ = model $
     where dfn_squish p@(Point3D _ _ z) | z > 0 = scale (Vector3D 1 1 0.1) p  -- bottom of emitter is flattened
           dfn_squish p = scale (Vector3D 1 1 0.25) p                         -- top of emitter is more round
                                  
-phase_weapon_grip :: Quality -> Modeling ()
+phase_weapon_grip :: Quality -> Modeling
 phase_weapon_grip _ = model $
     do sor $ linearInterpolation $
                 points2d $ reverse
@@ -57,18 +57,18 @@ phase_weapon_grip _ = model $
          dfn_slope_backwards pt@(Point3D _ y _) = translate (Vector3D 0 0 (-y/3)) pt
          dfn = dfn_slope_backwards . dfn_flat_back . dfn_flat_sides . dfn_gripped_front
 
-phaseWeapon :: Integer -> Quality -> Modeling ()
+phaseWeapon :: Integer -> Quality -> Modeling
 phaseWeapon guide_length q = model $
     scale' (1/100) $
         do translate (Vector3D 0 5 7) $ phaseWeaponEmitter guide_length q
            translate (Vector3D 0 5 0) $ phase_weapon_grip q
 	   concordance_metal
 
-phase_pistol :: Quality -> Modeling ()
+phase_pistol :: Quality -> Modeling
 phase_pistol = phaseWeapon 0
 
-phaser :: Quality -> Modeling ()
+phaser :: Quality -> Modeling
 phaser = phaseWeapon 1
 
-phase_rifle :: Quality -> Modeling ()
+phase_rifle :: Quality -> Modeling
 phase_rifle = phaseWeapon 2

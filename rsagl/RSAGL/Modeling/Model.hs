@@ -39,8 +39,6 @@ module RSAGL.Modeling.Model
      twoSided,
      reverseOrientation,
      regenerateNormals,
-     attribute,
-     withAttribute,
      model,
      RGBFunction,RGBAFunction,
      material,pigment,specular,emissive,transparent,filtering,
@@ -78,103 +76,93 @@ import RSAGL.Color
 -- A ModeledSurface consists of several essential fields: ms_surface is the geometric surface.
 -- ms_material defaults to invisible if no material is ever applied.  The functions pigment, transparent, emissive, and specular apply material properties to a surface.
 
--- Scope is controlled by 'model' and 'withAttribute'.  'model' creates a block of modeling operations that don't affect any surfaces outside of that block.  'withAttribute' restricts all operations to a subset of surfaces defined by attribute.
+-- Scope is controlled by 'model'.  'model' creates a block of modeling operations that don't affect any surfaces outside of that block.
 
 -- 'ms_tesselation' describes how the model will be tesselated into polygons before being sent to OpenGL.
 -- By default, the 'adaptive' model is used, which adapts to the contour and material of each surface.
 -- 'fixed' can be used to crudely force the tesselation of objects.
 
-type Model attr = [ModeledSurface attr]
+type Model = [ModeledSurface]
 
-data ModeledSurface attr = ModeledSurface {
+data ModeledSurface = ModeledSurface {
     ms_surface :: Surface SurfaceVertex3D,
     ms_material :: Material,
     ms_affine_transform :: Maybe AffineTransformation,
     ms_tesselation :: Maybe ModelTesselation,
     ms_tesselation_hint_complexity :: Integer,
-    ms_two_sided :: Bool,
-    ms_attributes :: attr }
+    ms_two_sided :: Bool }
 
 data ModelTesselation = Adaptive
                       | Fixed (Integer,Integer)
 
 data Quasimaterial = forall a. Quasimaterial (ApplicativeWrapper ((->)SurfaceVertex3D) a) (MaterialSurface a -> Material)
 
-newtype ModelingM attr a = ModelingM (State.State (Model attr) a) deriving (Monad)
-newtype MaterialM attr a = MaterialM (State.State [Quasimaterial] a) deriving (Monad)
-type Modeling attr = ModelingM attr ()
+newtype ModelingM a = ModelingM (State.State Model a) deriving (Monad)
+newtype MaterialM a = MaterialM (State.State [Quasimaterial] a) deriving (Monad)
+type Modeling = ModelingM ()
 
-instance State.MonadState [ModeledSurface attr] (ModelingM attr) where
+instance State.MonadState [ModeledSurface] ModelingM where
     get = ModelingM State.get
     put = ModelingM . State.put
 
-instance State.MonadState [Quasimaterial] (MaterialM attr) where
+instance State.MonadState [Quasimaterial] MaterialM where
     get = MaterialM State.get
     put = MaterialM . State.put
 
-extractModel :: Modeling attr -> Model attr
+extractModel :: Modeling -> Model
 extractModel (ModelingM m) = State.execState m []
 
-appendSurface :: (Monoid attr) => Surface SurfaceVertex3D -> Modeling attr
+appendSurface :: Surface SurfaceVertex3D -> Modeling
 appendSurface s = State.modify $ mappend $ [ModeledSurface {
     ms_surface = s,
     ms_material = mempty,
     ms_affine_transform = Nothing,
     ms_tesselation = Nothing,
     ms_tesselation_hint_complexity = 1,
-    ms_two_sided = False,
-    ms_attributes = mempty }]
+    ms_two_sided = False }]
 
-generalSurface :: (Monoid attr) => Either (Surface Point3D) (Surface (Point3D,Vector3D)) -> Modeling attr
+generalSurface :: Either (Surface Point3D) (Surface (Point3D,Vector3D)) -> Modeling
 generalSurface (Right pvs) = appendSurface $ uncurry SurfaceVertex3D <$> pvs
 generalSurface (Left points) = appendSurface $ surfaceNormals3D points
 
-twoSided :: (Monoid attr) => Bool -> Modeling attr
+twoSided :: Bool -> Modeling
 twoSided two_sided = State.modify (map $ \m -> m { ms_two_sided = two_sided })
 
 -- | Swap inside and outside surfaces and reverse normal vectors.  This shouldn't effect 'twoSided' surfaces in any visible way.
-reverseOrientation :: (Monoid attr) => Modeling attr -> Modeling attr
+reverseOrientation :: Modeling -> Modeling
 reverseOrientation modelingA = model $
     do modelingA
        State.modify $ map $ \m -> m { ms_surface = transposeSurface $ ms_surface m }
        deform $ \(SurfaceVertex3D p v) -> SurfaceVertex3D p $ vectorScale (-1) v
 
-tesselationHintComplexity :: (Monoid attr) => Integer -> Modeling attr
+tesselationHintComplexity :: Integer -> Modeling
 tesselationHintComplexity i = State.modify (map $ \m -> m { ms_tesselation_hint_complexity = i })
 
 -- | Tesselate models using an adaptive algorithm.
-adaptive :: Modeling attr
+adaptive :: Modeling
 adaptive = State.modify (map $ \m -> m { ms_tesselation = ms_tesselation m `State.mplus` (Just Adaptive) })
 
 -- | Tesselate models onto a fixed rectangle.
-fixed :: (Integer,Integer) -> Modeling attr
+fixed :: (Integer,Integer) -> Modeling
 fixed x = State.modify (map $ \m -> m { ms_tesselation = ms_tesselation m `State.mplus` (Just $ Fixed x) })
 
 -- 'regenerateNormals' is mostly used for debugging and strips and recomputes the normal vector data for
 -- every surface that is in scope.  It isn't the most efficient way to compute normals.
-regenerateNormals :: (Monoid attr) => Modeling attr
+regenerateNormals :: Modeling
 regenerateNormals = deform (id :: Point3D -> Point3D)
 
 -- The 'Modeling' monad has scoping rules that prevent nested modeling operations
 -- from affecting unrelated surfaces.
 
 -- 'model' brackets which surfaces are considered in scope.
--- 'attribute' tags all surfaces that are in scope with a user attribute.
--- 'withAttribute' filters which surfaces are considered in scope.
-model :: Modeling attr -> Modeling attr
+model :: Modeling -> Modeling
 model (ModelingM actions) = State.modify (State.execState actions [] ++)
 
-attribute :: (Monoid attr) => attr -> Modeling attr
-attribute attr = State.modify (map $ \m -> m { ms_attributes = attr `mappend` ms_attributes m })
-
-withAttribute :: (attr -> Bool) -> Modeling attr -> Modeling attr
-withAttribute f actions = withFilter (f . ms_attributes) actions
-
-withFilter :: (ModeledSurface attr -> Bool) -> Modeling attr -> Modeling attr
+withFilter :: (ModeledSurface -> Bool) -> Modeling -> Modeling
 withFilter f (ModelingM actions) = State.modify (\m -> State.execState actions (filter f m) ++ filter (not . f) m)
 
 class MonadMaterial m where
-    material :: MaterialM attr () -> m attr ()
+    material :: MaterialM () -> m ()
 
 instance MonadMaterial ModelingM where
     material (MaterialM actions) =
@@ -184,7 +172,7 @@ instance MonadMaterial ModelingM where
 instance MonadMaterial MaterialM where
     material (MaterialM actions) = State.modify (++ State.execState actions [])
 
-appendQuasimaterial :: Quasimaterial -> ModelingM attr ()
+appendQuasimaterial :: Quasimaterial -> ModelingM ()
 appendQuasimaterial (Quasimaterial vertexwise_f material_constructor) | isPure vertexwise_f = State.modify (map $ \m ->
     m { ms_material = ms_material m `mappend` (material_constructor $ pure $ fromJust $ fromPure vertexwise_f) })
 appendQuasimaterial (Quasimaterial vertexwise_f material_constructor) = State.modify (map $ \m ->
@@ -194,41 +182,41 @@ appendQuasimaterial (Quasimaterial vertexwise_f material_constructor) = State.mo
 type RGBFunction = ApplicativeWrapper ((->) SurfaceVertex3D) RGB
 type RGBAFunction = ApplicativeWrapper ((->) SurfaceVertex3D) RGBA
 
-pigment :: RGBFunction -> MaterialM attr ()
+pigment :: RGBFunction -> MaterialM ()
 pigment rgbf = State.modify (++ [Quasimaterial rgbf diffuseLayer])
 
-specular :: GLfloat -> RGBFunction -> MaterialM attr ()
+specular :: GLfloat -> RGBFunction -> MaterialM ()
 specular shininess rgbf = State.modify (++ [Quasimaterial rgbf (flip specularLayer shininess)])
 
-emissive :: RGBFunction -> MaterialM attr ()
+emissive :: RGBFunction -> MaterialM ()
 emissive rgbf = State.modify (++ [Quasimaterial rgbf emissiveLayer])
 
-transparent :: RGBAFunction -> MaterialM attr ()
+transparent :: RGBAFunction -> MaterialM ()
 transparent rgbaf = State.modify (++ [Quasimaterial rgbaf transparentLayer])
 
-filtering :: RGBFunction -> MaterialM attr ()
+filtering :: RGBFunction -> MaterialM ()
 filtering rgbf = State.modify (++ [Quasimaterial rgbf filteringLayer])
 
-instance AffineTransformable (ModelingM attr ()) where
+instance AffineTransformable (ModelingM ()) where
     transform mx m = model $ m >> affine (transform mx)
 
-instance AffineTransformable (MaterialM attr ()) where
+instance AffineTransformable (MaterialM ()) where
     transform mx m = material $ m >> affine (transform mx)
 
 class MonadAffine m where
     affine :: AffineTransformation -> m ()
 
-instance MonadAffine (ModelingM attr) where
+instance MonadAffine ModelingM where
     affine f = State.modify $ map (\x -> x { ms_affine_transform = Just $ (f .) $ fromMaybe id $ ms_affine_transform x })
 
-instance MonadAffine (MaterialM attr) where
+instance MonadAffine MaterialM where
     affine f = turbulence (inverseTransformation f)
 
-turbulence :: (SurfaceVertex3D -> SurfaceVertex3D) -> MaterialM attr ()
+turbulence :: (SurfaceVertex3D -> SurfaceVertex3D) -> MaterialM ()
 turbulence g = State.modify $ map (\(Quasimaterial f c) -> Quasimaterial 
         (either (wrapApplicative . (. g)) pure $ unwrapApplicative f) c)
 
-deform :: (DeformationClass dc) => dc -> Modeling attr
+deform :: (DeformationClass dc) => dc -> Modeling
 deform dc = 
     do finishModeling
        case deformation dc of
@@ -236,13 +224,13 @@ deform dc =
                 (Right f) -> State.modify (map $ \m -> m { ms_surface = fmap (sv3df f) $ ms_surface m })
   where sv3df f sv3d = let SurfaceVertex3D p v = f sv3d in SurfaceVertex3D p (vectorNormalize v)
 
-finishModeling :: Modeling attr
+finishModeling :: Modeling
 finishModeling = State.modify (map $ \m -> if isNothing (ms_affine_transform m) then m else finishAffine m)
     where finishAffine m = m { ms_surface = fmap (\(SurfaceVertex3D p v) -> SurfaceVertex3D p (vectorNormalize v)) $
                                                      transformation (fromJust $ ms_affine_transform m) (ms_surface m),
                                ms_affine_transform = Nothing }
 
-sphere :: (Monoid attr) => Point3D -> RSdouble -> Modeling attr
+sphere :: Point3D -> RSdouble -> Modeling
 sphere (Point3D x y z) radius = model $ do
     generalSurface $ Right $
         sphericalCoordinates $ (\(u,v) ->
@@ -258,10 +246,10 @@ sphere (Point3D x y z) radius = model $ do
                                   (signum radius * cosinev * sineu)
                 in (point,vector))
 
-skySphere :: (Monoid attr) => Point3D -> RSdouble -> Modeling attr
+skySphere :: Point3D -> RSdouble -> Modeling
 skySphere p r = sphere p (negate r)
 
-hemisphere :: (Monoid attr) => Point3D -> Vector3D -> RSdouble -> Modeling attr
+hemisphere :: Point3D -> Vector3D -> RSdouble -> Modeling
 hemisphere p v r = model $
     do generalSurface $ Right $ polarCoordinates $ \(a,d) -> let d_ = sqrt d
                                                                  x = cosine a*d_
@@ -270,7 +258,7 @@ hemisphere p v r = model $
                                                                  in (Point3D x y z,Vector3D x y z)
        affine $ translateToFrom p origin_point_3d . rotateToFrom v (Vector3D 0 1 0) . scale' r
 
-skyHemisphere :: (Monoid attr) => Point3D -> Vector3D -> RSdouble -> Modeling attr
+skyHemisphere :: Point3D -> Vector3D -> RSdouble -> Modeling
 skyHemisphere p v r = hemisphere p (vectorScale (-1) v) (negate r)
 
 -- |
@@ -279,7 +267,7 @@ skyHemisphere p v r = hemisphere p (vectorScale (-1) v) (negate r)
 -- rendered, and otherwise the sphere seems clipped.
 --
 -- This is the appropriate geometry to model the curvature of a planet from 200 kilometers altitude, for example.
-perspectiveSphere :: (Monoid attr) => Point3D -> RSdouble -> Point3D -> Modeling attr
+perspectiveSphere :: Point3D -> RSdouble -> Point3D -> Modeling
 perspectiveSphere center_point radius eye_point = model $
     do let d = distanceBetween center_point eye_point
        let  x = sqrt $ d**2 - radius**2
@@ -288,7 +276,7 @@ perspectiveSphere center_point radius eye_point = model $
        openCone (lerpBetween (0,d',d) (eye_point,center_point),h) (lerpBetween (0,d-radius,d) (eye_point,center_point),0)
        deform $ \(p :: Point3D) -> translate (vectorScaleTo radius $ vectorToFrom p center_point) center_point
 
-torus :: (Monoid attr) => RSdouble -> RSdouble -> Modeling attr
+torus :: RSdouble -> RSdouble -> Modeling
 torus major minor = model $
     do generalSurface $ Right $
         toroidalCoordinates $ \(u,v) ->
@@ -300,7 +288,7 @@ torus major minor = model $
                       (cosine v * sine u))
        tesselationHintComplexity $ round $ major / minor
 
-openCone :: (Monoid attr) => (Point3D,RSdouble) -> (Point3D,RSdouble) -> Modeling attr
+openCone :: (Point3D,RSdouble) -> (Point3D,RSdouble) -> Modeling
 openCone (a,a_radius) (b,b_radius) = model $
     do generalSurface $ Right $
            cylindricalCoordinates $ \(u,v) ->
@@ -312,7 +300,7 @@ openCone (a,a_radius) (b,b_radius) = model $
                  slope = (a_radius - b_radius) / distanceBetween a b
 
 -- | A flat disc with a hole in the middle, defined in terms of it's center, normal vector, inner (hole) radius and outer radius.
-openDisc :: (Monoid attr) => Point3D -> Vector3D -> RSdouble -> RSdouble -> Modeling attr
+openDisc :: Point3D -> Vector3D -> RSdouble -> RSdouble -> Modeling
 openDisc p up_vector inner_radius outer_radius = model $ 
     do generalSurface $ Right $
            cylindricalCoordinates $ \(u,v) -> 
@@ -323,29 +311,29 @@ openDisc p up_vector inner_radius outer_radius = model $
        tesselationHintComplexity $ round $ (max outer_radius inner_radius / (abs $ outer_radius - inner_radius))
        affine $ translateToFrom p origin_point_3d . rotateToFrom up_vector (Vector3D 0 1 0)
 
-closedDisc :: (Monoid attr) => Point3D -> Vector3D -> RSdouble -> Modeling attr
+closedDisc :: Point3D -> Vector3D -> RSdouble -> Modeling
 closedDisc center up_vector radius = model $
     do generalSurface $ Right $ circularCoordinates (\(x,z) -> (Point3D x 0 z,Vector3D 0 1 0))
        affine $ translateToFrom center origin_point_3d . rotateToFrom up_vector (Vector3D 0 1 0) . scale' radius
 
-closedCone :: (Monoid attr) => (Point3D,RSdouble) -> (Point3D,RSdouble) -> Modeling attr
+closedCone :: (Point3D,RSdouble) -> (Point3D,RSdouble) -> Modeling
 closedCone a b = model $
     do openCone a b
        openDisc (fst a) (vectorToFrom (fst a) (fst b)) 0 (snd a * (1 + recip (2^8)))
        openDisc (fst b) (vectorToFrom (fst b) (fst a)) 0 (snd b * (1 + recip (2^8)))
 
-quadralateral :: (Monoid attr) => Point3D -> Point3D -> Point3D -> Point3D -> Modeling attr
+quadralateral :: Point3D -> Point3D -> Point3D -> Point3D -> Modeling
 quadralateral a b c d = model $
     do let degenerate_message = error $ "quadralateral: " ++ show (a,b,c,d) ++ " seems to be degenerate."
        normal_vector <- return $ fromMaybe (degenerate_message) $ newell [a,b,c,d]
        generalSurface $ Right $ surface $ \u v -> (lerpClamped v (lerpClamped u (a,b), lerpClamped u (d,c)),normal_vector)
 
-triangle :: (Monoid attr) => Point3D -> Point3D -> Point3D -> Modeling attr
+triangle :: Point3D -> Point3D -> Point3D -> Modeling
 triangle a b c | distanceBetween a b > distanceBetween b c = triangle c a b
 triangle a b c | distanceBetween a c > distanceBetween b c = triangle b c a
 triangle a b c = quadralateral a b (lerp 0.5 (b,c)) c
 
-box :: (Monoid attr) => Point3D -> Point3D -> Modeling attr
+box ::  Point3D -> Point3D -> Modeling
 box (Point3D x1 y1 z1) (Point3D x2 y2 z2) = model $
     do let [lx,hx] = sort [x1,x2]
        let [ly,hy] = sort [y1,y2]
@@ -359,15 +347,15 @@ box (Point3D x1 y1 z1) (Point3D x2 y2 z2) = model $
        quadralateral (Point3D lx ly' lz') (Point3D lx ly' hz') (Point3D lx hy' hz') (Point3D lx hy' lz')  -- left
        quadralateral (Point3D hx ly' lz') (Point3D hx hy' lz') (Point3D hx hy' hz') (Point3D hx ly' hz')  -- right
 
-sor :: (Monoid attr) => Curve Point3D -> Modeling attr
+sor ::  Curve Point3D -> Modeling
 sor c = model $ generalSurface $ Left $ transformSurface2 id (clampCurve (0,1)) $ transposeSurface $ wrapSurface $ curve (flip rotateY c . fromRotations)
 
-tube :: (Monoid attr) => Curve (RSdouble,Point3D) -> Modeling attr
+tube ::  Curve (RSdouble,Point3D) -> Modeling
 tube c | radius <- fmap fst c 
        , spine <- fmap snd c = 
     model $ generalSurface $ Left $ transformSurface2 id (clampCurve (0,1)) $ extrudeTube radius spine
 
-prism :: (Monoid attr) => Vector3D -> (Point3D,RSdouble) -> (Point3D,RSdouble) -> Curve Point3D -> Modeling attr
+prism ::  Vector3D -> (Point3D,RSdouble) -> (Point3D,RSdouble) -> Curve Point3D -> Modeling
 prism upish ara brb c = model $ generalSurface $ Left $ transformSurface2 id (clampCurve (0,1)) $ extrudePrism upish ara brb c
 
 data BakedModel = BakedModel IntermediateModel -- this is just a newtype trick to keep track of what needs to be 'free'ed later.
@@ -442,18 +430,18 @@ freeModel (BakedModel (IntermediateModel surfaces)) = mapM_ (mapM_ (freeIt . iml
 intermediateModelToOpenGL :: IntermediateModel -> IO ()
 intermediateModelToOpenGL (IntermediateModel ms) = mapM_ intermediateModeledSurfaceToOpenGL ms
 
-modelingToOpenGL :: Integer -> Modeling attr -> IO ()
+modelingToOpenGL :: Integer -> Modeling -> IO ()
 modelingToOpenGL n modeling = intermediateModelToOpenGL $ buildIntermediateModel n modeling
 
-buildIntermediateModel :: Integer -> Modeling attr -> IntermediateModel
+buildIntermediateModel :: Integer -> Modeling -> IntermediateModel
 buildIntermediateModel n modeling = IntermediateModel $ zipWith intermediateModeledSurface complexities ms
     where complexities = allocateComplexity sv3d_ruler (map (\m -> (ms_surface m,extraComplexity m)) ms) n
           ms = extractModel (modeling >> finishModeling)
-          extraComplexity m = (1 + fromInteger (ms_tesselation_hint_complexity m)) * 
+          extraComplexity m = (1 + fromInteger (ms_tesselation_hint_complexity m)) *
                               (1 + fromInteger (materialComplexity $ ms_material m))
 
 intermediateModeledSurfaceToOpenGL :: IMSurface -> IO ()
-intermediateModeledSurfaceToOpenGL (IMSurface layers two_sided) = 
+intermediateModeledSurfaceToOpenGL (IMSurface layers two_sided) =
     do lmts <- get lightModelTwoSide
        cf <- get cullFace
        lightModelTwoSide $= (if two_sided then Enabled else Disabled)
@@ -462,7 +450,7 @@ intermediateModeledSurfaceToOpenGL (IMSurface layers two_sided) =
        lightModelTwoSide $= lmts
        cullFace $= cf
 
-intermediateModeledSurface :: Integer -> ModeledSurface attr -> IMSurface
+intermediateModeledSurface :: Integer -> ModeledSurface -> IMSurface
 intermediateModeledSurface n m = IMSurface (zipWith (IMLayer Nothing) (selectLayers (genericLength layers) tesselation) layers) (ms_two_sided m)
     where layers = toLayers $ ms_material m
           color_material_layers :: [Surface RGBA]

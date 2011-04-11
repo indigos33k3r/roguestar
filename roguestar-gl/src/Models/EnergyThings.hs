@@ -9,7 +9,7 @@ import Data.Monoid
 import Models.Materials
 import RSAGL.Color.RSAGLColors
 
-energyCylinder :: (Monoid attr) => EnergyColor -> Quality -> Modeling attr
+energyCylinder :: EnergyColor -> Quality -> Modeling
 energyCylinder c _ = model $
     do closedCone (Point3D 0 0 0,1.0) (Point3D 0 1 0,1.0)
        material $ do pigment $ pure blackbody

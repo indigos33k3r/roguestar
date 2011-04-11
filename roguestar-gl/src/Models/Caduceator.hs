@@ -11,7 +11,7 @@ import Quality
 import Models.Materials
 import RSAGL.Color.RSAGLColors
 
-caduceator :: Quality -> Modeling ()
+caduceator :: Quality -> Modeling
 caduceator _ = model $
     do model $
            do tube $ linearInterpolation
@@ -46,7 +46,7 @@ caduceator _ = model $
 	      material $ pigment $ pure black
        affine $ scale' (1/20)
 
-caduceator_arm_upper :: Quality -> Modeling ()
+caduceator_arm_upper :: Quality -> Modeling
 caduceator_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do model $ sor $ linearInterpolation $
            points2d [(0,0),
@@ -56,7 +56,7 @@ caduceator_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
        caduceator_skin
        affine $ scale' (1/10)
 
-caduceator_arm_lower :: Quality -> Modeling ()
+caduceator_arm_lower :: Quality -> Modeling
 caduceator_arm_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do model $ sor $ linearInterpolation $
            points2d [(0,-0.5),

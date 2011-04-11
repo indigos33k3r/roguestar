@@ -13,7 +13,7 @@ import RSAGL.Math.CurveExtras
 import Quality
 import RSAGL.Scene.CoordinateSystems
 
-cyborg_type_4_dome :: Quality -> Modeling ()
+cyborg_type_4_dome :: Quality -> Modeling
 cyborg_type_4_dome q =
     do hemisphere (Point3D 0 0 0) (Vector3D 0 1 0) 9
        closedDisc (Point3D 0 0 0) (Vector3D 0 (-1) 0) 9.01
@@ -21,7 +21,7 @@ cyborg_type_4_dome q =
        material cyborg_metal
        qualityToFixed q
 
-cyborg_type_4_base :: Quality -> Modeling ()
+cyborg_type_4_base :: Quality -> Modeling
 cyborg_type_4_base q =
     do model $ 
            do openDisc (Point3D 0 0 0) (Vector3D 0 1 0) 0 10.01
@@ -38,19 +38,19 @@ cyborg_type_4_base q =
 	   Point3D 0 (-26)]
        material cyborg_metal
 
-cyborg_type_4_hyperspace_disc :: Quality -> Modeling ()
+cyborg_type_4_hyperspace_disc :: Quality -> Modeling
 cyborg_type_4_hyperspace_disc q =
     do closedCone (Point3D 0 0 0,10) (Point3D 0 10 0,10)
        material cyborg_glow
        qualityToFixed q
 
-cyborg_type_4_hyperspace_rotor :: Quality -> Modeling ()
+cyborg_type_4_hyperspace_rotor :: Quality -> Modeling
 cyborg_type_4_hyperspace_rotor _ =
     do box (Point3D 15 4 (-0.5)) (Point3D 20 (-6) 0.5)
        material cyborg_glow
        fixed (3,3)
 
-cyborg_type_4_hyperspace_stabilizer :: Quality -> Modeling ()
+cyborg_type_4_hyperspace_stabilizer :: Quality -> Modeling
 cyborg_type_4_hyperspace_stabilizer q =
     do box (Point3D 6 (-9) (-2)) (Point3D 10 (-16) 2)
        affine $ transformAbout (Point3D 8 (-16) 0) $ rotate (Vector3D 0 1 0) (fromDegrees 45)

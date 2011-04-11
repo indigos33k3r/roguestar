@@ -13,7 +13,7 @@ import Models.Materials
 import RSAGL.Color.RSAGLColors
 import RSAGL.Math.CurveExtras
 
-reptilian :: Quality -> Modeling ()
+reptilian :: Quality -> Modeling
 reptilian _ = model $
     do model $
            do tube $ linearInterpolation
@@ -45,7 +45,7 @@ reptilian _ = model $
 	      material $ pigment $ pure black
        affine $ scale' (1/20)
 
-reptilian_leg_upper :: Quality -> Modeling ()
+reptilian_leg_upper :: Quality -> Modeling
 reptilian_leg_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do model $ sor $ linearInterpolation $
            points2d [(0  ,0),
@@ -59,7 +59,7 @@ reptilian_leg_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
               specular 5.0 $ pattern (gradient origin_point_3d (Vector3D 0 10 0)) [(0.0,reptilian_specular),(1.0,pure red)]
        affine $ scale' (1/10)
 
-reptilian_leg_lower :: Quality -> Modeling ()
+reptilian_leg_lower :: Quality -> Modeling
 reptilian_leg_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $
            points2d [(0  ,-0.15),
@@ -76,7 +76,7 @@ reptilian_leg_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
              specular 5.0 $ pure red
        affine $ scale' (1/10)
 
-reptilian_arm_upper :: Quality -> Modeling ()
+reptilian_arm_upper :: Quality -> Modeling
 reptilian_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $
 	   points2d [(0  ,0.0),
@@ -91,7 +91,7 @@ reptilian_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
               specular 5.0 $ pure red
        affine $ scale' (1/10)
 
-reptilian_arm_lower :: Quality -> Modeling ()
+reptilian_arm_lower :: Quality -> Modeling
 reptilian_arm_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $
            points2d [(0  ,-1.0),

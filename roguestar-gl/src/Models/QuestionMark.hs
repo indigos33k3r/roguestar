@@ -1,19 +1,19 @@
 module Models.QuestionMark
     (question_mark)
     where
-    
+
 import RSAGL.Modeling
 import RSAGL.Color.RSAGLColors
 import RSAGL.Math
 import RSAGL.Math.CurveExtras
 
-question_mark_material :: Modeling () 
+question_mark_material :: Modeling
 question_mark_material = material $
     do pigment $ pure blackbody
        emissive $ pure hot_pink
 
-question_mark :: Modeling ()
-question_mark = model $ scale' 0.1 $ 
+question_mark :: Modeling
+question_mark = model $ scale' 0.1 $
     do sor $ linearInterpolation $
            points2d [(0.1,-4.5),
                      (0.5,-5),

@@ -10,7 +10,7 @@ import RSAGL.Math.CurveExtras
 import RSAGL.Math
 import Models.Materials
 
-machine_arm_lower :: Quality -> Modeling ()
+machine_arm_lower :: Quality -> Modeling
 machine_arm_lower _ = scale' (1/4) $ rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $ reverse $ 
         points2d [(0.0,4.5),
@@ -21,7 +21,7 @@ machine_arm_lower _ = scale' (1/4) $ rotate (Vector3D 1 0 0) (fromDegrees 90) $ 
                   (0.0,0.3)]
        alliance_metal
 
-machine_arm_upper :: Quality -> Modeling ()
+machine_arm_upper :: Quality -> Modeling
 machine_arm_upper _ = scale' (1/4) $ rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $ reverse $
         points2d [(0.0,4.5),
@@ -32,7 +32,7 @@ machine_arm_upper _ = scale' (1/4) $ rotate (Vector3D 1 0 0) (fromDegrees 90) $ 
                   (0.0,-0.5)]
        alliance_metal
 
-thin_limb :: Quality -> Modeling ()
+thin_limb :: Quality -> Modeling
 thin_limb _ =
     do openCone (Point3D 0 0 0,0.05) (Point3D 0 0 1,0.05)
        sphere (Point3D 0 0 0) 0.05

@@ -49,7 +49,7 @@ known_terrain_types =
 --
 -- This is just the shape, without any material.
 --
-terrainTileShape :: RSdouble -> RSdouble -> Quality -> Modeling ()
+terrainTileShape :: RSdouble -> RSdouble -> Quality -> Modeling
 terrainTileShape physical_height aesthetic_height q = model $
     do heightField (-0.5,-0.5) (0.5,0.5) $ \(x,z) -> let y = 1 - max (abs x) (abs z) * 2 in min (max 0 $ sqrt y) (2*y)
        affine $ scale (Vector3D 1 aesthetic_height 1)
@@ -60,7 +60,7 @@ terrainTileShape physical_height aesthetic_height q = model $
 -- Creates a terrain tile based on 'terrainTileShape' with appropriate characteristics and material for its type,
 -- but without any special casing for unsual terrains like forest.
 --
-basicTerrainTile :: B.ByteString -> Quality -> Modeling ()
+basicTerrainTile :: B.ByteString -> Quality -> Modeling
 basicTerrainTile s q = model $
     do terrainTileShape 0.01 (terrainHeight s) q
        material $ terrainTexture s
@@ -69,7 +69,7 @@ basicTerrainTile s q = model $
 -- Creates a terrain tile based on 'terrainTileShape'
 -- Provides special casing for forest, rockface, liquids, etc.
 --
-terrainTile :: B.ByteString -> Quality -> Modeling ()
+terrainTile :: B.ByteString -> Quality -> Modeling
 terrainTile "recreantfactory" q = recreant_factory q
 terrainTile "rockface" q = model $
     do terrainTileShape (terrainHeight "rockface") (terrainHeight "rockface") q
@@ -140,7 +140,7 @@ terrainHeight _ = 5.0
 -- Unrecognized terrain types will appear bright magenta, so they can be easily
 -- noticed and corrected.
 --
-terrainTexture :: B.ByteString -> MaterialM () ()
+terrainTexture :: B.ByteString -> MaterialM ()
 terrainTexture "water" =
     do pigment $ pure blue
        specular 100 $ pure white
