@@ -41,4 +41,4 @@ recreant q = scale' 0.05 $
     do recreant_antenna_small q
        recreant_antenna_large q
        recreant_body q
-       alliance_metal
+       material $ alliance_metal

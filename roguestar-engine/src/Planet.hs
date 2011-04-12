@@ -21,7 +21,7 @@ makePlanet plane_location planet_info =
     do seed <- getRandom
        seed_down <- getRandom
        planet_name <- liftM (`fromMaybe` planet_info_name planet_info) $
-                          randomPlanetName PanGalacticTreatyOrganization
+                          randomPlanetName Nonaligned
        plane_ref <- dbNewPlane
           planet_name
           (TerrainGenerationData {

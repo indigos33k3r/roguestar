@@ -17,4 +17,4 @@ recreant_factory _ = model $
        sphere (Point3D 0.4 0 (-0.4)) 0.1
        sphere (Point3D 0.4 0 0.4) 0.1
        sphere (Point3D (-0.4) 0 0.4) 0.1
-       alliance_metal
+       material $ alliance_metal

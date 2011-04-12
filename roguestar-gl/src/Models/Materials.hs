@@ -8,6 +8,7 @@ module Models.Materials
      concordance_metal,
      concordance_dark_glass,
      concordance_bright_glass,
+     cyborg_skin,
      cyborg_metal,
      cyborg_glow,
      -- | Material by Species
@@ -50,8 +51,8 @@ treaty_energy_field = material $
 
 -- Alliance Materials  (yellow-gold solid colors, orange energy colors)
 
-alliance_metal :: Modeling
-alliance_metal = material $
+alliance_metal :: MaterialM ()
+alliance_metal =
     do pigment $ pure $ scalarMultiply 0.6 yellow
        specular 7 $ pure yellow
 
@@ -82,6 +83,9 @@ concordance_bright_glass = material $
 -- Monster (orange solid colors, violet energy colors)
 
 -- Cyborg Materials  (white solid colors, green energy colors)
+cyborg_skin :: MaterialM ()
+cyborg_skin =
+    do pigment $ pattern (cloudy 435 0.2) [(0.0,pure mauve),(1.0,pure grey)]
 
 cyborg_metal :: MaterialM ()
 cyborg_metal = metallic $ pure beige
@@ -122,8 +126,8 @@ hellion_skin = material $
 
 -- Encephalon Skins
 
-encephalon_skin :: Modeling
-encephalon_skin = material $ pigment $ pattern (cloudy 32 0.1) [(0.0,pure mauve),(1.0,pure salmon)]
+encephalon_skin :: MaterialM ()
+encephalon_skin = pigment $ pattern (cloudy 32 0.1) [(0.0,pure mauve),(1.0,pure salmon)]
 
 {--------------------------------------------------------
  - Material by Energy Type

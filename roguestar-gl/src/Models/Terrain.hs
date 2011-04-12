@@ -10,7 +10,6 @@ import Quality
 import Models.RecreantFactory
 import RSAGL.Modeling
 import RSAGL.Math
-import RSAGL.Math.Types
 import RSAGL.Color
 import RSAGL.Color.RSAGLColors
 import RSAGL.Extras.ColorPhysics

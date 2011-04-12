@@ -84,7 +84,7 @@ walking_orb_animation qo_orb qo_glow_orb qo_orb_upper_leg qo_orb_lower_leg =
 
 testScene :: IO (AniM ((),Camera))
 testScene =
-    do let newQO :: Integer -> Modeling () -> IO BakedModel
+    do let newQO :: Integer -> Modeling -> IO BakedModel
            newQO v im = bakeModel $ buildIntermediateModel v im
        putStrLn "building planet..."
        qo_planet <- newQO test_quality planet
@@ -213,7 +213,7 @@ rsaglTimerCallback window =
     do addTimerCallback timer_callback_millis (rsaglTimerCallback window)
        postRedisplay $ Just window
 
-ring :: Modeling ()
+ring :: Modeling
 ring = model $ do openDisc origin_point_3d (Vector3D 0 1 0) 0.75 1.0
                   material $
 		      do transparent $ pure $ alpha 0.25 $ transformColor purple
@@ -221,8 +221,8 @@ ring = model $ do openDisc origin_point_3d (Vector3D 0 1 0) 0.75 1.0
                   bumps $ waves 0.2 0.01
                   twoSided True
 
-planet :: Modeling ()
-planet = model $ 
+planet :: Modeling
+planet = model $
     do RSAGL.Modeling.sphere (Point3D 0 0 0) 0.65
        deform $ constrain (\(SurfaceVertex3D (Point3D x y z) _) -> x > 0 && y > 0 && z > 0) $ 
            RT.shadowDeform (Vector3D (-1) (-1) (-1)) (map (RT.plane (Point3D 0 0 0)) [Vector3D 1 0 0,Vector3D 0 1 0,Vector3D 0 0 1])
@@ -239,13 +239,13 @@ planet = model $
               emissive $ planet_interior (pure yellow) (pure red) $ cities (pure $ scalarMultiply 0.2 white) (pure blackbody)
               specular 20 $ planet_interior (pure blackbody) (pure blackbody) $ land_vs_water (pure blackbody) (pure white)
 
-moon :: Modeling ()
+moon :: Modeling
 moon = model $ 
     do RSAGL.Modeling.sphere (Point3D 0 0 0) 0.2
        material $ pigment $ pattern (cloudy 8 0.05) [(0.0,pure grey),(1.0,pure white)]
        regenerateNormals
 
-monolith :: Modeling ()
+monolith :: Modeling
 monolith = model $
     do smoothbox 0.1 (Point3D 4 9 1) (Point3D (-4) (-9) (-1))
        affine (translate $ Vector3D 0 9 0)
@@ -254,14 +254,14 @@ monolith = model $
            do pigment $ pure blackbody
               specular 100 $ pure white
 
-ground :: Modeling ()
+ground :: Modeling
 ground = model $
     do closedDisc (Point3D 0 (-0.1) 0) (Vector3D 0 1 0) 30
        regenerateNormals
        material $ pigment $ pattern (cloudy 27 1.0) [(0.0,pure brown),(1.0,pure forest_green)]
        affine $ translate (Vector3D 0 (-0.1) 0)
 
-station :: Modeling ()
+station :: Modeling
 station = model $
     do model $ 
          do torus 0.5 0.1
@@ -291,7 +291,7 @@ station = model $
                          tesselationHintComplexity 0
                          fixed (3,3)
 
-orb :: Modeling ()
+orb :: Modeling
 orb = model $
     do sor $ linearInterpolation $ points2d
                [(-0.001,0.4),
@@ -313,12 +313,12 @@ orb = model $
            do pigment $ pure yellow
               specular 64 $ pure grey
 
-glow_orb :: Modeling ()
+glow_orb :: Modeling
 glow_orb = translate (Vector3D 0 1 0) $
     do closedDisc (Point3D 0 0 0) (Vector3D 0 1 0) 1
        material $ emissive $ pattern (spherical (Point3D 0 0 0) 1) [(0.0,pure $ scalarMultiply 1.5 white),(0.25,pure white),(0.95,pure blackbody)]
 
-orb_upper_leg :: Modeling ()
+orb_upper_leg :: Modeling
 orb_upper_leg = model $
     do tube $ zipCurve (,) (pure 0.05) $ linearInterpolation [Point3D 0 0 0,Point3D 0 0.1 0.5,Point3D 0 0 1]
        RSAGL.Modeling.sphere (Point3D 0 0 1) 0.05
@@ -326,14 +326,14 @@ orb_upper_leg = model $
            do pigment $ pure yellow
               specular 64 $ pure grey
 
-orb_lower_leg :: Modeling ()
+orb_lower_leg :: Modeling
 orb_lower_leg = model $
     do openCone (Point3D 0 0 0,0.05) (Point3D 0 0 1,0)
        material $ 
            do pigment $ pure yellow
               specular 64 $ pure grey
 
-sky :: Modeling ()
+sky :: Modeling
 sky = model $
     do skyHemisphere (Point3D 0 0 0) (Vector3D 0 1 0) 1.0
        affine $ scale $ Vector3D 5 1 5
