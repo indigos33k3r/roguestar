@@ -21,6 +21,7 @@ module VisibleObject
      isWielding,
      visibleObject,
      objectDetailsLookup,
+     objectFaction,
      objectDestination,
      objectIdealPosition,
      objectFacing,
@@ -45,6 +46,7 @@ import qualified Data.Map as Map
 import Control.Monad
 import Scene
 import Models.LibraryData
+import Models.FactionData
 import qualified Data.ByteString.Char8 as B
 
 data ToolThreadInput = ToolThreadInput {
@@ -223,9 +225,26 @@ objectDetailsLookup :: (FRPModel m,StateOf m ~ AnimationState,
 objectDetailsLookup obj field = proc _ ->
     do m_unique_id <- getVisibleObject obj -< ()
        m_details_table <- arr (fromMaybe Nothing) <<< whenJust (driverGetTableA <<< arr (\x -> ("object-details",B.pack $ show x))) -< m_unique_id
-       sticky isJust Nothing -< 
+       sticky isJust Nothing -<
            do details_table <- m_details_table
               tableLookup details_table ("property","value") field
+
+-- | Get an object's faction.  (Using 'objectDetailsLookup'.)
+-- Returns 'Gray' by default, if no faction is available,
+-- but this should be rare because generally by the time
+-- we have an avatar up for the particular type of object,
+-- the details for that object are already available.
+objectFaction :: (FRPModel m,StateOf m ~ AnimationState,
+                  ThreadIDOf m ~ Maybe Integer,
+                  FRPModes m ~ RoguestarModes) =>
+                 VisibleObjectReference -> FRP e m () Faction
+objectFaction obj = proc _ ->
+    do faction <- objectDetailsLookup obj "faction" -< ()
+       returnA -< case faction of
+           Just "player" -> Player
+           Just "nonaligned" -> Nonaligned
+           Just "cyborg" -> Cyborg
+           _ -> Gray
 
 -- | Grid position to which the specified object should move.
 objectDestination :: (FRPModel m,

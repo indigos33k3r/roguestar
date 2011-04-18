@@ -50,12 +50,12 @@ toModel (SkySphere sky_info) = const $ makeSky sky_info
 toModel (SunDisc sun_info) = const $ makeSun sun_info
 toModel (SimpleModel QuestionMark) = const $ question_mark
 toModel NullModel = const $ return ()
-toModel (SimpleModel Encephalon) = encephalon
-toModel (SimpleModel Recreant) = recreant
-toModel (SimpleModel Androsynth) = androsynth
-toModel (SimpleModel Caduceator) = caduceator
-toModel (SimpleModel Reptilian) = reptilian
-toModel (SimpleModel Hellion) = hellion
+toModel (FactionedModel f Encephalon) = encephalon f
+toModel (FactionedModel f Recreant) = recreant f
+toModel (FactionedModel f Androsynth) = androsynth f
+toModel (FactionedModel f Caduceator) = caduceator f
+toModel (FactionedModel f Reptilian) = reptilian f
+toModel (FactionedModel f Hellion) = hellion f
 toModel (SimpleModel AscendantGlow) = ascendant_glow
 toModel (SimpleModel DustPuff) = dust_puff
 toModel (SimpleModel PhasePistol) = phase_pistol
@@ -64,17 +64,17 @@ toModel (SimpleModel PhaseRifle) = phase_rifle
 toModel (SimpleModel GasSphere) = gasSphere
 toModel (SimpleModel MetalSphere) = metalSphere
 toModel (SimpleModel ChromaliteSphere) = chromaliteSphere
-toModel (SimpleModel MachineArmLower) = machine_arm_lower
-toModel (SimpleModel MachineArmUpper) = machine_arm_upper
-toModel (SimpleModel CaduceatorArmLower) = caduceator_arm_lower
-toModel (SimpleModel CaduceatorArmUpper) = caduceator_arm_upper
-toModel (SimpleModel ReptilianLegLower) = reptilian_leg_lower
-toModel (SimpleModel ReptilianLegUpper) = reptilian_leg_upper
-toModel (SimpleModel ReptilianArmLower) = reptilian_arm_lower
-toModel (SimpleModel ReptilianArmUpper) = reptilian_arm_upper
-toModel (SimpleModel HellionAppendage) = hellion_appendage
-toModel (SimpleModel HellionEye) = hellion_eye
-toModel (SimpleModel ThinLimb) = thin_limb
+toModel (FactionedModel f MachineArmLower) = machine_arm_lower f
+toModel (FactionedModel f MachineArmUpper) = machine_arm_upper f
+toModel (FactionedModel f CaduceatorArmLower) = caduceator_arm_lower f
+toModel (FactionedModel f CaduceatorArmUpper) = caduceator_arm_upper f
+toModel (FactionedModel f ReptilianLegLower) = reptilian_leg_lower f
+toModel (FactionedModel f ReptilianLegUpper) = reptilian_leg_upper f
+toModel (FactionedModel f ReptilianArmLower) = reptilian_arm_lower f
+toModel (FactionedModel f ReptilianArmUpper) = reptilian_arm_upper f
+toModel (FactionedModel f HellionAppendage) = hellion_appendage f
+toModel (FactionedModel f HellionEye) = hellion_eye f
+toModel (FactionedModel f ThinLimb) = thin_limb f
 toModel (SimpleModel CyborgType4Dome) = cyborg_type_4_dome
 toModel (SimpleModel CyborgType4Base) = cyborg_type_4_base
 toModel (SimpleModel CyborgType4HyperspaceDisc) = cyborg_type_4_hyperspace_disc
@@ -96,10 +96,7 @@ downgraded_models :: [LibraryModel]
 downgraded_models =
     Prelude.map toLibraryModel
         [LeafyBlob,TreeBranch,
-         GasSphere,MetalSphere,ChromaliteSphere,MachineArmLower,
-         MachineArmUpper,CaduceatorArmLower,CaduceatorArmUpper,
-         ReptilianLegLower,ReptilianLegUpper,ReptilianArmLower,
-         ReptilianArmUpper, ThinLimb]
+         GasSphere,MetalSphere,ChromaliteSphere]
 
 -- |
 -- Sometimes we want to constrain the quality of some models.

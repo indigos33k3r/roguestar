@@ -9,10 +9,11 @@ import RSAGL.Math.CurveExtras
 import RSAGL.Modeling
 import Quality
 import Models.Materials
-import RSAGL.Color.RSAGLColors
+import Models.Factions
+import Models.FactionData
 
-caduceator :: Quality -> Modeling
-caduceator _ = model $
+caduceator :: Faction -> Quality -> Modeling
+caduceator f _ = model $
     do model $
            do tube $ linearInterpolation
                   [(0,Point3D 0 0   (-5)),
@@ -39,25 +40,25 @@ caduceator _ = model $
 	                 (7,3),
 	                 (8,1)]
 	              in Point3D (x*x') y z
-              caduceator_skin
+              material $ skin f caduceator_skin
        model $
            do sphere (Point3D 1.25 7.5 5) 0.25
 	      sphere (Point3D (-1.25) 7.5 5) 0.25
-	      material $ pigment $ pure black
+	      material $ eye f
        affine $ scale' (1/20)
 
-caduceator_arm_upper :: Quality -> Modeling
-caduceator_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
+caduceator_arm_upper :: Faction -> Quality -> Modeling
+caduceator_arm_upper f _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do model $ sor $ linearInterpolation $
            points2d [(0,0),
 	             (1.0,1.0),
 		     (0.5,10.0),
 		     (0,10.5)]
-       caduceator_skin
+       material $ skin f caduceator_skin
        affine $ scale' (1/10)
 
-caduceator_arm_lower :: Quality -> Modeling
-caduceator_arm_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
+caduceator_arm_lower :: Faction -> Quality -> Modeling
+caduceator_arm_lower f _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do model $ sor $ linearInterpolation $
            points2d [(0,-0.5),
 	             (0.5,0.0),
@@ -66,5 +67,5 @@ caduceator_arm_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
 		     (1.0,10.25),
 		     (0.75,9.75),
 		     (0,9)]
-       caduceator_skin
+       material $ skin f caduceator_skin
        affine $ scale' (1/10)

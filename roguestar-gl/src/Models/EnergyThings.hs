@@ -5,7 +5,6 @@ import Models.LibraryData
 import RSAGL.Modeling
 import RSAGL.Math
 import Quality
-import Data.Monoid
 import Models.Materials
 import RSAGL.Color.RSAGLColors
 

@@ -101,8 +101,8 @@ cyborg_glow =
 
 -- Caduceator Skins
 
-caduceator_skin :: Modeling
-caduceator_skin = material $ pigment $ pattern (cloudy 75 0.01) [(0.0,pure red),(0.5,pure orange),(1.0,pure black)]
+caduceator_skin :: MaterialM ()
+caduceator_skin = pigment $ pattern (cloudy 75 0.01) [(0.0,pure red),(0.5,pure orange),(1.0,pure black)]
 
 -- Reptilian Skins
 
@@ -112,15 +112,15 @@ reptilian_pigment = pattern (cloudy 75 0.1) [(0.0,pure lavender),(1.0,pure periw
 reptilian_specular :: ColorFunction RGB
 reptilian_specular = pattern (cloudy 75 0.1) [(0.0,pure red),(1.0,pure mustard)]
 
-reptilian_skin :: Modeling
-reptilian_skin = material $
+reptilian_skin :: MaterialM ()
+reptilian_skin =
     do pigment $ reptilian_pigment
        specular 5.0 $ reptilian_specular
 
 -- Hellion Skin
 
-hellion_skin :: Modeling
-hellion_skin = material $
+hellion_skin :: MaterialM ()
+hellion_skin =
     do pigment $ pattern (cloudy 75 0.1) [(0.0,pure sea_green),(1.0,pure lime)]
        specular 5.0 $ scalarMultiply (1/5) pure white
 

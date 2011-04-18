@@ -1,12 +1,14 @@
 module Models.LibraryData
     (LibraryModel(..),
      SimpleModel(..),
+     FactionedModel(..),
      EnergyColor(..),
      EnergyThing(..),
      LibraryModelSource(..))
     where
 
 import Models.Sky
+import Models.FactionData
 import qualified Data.ByteString.Char8 as B
 
 data EnergyColor = Blue | Yellow | Red | Green
@@ -16,15 +18,9 @@ data SimpleModel =
     LeafyBlob
   | TreeBranch
   | QuestionMark
-    -- Creature Bodies
-  | Encephalon
-  | Recreant
-  | Androsynth
+    -- Vortex Glows/Puffs
   | AscendantGlow
   | DustPuff
-  | Caduceator
-  | Reptilian
-  | Hellion
     -- Tools
   | PhasePistol
   | Phaser
@@ -32,19 +28,6 @@ data SimpleModel =
   | GasSphere
   | MetalSphere
   | ChromaliteSphere
-    -- Arms and Legs
-  | MachineArmLower
-  | MachineArmUpper
-  | CaduceatorArmLower
-  | CaduceatorArmUpper
-  | ReptilianLegUpper
-  | ReptilianLegLower
-  | ReptilianArmUpper
-  | ReptilianArmLower
-  | HellionAppendage
-  | ThinLimb
-    -- Other bodyparts
-  | HellionEye
     -- Space Ship Parts
   | CyborgType4Dome
   | CyborgType4Base
@@ -63,6 +46,29 @@ data EnergyThing =
   | EnergyCylinder
       deriving (Eq,Ord,Show,Enum,Bounded)
 
+data FactionedModel =
+    -- Creature Bodies
+    Encephalon
+  | Recreant
+  | Androsynth
+  | Caduceator
+  | Reptilian
+  | Hellion
+    -- Arms and Legs
+  | MachineArmLower
+  | MachineArmUpper
+  | CaduceatorArmLower
+  | CaduceatorArmUpper
+  | ReptilianLegUpper
+  | ReptilianLegLower
+  | ReptilianArmUpper
+  | ReptilianArmLower
+  | HellionAppendage
+  | ThinLimb
+    -- Other bodyparts
+  | HellionEye
+    deriving(Eq, Ord, Show)
+
 data LibraryModel =
     -- Terrain
     TerrainTile B.ByteString
@@ -75,6 +81,8 @@ data LibraryModel =
   | SimpleModel SimpleModel
     -- Energy things
   | EnergyThing EnergyThing EnergyColor
+    -- Factioned Models
+  | FactionedModel Faction FactionedModel
       deriving (Eq,Ord,Show)
 
 -- | Things that are also LibraryModels.

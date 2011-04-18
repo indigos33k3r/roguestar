@@ -6,9 +6,11 @@ import RSAGL.Math
 import RSAGL.Modeling
 import Quality
 import Models.Materials
+import Models.Factions
+import Models.FactionData
 
-androsynth_head :: Quality -> Modeling
-androsynth_head _ = model $
+androsynth_head :: Faction -> Quality -> Modeling
+androsynth_head f _ = model $
     do model $
            do smoothbox 0.2 (Point3D (-2) 0 (-2)) (Point3D (-3) 10 (-5))  -- side panels/"ears"
               smoothbox 0.2 (Point3D 2 0 (-2))    (Point3D 3 10 (-5))
@@ -21,7 +23,7 @@ androsynth_head _ = model $
 		                   (Point3D 0 10 (-5)) (Point3D 0 6 (-5))
 		     twoSided True
 	      openCone (Point3D 0 2 0,0.5) (Point3D 0 (-2) 0,0.5)
-              concordance_metal
+              material $ metal f
        let eyeglass = model $
             do sphere (Point3D 0 0 0) 0.75
 	       affine $ scale (Vector3D 1 1 0.1)
@@ -30,22 +32,22 @@ androsynth_head _ = model $
        model $ eyeglass >> affine (translate $ Vector3D (-3) 4 1)
        model $
            do sphere (Point3D 0 4 2) 0.95
-	      concordance_dark_glass
+              concordance_dark_glass
 
-androsynth_body :: Quality -> Modeling
-androsynth_body _ = model $
+androsynth_body :: Faction -> Quality -> Modeling
+androsynth_body f _ = model $
     do model $
            do smoothbox 0.2 (Point3D (-2) 7 (-2.5)) (Point3D 2 8 2.5)
-	      smoothbox 0.2 (Point3D (-3) 0 (-3.5)) (Point3D 3 1 3.5)
-	      openCone (Point3D 0 1 0,1.5) (Point3D 0 7 0,1)
-       concordance_metal
+              smoothbox 0.2 (Point3D (-3) 0 (-3.5)) (Point3D 3 1 3.5)
+              openCone (Point3D 0 1 0,1.5) (Point3D 0 7 0,1)
+       material $ metal f
 
-androsynth :: Quality -> Modeling
-androsynth q = model $
+androsynth :: Faction -> Quality -> Modeling
+androsynth f q = model $
     do model $
-           do androsynth_head q
+           do androsynth_head f q
               affine $ translate (Vector3D 0 30 0)
        model $
-           do androsynth_body q
+           do androsynth_body f q
 	      affine $ translate (Vector3D 0 20 0)
        affine $ scale' (1/40)

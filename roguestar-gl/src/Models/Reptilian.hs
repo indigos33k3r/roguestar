@@ -12,9 +12,11 @@ import Quality
 import Models.Materials
 import RSAGL.Color.RSAGLColors
 import RSAGL.Math.CurveExtras
+import Models.Factions
+import Models.FactionData
 
-reptilian :: Quality -> Modeling
-reptilian _ = model $
+reptilian :: Faction -> Quality -> Modeling
+reptilian f _ = model $
     do model $
            do tube $ linearInterpolation
                   [(0    ,Point3D 0 0   (-6)),
@@ -38,15 +40,15 @@ reptilian _ = model $
 		     triangle (Point3D 0 7 (-2)) (Point3D 0.5 8 (-8.5)) (Point3D 5.5 9 (-7))
                      twoSided True
 		     deform $ \(Point3D x y z) -> Point3D x (y+x^2/100) (z+x^2/25+sin (x*10)/4)
-	      reptilian_skin 
+	      material $ skin f reptilian_skin
        model $
            do sphere (Point3D 0.55 11 2) 0.5
 	      sphere (Point3D (-0.55) 11 2) 0.5
-	      material $ pigment $ pure black
+	      material $ eye f
        affine $ scale' (1/20)
 
-reptilian_leg_upper :: Quality -> Modeling
-reptilian_leg_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
+reptilian_leg_upper :: Faction -> Quality -> Modeling
+reptilian_leg_upper f _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do model $ sor $ linearInterpolation $
            points2d [(0  ,0),
 	             (1.9,1),
@@ -54,13 +56,13 @@ reptilian_leg_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
 		     (1,7.5),
 		     (0.75,10.6),
 		     (0  ,10.8)]
-       material $
+       material $ skin f $
            do pigment $ pattern (gradient origin_point_3d (Vector3D 0 10 0)) [(0.0,reptilian_pigment),(1.0,pure dark_pink)]
               specular 5.0 $ pattern (gradient origin_point_3d (Vector3D 0 10 0)) [(0.0,reptilian_specular),(1.0,pure red)]
        affine $ scale' (1/10)
 
-reptilian_leg_lower :: Quality -> Modeling
-reptilian_leg_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
+reptilian_leg_lower :: Faction -> Quality -> Modeling
+reptilian_leg_lower f _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $
            points2d [(0  ,-0.15),
 	             (0.5,-0.1),
@@ -71,13 +73,13 @@ reptilian_leg_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
        openCone (Point3D 0 9.5 0,0.5) (Point3D 0 10 7,0.0001)
        openCone (Point3D 0 9.5 0,0.5) (Point3D 5 10 5,0.0001)
        openCone (Point3D 0 9.5 0,0.5) (Point3D (-5) 10 5,0.0001)
-       material $ 
+       material $ skin f $
           do pigment $ pure dark_pink
              specular 5.0 $ pure red
        affine $ scale' (1/10)
 
-reptilian_arm_upper :: Quality -> Modeling
-reptilian_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
+reptilian_arm_upper :: Faction -> Quality -> Modeling
+reptilian_arm_upper f _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $
 	   points2d [(0  ,0.0),
 	             (1.0,0.1),
@@ -86,13 +88,13 @@ reptilian_arm_upper _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
 		     (0.5,9.0),
 		     (1.0,9.9),
 		     (0  ,0.0)]
-       material $
+       material $ skin f $
            do pigment $ pure dark_pink
               specular 5.0 $ pure red
        affine $ scale' (1/10)
 
-reptilian_arm_lower :: Quality -> Modeling
-reptilian_arm_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
+reptilian_arm_lower :: Faction -> Quality -> Modeling
+reptilian_arm_lower f _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
     do sor $ linearInterpolation $
            points2d [(0  ,-1.0),
 	             (1.0,0.0),
@@ -100,8 +102,8 @@ reptilian_arm_lower _ = rotate (Vector3D 1 0 0) (fromDegrees 90) $ model $
 		     (0.5,9.0),
 		     (0.5,9.9),
 		     (0  ,0.0)]
-       material $
+       material $ skin f $
            do pigment $ pure dark_pink
               specular 5.0 $ pure red
        affine $ scale' (1/10)
-       
+

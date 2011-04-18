@@ -86,10 +86,10 @@ foot forward_radius side_radius lift_radius = proc emergency_footdown ->
 data LegStyle = Upright | Insectoid
 
 -- | A description of a leg.
-data Leg e m = Leg (FRP e m [Bool] [Bool])
+data Leg a e m = Leg (FRP e m ([Bool],a) [Bool])
 
 instance (CoordinateSystemClass s,StateOf m ~ s) =>
-         AffineTransformable (Leg e m) where
+         AffineTransformable (Leg a e m) where
     transform m (Leg l) =
         Leg (proc x -> transformA l -< (Affine $ transform m,x))
 
@@ -113,9 +113,9 @@ leg :: (CoordinateSystemClass s,StateOf m ~ s) =>
        Point3D ->
        RSdouble ->
        Point3D ->
-       (FRP e m Joint ()) ->
-       Leg e m
-leg style bend base len end animation = Leg $ proc feet_that_are_down ->
+       (FRP e m (Joint,a) ()) ->
+       Leg a e m
+leg style bend base len end animation = Leg $ proc (feet_that_are_down,a) ->
     do let declare_emergency_foot_down =
                length (filter id feet_that_are_down) <
                length (filter not feet_that_are_down) &&
@@ -124,7 +124,7 @@ leg style bend base len end animation = Leg $ proc feet_that_are_down ->
            transformA (foot foot_radius foot_radius (foot_radius/5)) -<
                (Affine $ translate (vectorToFrom end origin_point_3d),
                 declare_emergency_foot_down)
-       animation -< joint bend base len p
+       animation -< (joint bend base len p,a)
        returnA -< (foot_is_down || declare_emergency_foot_down) :
                   feet_that_are_down
   where insectoid_style = sqrt (len^2 - foot_ideal_distance_squared) / 4
@@ -135,21 +135,27 @@ leg style bend base len end animation = Leg $ proc feet_that_are_down ->
             Insectoid -> insectoid_style
             Upright -> upright_style
 
+fromLeg :: Leg a e m -> FRP e m ([Bool],a) ([Bool],a)
+fromLeg (Leg l) = proc (xs,a) ->
+    do xs' <- l -< (xs,a)
+       returnA -< (xs',a)
+
 -- | Combines a group of legs into a group that will try to keep at least half
 -- of the legs on the ground at all times.
-legs :: [Leg e m] -> FRP e m () ()
-legs ls = (foldl (>>>) (arr $ const []) $ map (\(Leg l) -> l) ls) >>>
-          (arr $ const ())
+legs :: [Leg a e m] -> FRP e m a ()
+legs ls = proc a ->
+    do foldl1 (>>>) (map fromLeg ls) -< ([],a)
+       returnA -< ()
 
 -- | Animates the upper and lower limbs of a joint into a single animation,
 -- using the affine transformations 'joitn_arm_upper' and 'joint_arm_lower'.
 jointAnimation :: (CoordinateSystemClass s,StateOf m ~ s) =>
-                  FRP e m () () ->
-                  FRP e m () () ->
-                  FRP e m Joint ()
-jointAnimation upperJoint lowerJoint = proc j ->
-    do transformA upperJoint -< (affineOf $ joint_arm_upper j,())
-       transformA lowerJoint -< (affineOf $ joint_arm_lower j,())
+                  FRP e m a () ->
+                  FRP e m a () ->
+                  FRP e m (Joint,a) ()
+jointAnimation upperJoint lowerJoint = proc (j,a) ->
+    do transformA upperJoint -< (affineOf $ joint_arm_upper j,a)
+       transformA lowerJoint -< (affineOf $ joint_arm_lower j,a)
 
 -- | An acceleration function that that tries to approach a goal point.
 -- It begins slowing down when it comes within the goal radius, and otherwise

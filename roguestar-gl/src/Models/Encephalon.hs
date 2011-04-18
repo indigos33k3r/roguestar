@@ -6,12 +6,12 @@ import Quality
 import RSAGL.Math
 import RSAGL.Math.CurveExtras
 import RSAGL.Modeling
-import RSAGL.Color.RSAGLColors
 import Models.Materials
 import Models.Factions
+import Models.FactionData
 
-encephalon_head :: Quality -> Modeling
-encephalon_head _ = model $
+encephalon_head :: Faction -> Quality -> Modeling
+encephalon_head f _ = model $
     do sor $ linearInterpolation $
            points2d $ reverse
                     [(0,9),
@@ -24,16 +24,16 @@ encephalon_head _ = model $
                      (4,5),
                      (3,3)]
        deform dfn
-       material $ skin Player encephalon_skin
+       material $ skin f encephalon_skin
   where dfn (Point3D x y z) = Point3D x (min (abs x ** 4 + 7.5) y) z
 
-encephalon_eye :: Quality -> Modeling
-encephalon_eye _ = model $
+encephalon_eye :: Faction -> Quality -> Modeling
+encephalon_eye f _ = model $
     do sphere origin_point_3d 0.4
-       material $ eye Player
+       material $ eye f
 
-encephalon_suit :: Quality -> Modeling
-encephalon_suit _ = model $
+encephalon_suit :: Faction -> Quality -> Modeling
+encephalon_suit f _ = model $
     do sor $ linearInterpolation $
            points2d $ reverse
                     [(3,5),
@@ -43,12 +43,12 @@ encephalon_suit _ = model $
                      (8,0.5),
                      (7,0),
                      (0,0)]
-       material $ metal Player
+       material $ metal f
 
-encephalon :: Quality -> Modeling
-encephalon q = model $ scale' (1/30) $
-    do encephalon_head q
-       encephalon_suit q
-       translate (Vector3D (-1) 6 4) $ encephalon_eye q
-       translate (Vector3D 1 6 4) $ encephalon_eye q
+encephalon :: Faction -> Quality -> Modeling
+encephalon f q = model $ scale' (1/30) $
+    do encephalon_head f q
+       encephalon_suit f q
+       translate (Vector3D (-1) 6 4) $ encephalon_eye f q
+       translate (Vector3D 1 6 4) $ encephalon_eye f q
 

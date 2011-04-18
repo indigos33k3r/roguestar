@@ -37,26 +37,29 @@ creatureAvatar = proc () ->
 
 encephalonAvatar :: (FRPModel m) => CreatureAvatar e m
 encephalonAvatar = genericCreatureAvatar $ proc () ->
-    do libraryA -< (scene_layer_local,Encephalon)
+    do faction <- objectFaction ThisObject -< ()
+       libraryA -< (scene_layer_local,FactionedModel faction Encephalon)
        wield_point <- exportCoordinateSystem <<< arr (joint_arm_hand . snd) <<<
-           bothArms MachineArmUpper MachineArmLower (Vector3D 0.66 0.66 0) (Point3D 0.145 0.145 0) 0.33 (Point3D 0.35 0.066 0.133) -< ()
+           bothArms (Vector3D 0.66 0.66 0) (Point3D 0.145 0.145 0) 0.33 (Point3D 0.35 0.066 0.133) -< (FactionedModel faction MachineArmUpper,FactionedModel faction MachineArmLower)
        returnA -< CreatureThreadOutput {
            cto_wield_point = wield_point }
 
 recreantAvatar :: (FRPModel m) => CreatureAvatar e m
 recreantAvatar = genericCreatureAvatar $ floatBobbing 0.25 0.4 $ proc () ->
-    do libraryA -< (scene_layer_local,Recreant)
+    do faction <- objectFaction ThisObject -< ()
+       libraryA -< (scene_layer_local,FactionedModel faction Recreant)
        wield_point <- exportCoordinateSystem <<< arr (joint_arm_hand . snd) <<<
-           bothArms MachineArmUpper MachineArmLower (Vector3D 0 (-1.0) 0) (Point3D 0.3 0.075 0) 0.5 (Point3D 0.5 0.075 0.2) -< ()
+           bothArms (Vector3D 0 (-1.0) 0) (Point3D 0.3 0.075 0) 0.5 (Point3D 0.5 0.075 0.2) -< (FactionedModel faction MachineArmUpper,FactionedModel faction MachineArmLower)
        returnA -< CreatureThreadOutput {
            cto_wield_point = wield_point }
 
 androsynthAvatar :: (FRPModel m) => CreatureAvatar e m
 androsynthAvatar = genericCreatureAvatar $ proc () ->
-    do libraryA -< (scene_layer_local,Androsynth)
-       bothLegs ThinLimb ThinLimb Upright (Vector3D 0 0 1) (Point3D (0.07) 0.5 (-0.08)) 0.55 (Point3D 0.07 0 0.0) -< ()
+    do faction <- objectFaction ThisObject -< ()
+       libraryA -< (scene_layer_local,FactionedModel faction Androsynth)
+       bothLegs Upright (Vector3D 0 0 1) (Point3D (0.07) 0.5 (-0.08)) 0.55 (Point3D 0.07 0 0.0) -< (FactionedModel faction ThinLimb, FactionedModel faction ThinLimb)
        wield_point <- exportCoordinateSystem <<< arr (joint_arm_hand . snd) <<<
-           bothArms ThinLimb ThinLimb (Vector3D (1.0) (-1.0) (-1.0)) (Point3D 0.05 0.65 0.0) 0.45 (Point3D 0.15 0.34 0.1) -< ()
+           bothArms (Vector3D (1.0) (-1.0) (-1.0)) (Point3D 0.05 0.65 0.0) 0.45 (Point3D 0.15 0.34 0.1) -< (FactionedModel faction ThinLimb,FactionedModel faction ThinLimb)
        returnA -< CreatureThreadOutput {
            cto_wield_point = wield_point }
 
@@ -79,34 +82,36 @@ dustVortexAvatar = particleAvatar dust_vortex 12 (SimpleModel DustPuff) Nothing
 
 caduceatorAvatar :: (FRPModel m) => CreatureAvatar e m
 caduceatorAvatar = genericCreatureAvatar $ proc () ->
-    do libraryA -< (scene_layer_local,Caduceator)
+    do faction <- objectFaction ThisObject -< ()
+       libraryA -< (scene_layer_local,FactionedModel faction Caduceator)
        wield_point <- exportCoordinateSystem <<< arr (joint_arm_hand . snd) <<<
-           bothArms CaduceatorArmUpper CaduceatorArmLower (Vector3D 1.0 (-1.0) 1.0) (Point3D 0.1 0.15 0.257) 0.34 (Point3D 0.02 0.17 0.4) -< ()
+           bothArms (Vector3D 1.0 (-1.0) 1.0) (Point3D 0.1 0.15 0.257) 0.34 (Point3D 0.02 0.17 0.4) -< (FactionedModel faction CaduceatorArmUpper, FactionedModel faction CaduceatorArmLower)
        returnA -< CreatureThreadOutput {
            cto_wield_point = wield_point }
 
 reptilianAvatar :: (FRPModel m) => CreatureAvatar e m
 reptilianAvatar = genericCreatureAvatar $ proc () ->
-    do libraryA -< (scene_layer_local,Reptilian)
-       bothLegs ReptilianLegUpper ReptilianLegLower Upright (Vector3D 0 0 1) (Point3D (0.05) 0.25 (-0.1)) 0.29 (Point3D 0.07 0 0.0) -< ()
+    do faction <- objectFaction ThisObject -< ()
+       libraryA -< (scene_layer_local,FactionedModel faction Reptilian)
+       bothLegs Upright (Vector3D 0 0 1) (Point3D (0.05) 0.25 (-0.1)) 0.29 (Point3D 0.07 0 0.0) -< (FactionedModel faction ReptilianLegUpper,FactionedModel faction ReptilianLegLower)
        wield_point <- exportCoordinateSystem <<< arr (joint_arm_hand . snd) <<<
-           bothArms ReptilianArmUpper ReptilianArmLower (Vector3D 1.0 0.0 1.0) (Point3D (0.05) 0.35 (-0.1)) 0.25 (Point3D 0.07 0.25 0.12) -< ()
+           bothArms (Vector3D 1.0 0.0 1.0) (Point3D (0.05) 0.35 (-0.1)) 0.25 (Point3D 0.07 0.25 0.12) -< (FactionedModel faction ReptilianArmUpper, FactionedModel faction ReptilianArmLower)
        returnA -< CreatureThreadOutput {
            cto_wield_point = wield_point }
 
 hellionAvatar :: (FRPModel m) => CreatureAvatar e m
 hellionAvatar = genericCreatureAvatar $ proc () ->
-    do libraryA -< (scene_layer_local,Hellion)
-       bothEyeStalks (SimpleModel HellionAppendage)
-                     (SimpleModel HellionAppendage)
-                     (SimpleModel HellionEye)
-                     (Vector3D (0.1) 0 (-1))
+    do faction <- objectFaction ThisObject -< ()
+       libraryA -< (scene_layer_local,FactionedModel faction Hellion)
+       bothEyeStalks (Vector3D (0.1) 0 (-1))
                      (Point3D 0.06 0.55 0)
                      1.2
-                     (Point3D 0.2 0.8 0.05) -< ()
-       bothLegs HellionAppendage HellionAppendage Upright (Vector3D 0.5 0 (-1)) (Point3D 0.05 0.55 0) 0.8 (Point3D 0.05 0 0) -< ()
+                     (Point3D 0.2 0.8 0.05) -< (FactionedModel faction HellionAppendage,
+                                                FactionedModel faction HellionAppendage,
+                                                FactionedModel faction HellionEye)
+       bothLegs Upright (Vector3D 0.5 0 (-1)) (Point3D 0.05 0.55 0) 0.8 (Point3D 0.05 0 0) -< (FactionedModel faction HellionAppendage,FactionedModel faction HellionAppendage)
        wield_point <- exportCoordinateSystem <<< arr (joint_arm_hand . snd) <<<
-           bothArms HellionAppendage HellionAppendage (Vector3D 1.0 0.0 (-0.5)) (Point3D 0.1 0.6 0) 0.4 (Point3D 0.3 0.25 0.3) -< ()
+           bothArms (Vector3D 1.0 0.0 (-0.5)) (Point3D 0.1 0.6 0) 0.4 (Point3D 0.3 0.25 0.3) -< (FactionedModel faction HellionAppendage,FactionedModel faction HellionAppendage)
        returnA -< CreatureThreadOutput {
            cto_wield_point = wield_point }
 
