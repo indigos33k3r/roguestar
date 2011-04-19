@@ -3,7 +3,7 @@ module PlanetData
     (PlanetInfo(..),
      addTown,
      all_planets,
-     pgto_planets)
+     nonaligned_planets)
     where
 
 import TerrainData
@@ -32,8 +32,8 @@ data PlanetInfo = PlanetInfo {
     planet_info_node_type :: NodeType }
         deriving (Read,Show)
 
-pgto :: Integer -> B.ByteString -> Biome -> PlanetInfo
-pgto x name biome = PlanetInfo {
+nonaligned :: Integer -> B.ByteString -> Biome -> PlanetInfo
+nonaligned x name biome = PlanetInfo {
     planet_info_priority = fromInteger x / 3,
     planet_info_name = case name of
                            "" -> Nothing
@@ -48,33 +48,46 @@ pgto x name biome = PlanetInfo {
     planet_info_town = [(1,Portal)],
     planet_info_node_type = Anchor }
 
+cyber :: B.ByteString -> Biome -> PlanetInfo
+cyber name biome = PlanetInfo {
+    planet_info_priority = 0.0,
+    planet_info_name = case name of
+                           "" -> Nothing
+                           _ -> Just name,
+    planet_info_depth = 5,
+    planet_info_biome = biome,
+    planet_info_dungeon = FrozenDungeon,
+    planet_info_town = [(1,CyberGate)],
+    planet_info_node_type = Anchor }
+
 addTown :: PlanetInfo -> [(Rational,BuildingType)] -> PlanetInfo
 addTown planet_info town = planet_info { planet_info_town = planet_info_town planet_info ++ town }
 
 all_planets :: [PlanetInfo]
-all_planets = concat [pgto_planets]
+all_planets = concat [nonaligned_planets]
 
-pgto_planets :: [PlanetInfo]
-pgto_planets = [
-    pgto 1 "" RockBiome,
-    pgto 1 "" IcyRockBiome,
-    pgto 1 "" TundraBiome,
-    pgto 1 "" DesertBiome,
-    pgto 1 "" MountainBiome,
-    pgto 2 "roanoke" SwampBiome,
-    pgto 2 "pamlico" SwampBiome,
-    pgto 2 "pungo" ForestBiome,
-    pgto 2 "neuse" ForestBiome,
-    pgto 2 "crabtree" SwampBiome,
-    pgto 2 "eno" SwampBiome `addTown` [(1%20,Node Monolith)],
-    pgto 2 "yadkin" SwampBiome,
-    pgto 2 "catawba" ForestBiome,
-    pgto 2 "pasquotank" ForestBiome,
-    pgto 3 "dogwood" GrasslandBiome,
-    pgto 3 "emerald" GrasslandBiome,
-    pgto 3 "cardinal" GrasslandBiome,
-    pgto 4 "currituck" OceanBiome,
-    pgto 4 "hatteras" OceanBiome,
-    pgto 4 "lookout" OceanBiome,
-    pgto 4 "ocracoke" OceanBiome]
+nonaligned_planets :: [PlanetInfo]
+nonaligned_planets = [
+    cyber "cybernet" IcyRockBiome,
+    nonaligned 1 "" RockBiome,
+    nonaligned 1 "" IcyRockBiome,
+    nonaligned 1 "" TundraBiome,
+    nonaligned 1 "" DesertBiome,
+    nonaligned 1 "" MountainBiome,
+    nonaligned 2 "roanoke" SwampBiome,
+    nonaligned 2 "pamlico" SwampBiome,
+    nonaligned 2 "pungo" ForestBiome,
+    nonaligned 2 "neuse" ForestBiome,
+    nonaligned 2 "crabtree" SwampBiome,
+    nonaligned 2 "eno" SwampBiome `addTown` [(1%20,Node Monolith)],
+    nonaligned 2 "yadkin" SwampBiome,
+    nonaligned 2 "catawba" ForestBiome,
+    nonaligned 2 "pasquotank" ForestBiome,
+    nonaligned 3 "dogwood" GrasslandBiome,
+    nonaligned 3 "emerald" GrasslandBiome,
+    nonaligned 3 "cardinal" GrasslandBiome,
+    nonaligned 4 "currituck" OceanBiome,
+    nonaligned 4 "hatteras" OceanBiome,
+    nonaligned 4 "lookout" OceanBiome,
+    nonaligned 4 "ocracoke" OceanBiome]
 

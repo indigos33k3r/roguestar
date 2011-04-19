@@ -91,18 +91,18 @@ whereIs :: (DBReadable db) => Reference a -> DBPerception db (Location (Referenc
 whereIs ref = liftDB $ dbWhere ref
 
 localBiome :: (DBReadable db) => DBPerception db Biome
-localBiome = 
+localBiome =
     do plane_ref <- whatPlaneAmIOn
        liftDB $ liftM plane_biome $ dbGetPlane plane_ref
 
 compass :: (DBReadable db) => DBPerception db Facing
 compass =
-    do let signalling_building_types = [Portal] ++ map Node all_nodes
+    do let signalling_building_types = [Portal,CyberGate] ++ map Node all_nodes
        (_,pos) <- whereAmI
        plane <- whatPlaneAmIOn
        liftDB $
            do buildings <- liftM (sortBy $ comparing $ distanceBetweenSquared pos . parent) $
-                  filterM (liftM (`elem` signalling_building_types) . buildingType . child) =<< 
+                  filterM (liftM (`elem` signalling_building_types) . buildingType . child) =<<
                                dbGetContents plane
               return $ maybe Here (faceAt pos . parent) $ listToMaybe buildings
 

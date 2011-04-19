@@ -56,22 +56,35 @@ activateBuilding Portal creature_ref building_ref =
                    () | cy < py ->
                        do m_subsequent_loc :: Maybe (Location PlaneRef Subsequent) <- liftM listToMaybe $ dbGetContents plane_ref
                           case m_subsequent_loc of
-                              Just loc -> (portalCreatureTo 1 creature_ref $ child loc) >> return True
+                              Just loc -> (portalCreatureTo Portal 1 creature_ref $ child loc) >> return True
                               _ -> throwError $ DBErrorFlag NoStargateAddress
                    () | cy > py ->
                        do m_previous_loc :: Maybe Subsequent <- liftM extractParent $ dbWhere plane_ref
                           case m_previous_loc of
-                              Just loc -> (portalCreatureTo (-1) creature_ref $ subsequent_to loc) >> return True
+                              Just loc -> (portalCreatureTo Portal (-1) creature_ref $ subsequent_to loc) >> return True
                               _ -> throwError $ DBErrorFlag NoStargateAddress
                    () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
            _ -> throwError $ DBError "activateBuilding: can't decode building-creature relative positions"
-
+activateBuilding CyberGate creature_ref building_ref =
+    do m_creature_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere creature_ref
+       m_portal_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere building_ref
+       when (fmap fst m_creature_position /= fmap fst m_portal_position) $ throwError $ DBError "activateBuilding: creature and portal on different planes"
+       case (m_creature_position,m_portal_position) of
+           (Just (plane_ref,Position (cx,cy)),Just (_,Position (px,py))) ->
+                case () of
+                    () | cy < py && cx == px ->
+                        do m_subsequent_loc :: Maybe (Location PlaneRef Subsequent) <- liftM listToMaybe $ dbGetContents plane_ref
+                           case m_subsequent_loc of
+                               Just loc -> (portalCreatureTo (Node Monolith) 0 creature_ref $ child loc) >> return True
+                               _ -> throwError $ DBErrorFlag NoStargateAddress
+                    () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
+           _ -> throwError $ DBError "activateBuilding: can't decode building-creature relative positions"
 
 -- | Deposit a creature in front of (-1) or behind (+1) a random portal on the specified plane.  Returns
 -- the dbMove result from the action.
-portalCreatureTo :: Integer -> CreatureRef -> PlaneRef -> DB (Location CreatureRef (),Location CreatureRef Standing)
-portalCreatureTo offset creature_ref plane_ref =
-    do portals <- filterM (liftM (== Portal) . buildingType) =<< dbGetContents plane_ref
+portalCreatureTo :: BuildingType -> Integer -> CreatureRef -> PlaneRef -> DB (Location CreatureRef (),Location CreatureRef Standing)
+portalCreatureTo building_type offset creature_ref plane_ref =
+    do portals <- filterM (liftM (== building_type) . buildingType) =<< dbGetContents plane_ref
        ideal_position <- if null portals
            then liftM2 (\x y -> Position (x,y)) (getRandomR (-100,100)) (getRandomR (-100,100))
            else do portal <- pickM portals

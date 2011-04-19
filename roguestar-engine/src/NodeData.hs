@@ -3,7 +3,6 @@ module NodeData
     where
 
 import BuildingData
-import CreatureData
 import CharacterData
 import CharacterAdvancement
 

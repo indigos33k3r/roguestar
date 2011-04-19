@@ -11,7 +11,7 @@ module BuildingData
 data Building = Building
         deriving (Read,Show)
 
-data BuildingType = Node NodeType | Portal
+data BuildingType = Node NodeType | Portal | CyberGate
         deriving (Eq,Ord,Read,Show)
 
 data NodeType = Monolith | Anchor
@@ -35,4 +35,9 @@ buildingOccupies :: BuildingType -> [(Integer,Integer)]
 buildingOccupies (Node _) = [(0,0)]
 -- Portal:   XXX
 buildingOccupies Portal = [(0,0),(-1,0),(1,0)]
+-- Cybergate: XXX
+--           XX XX
+--          XX   XX
+--          X     X
+buildingOccupies CyberGate = [(-3,-3),(-3,-2),(-2,-2),(-2,-1),(-1,-1),(-1,0),(0,0),(1,-1),(1,0),(2,-2),(2,-1),(3,-3),(3,-2)]
 
