@@ -25,6 +25,7 @@ import RSAGL.Math.AbstractVector
 import RSAGL.Math.Angle
 import RSAGL.Math.FMod
 import RSAGL.Math.Types
+import Debug.Trace
 
 -- | This simulates a single foot that hops along by itself whenever its
 -- coordinate system moves.  A foot always trys to walk on the plane @y == 0@.
@@ -51,7 +52,7 @@ foot :: (CoordinateSystemClass s,s ~ StateOf m) =>
 foot forward_radius side_radius lift_radius = proc emergency_footdown ->
        -- total forward travel of the foot:
     do fwd_total_stepage <- arr (* recip (2*forward_radius)) <<<
-           odometer root_coordinate_system (Vector3D 0 0 1) -< ()
+           odometer root_coordinate_system (Vector3D 0 1 0) -< ()
        -- total sideways travel of the foot
        side_total_stepage <- arr (* recip (2*side_radius)) <<<
            odometer root_coordinate_system (Vector3D 1 0 0) -< ()
@@ -73,14 +74,14 @@ foot forward_radius side_radius lift_radius = proc emergency_footdown ->
        let stepage_offset = if cyclic_stepage > 1
                                 then 1.5 - cyclic_stepage
                                 else cyclic_stepage - 0.5
-       let step_vector = scale (Vector3D (2*side_radius) 0 (2*forward_radius)) $
+       let step_vector = scale (Vector3D (2*side_radius) (2*forward_radius) 0) $
                              vectorScaleTo stepage_offset $
-                                 Vector3D side_total_stepage 0 fwd_total_stepage
+                                 Vector3D side_total_stepage fwd_total_stepage 0
        foot_position <- importA <<<
-           arr (remoteCSN root_coordinate_system $ scale (Vector3D 1 0 1)) <<<
+           arr (remoteCSN root_coordinate_system $ scale (Vector3D 1 1 0)) <<<
                exportA -< translate step_vector origin_point_3d
        csn_foot_position <- exportA -<
-           translate (Vector3D 0 foot_lift 0) foot_position
+           translate (Vector3D 0 0 foot_lift) foot_position
        returnA -< (csn_foot_position,cyclic_stepage > 1)
 
 data LegStyle = Upright | Insectoid
@@ -129,7 +130,7 @@ leg style bend base len end animation = Leg $ proc (feet_that_are_down,a) ->
                   feet_that_are_down
   where insectoid_style = sqrt (len^2 - foot_ideal_distance_squared) / 4
         upright_style = case (base,end) of
-            (Point3D _ base_y _,Point3D _ end_y _) -> sqrt $ len^2 - (base_y - end_y)^2
+            (Point3D _ _ base_z,Point3D _ _ end_z) -> sqrt $ len^2 - (base_z - end_z)^2
         foot_ideal_distance_squared = distanceBetweenSquared base end
         foot_radius = case style of
             Insectoid -> insectoid_style

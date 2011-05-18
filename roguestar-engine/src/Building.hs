@@ -86,7 +86,7 @@ portalCreatureTo :: BuildingType -> Integer -> CreatureRef -> PlaneRef -> DB (Lo
 portalCreatureTo building_type offset creature_ref plane_ref =
     do portals <- filterM (liftM (== building_type) . buildingType) =<< dbGetContents plane_ref
        ideal_position <- if null portals
-           then liftM2 (\x y -> Position (x,y)) (getRandomR (-100,100)) (getRandomR (-100,100))
+           then liftM2 (\x y -> Position (x,y)) (getRandomR (-40,40)) (getRandomR (-40,40))
            else do portal <- pickM portals
                    m_position <- liftM (fmap (offsetPosition (0,offset)) . extractParent) $ dbWhere portal
                    return $ fromMaybe (Position (0,0)) m_position

@@ -89,16 +89,16 @@ dynamicSkyFilter max_black min_white origF = case () of
 
 -- | Generate a low level 'Scattering' model directly from an 'AtmosphereLayer'.
 atmosphereLayerToScatteringModel :: AtmosphereLayer -> Scattering
-atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Air }) = 
+atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Air }) =
      rayleigh (atmosphere_altitude l / atmosphere_thickness l) rayleigh_sky
 atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Vapor }) = mconcat [
     elasticOmnidirectionalScatter (atmosphere_altitude l / atmosphere_thickness l)
                                   (grayscale $ linear_value $ viewChannel channel_brightness rayleigh_sky),
     elasticForwardScatter (atmosphere_altitude l / atmosphere_thickness l) (fromDegrees 30)
                           (grayscale $ linear_value $ viewChannel channel_brightness rayleigh_sky)]
-atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Dust c }) = 
+atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Dust c }) =
     dust (f2f $ atmosphere_altitude l / atmosphere_thickness l) c
-atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Fog c }) = 
+atmosphereLayerToScatteringModel l@(AtmosphereLayer { atmosphere_composition = Fog c }) =
     fog (f2f $ atmosphere_altitude l / atmosphere_thickness l) c
 
 -- | Cast a ray that can intersect a geometry at exactly two or zero points, given a default value
@@ -130,7 +130,7 @@ atmosphereLayerScattering :: AtmosphereLayer -> (Vector3D,RGB) -> Ray3D -> RGB
 atmosphereLayerScattering l (sun_vector,sun_color) r = castSkyRay (sphere origin_point_3d (1 + atmosphere_altitude l)) (grayscale 0) scatterF r
     where scatterF p_near p_far = fst $ traceScattering (const scattering_model) 
               (\p -> (sun_vector,scalarMultiply (lightingF p) sun_color)) adaptiveSamples p_near p_far $
-                  round $ max 20 $ (* 800) $ toRotations $ angleBetween (Vector3D 0 1 0) (ray_vector r)
+                  round $ max 20 $ (* 800) $ toRotations $ angleBetween (Vector3D 0 0 1) (ray_vector r)
           scattering_model = achromaticAbsorbtion $ atmosphereLayerToScatteringModel l
 	  lightingF p = f2f $ castSkyRay UnitSphere 1 
 	                                        (\p_near p_far -> max 0 $ sqrt (atmosphere_altitude l) - 1 + sqrt (4 - distanceBetween p_near p_far ** 2) / 2)
@@ -177,10 +177,10 @@ atmosphereScatteringMaterial _ suns _ |
         return ()
 atmosphereScatteringMaterial atm suns sky_filter = material $
     do filtering $ ApplicativeWrapper $ Left $
-           \(SurfaceVertex3D p _) -> absorbtionFilter $ atmosphereAbsorbtion atm (Point3D 0 1 0) (vectorToFrom p origin_point_3d)
+           \(SurfaceVertex3D p _) -> absorbtionFilter $ atmosphereAbsorbtion atm (Point3D 0 0 1) (vectorToFrom p origin_point_3d)
        case m_skyFilterF of
            Just skyFilterF -> emissive $ ApplicativeWrapper $ Left $ 
 	       \(SurfaceVertex3D p _) -> skyFilterF $ scatteringF (vectorToFrom p origin_point_3d)
 	   Nothing -> return ()
-    where scatteringF = atmosphereScattering atm suns (Point3D 0 1 0)
+    where scatteringF = atmosphereScattering atm suns (Point3D 0 0 1)
           m_skyFilterF = sky_filter scatteringF

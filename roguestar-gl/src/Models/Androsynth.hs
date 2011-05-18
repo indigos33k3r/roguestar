@@ -10,7 +10,8 @@ import Models.Factions
 import Models.FactionData
 
 androsynth_head :: Faction -> Quality -> Modeling
-androsynth_head f _ = model $
+androsynth_head f _ = rotate (Vector3D 0 0 1) (fromDegrees 180) $
+                      rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $ model $
     do model $
            do smoothbox 0.2 (Point3D (-2) 0 (-2)) (Point3D (-3) 10 (-5))  -- side panels/"ears"
               smoothbox 0.2 (Point3D 2 0 (-2))    (Point3D 3 10 (-5))
@@ -35,7 +36,8 @@ androsynth_head f _ = model $
               concordance_dark_glass
 
 androsynth_body :: Faction -> Quality -> Modeling
-androsynth_body f _ = model $
+androsynth_body f _ = rotate (Vector3D 0 0 1) (fromDegrees 180) $
+                      rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $ model $
     do model $
            do smoothbox 0.2 (Point3D (-2) 7 (-2.5)) (Point3D 2 8 2.5)
               smoothbox 0.2 (Point3D (-3) 0 (-3.5)) (Point3D 3 1 3.5)
@@ -46,8 +48,8 @@ androsynth :: Faction -> Quality -> Modeling
 androsynth f q = model $
     do model $
            do androsynth_head f q
-              affine $ translate (Vector3D 0 30 0)
+              affine $ translate (Vector3D 0 0 30)
        model $
            do androsynth_body f q
-	      affine $ translate (Vector3D 0 20 0)
+	      affine $ translate (Vector3D 0 0 20)
        affine $ scale' (1/40)

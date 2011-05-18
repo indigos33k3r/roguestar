@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, ScopedTypeVariables, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ExistentialQuantification, ScopedTypeVariables, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, PatternGuards #-}
 module RSAGL.Modeling.Model
     (Model,
      Modeling,
@@ -319,6 +319,7 @@ closedDisc center up_vector radius = model $
 closedCone :: (Point3D,RSdouble) -> (Point3D,RSdouble) -> Modeling
 closedCone a b = model $
     do openCone a b
+       -- we want open discs here, because closed disks don't mesh well with the cone
        openDisc (fst a) (vectorToFrom (fst a) (fst b)) 0 (snd a * (1 + recip (2^8)))
        openDisc (fst b) (vectorToFrom (fst b) (fst a)) 0 (snd b * (1 + recip (2^8)))
 

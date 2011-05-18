@@ -1,1 +1,5 @@
 .vim.makehere.sh
+.dist-scion
+.hsproject
+.project
+dist

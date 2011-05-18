@@ -61,17 +61,16 @@ regularPrism (a,ra) (b,rb) n =
         b2 = rotateY (fromRotations $ recip $ fromInteger n) b1
         quad = quadralateral a1 a2 b2 b1
 
--- | A rectangular height field rising off of the x-z plane.
+-- | A rectangular height field rising off of the x-y plane.
 heightField :: (RSdouble,RSdouble) -> (RSdouble,RSdouble) -> ((RSdouble,RSdouble) -> RSdouble) -> Modeling
-heightField (x1,z1) (x2,z2) f = model $
-    do quadralateral (Point3D x1 0 z1) (Point3D x1 0 z2) (Point3D x2 0 z2) (Point3D x2 0 z1)
+heightField (x1,y1) (x2,y2) f = model $
+    do quadralateral (Point3D x1 y1 0) (Point3D x2 y1 0) (Point3D x2 y2 0) (Point3D x1 y2 0)
        heightMap f
-       
 
--- | A circular height field rising off of the x-z plane.
+-- | A circular height field rising off of the x-y plane.
 heightDisc :: (RSdouble,RSdouble) -> RSdouble -> ((RSdouble,RSdouble) -> RSdouble) -> Modeling
 heightDisc (x,y) r f = model $
-    do closedDisc (Point3D x 0 y) (Vector3D 0 1 0) r
+    do closedDisc (Point3D x y 0) (Vector3D 0 0 1) r
        heightMap f
 
 rotationGroup :: (AffineTransformable a) => Vector3D -> Integer -> a -> [a]
@@ -166,7 +165,7 @@ waves wave_length amplitude (SurfaceVertex3D (Point3D x y z) _) = (wave_f x + wa
 -- | Raises or lowers each point in a model along the y-axis according to its (x,z) coordinate.
 -- Typically this is used to construct height fields.
 heightMap :: ((RSdouble,RSdouble) -> RSdouble) -> Modeling
-heightMap f = deform $ \(Point3D x y z) -> Point3D x (y + f (x,z)) z
+heightMap f = deform $ \(Point3D x y z) -> Point3D x y (z + f (x,y))
 
 -- | Turns off calculation of surface normals.  This can speed
 -- up modeling in some cases if we know we don't need them.

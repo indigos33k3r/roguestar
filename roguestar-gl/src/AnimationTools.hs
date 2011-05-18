@@ -65,8 +65,8 @@ phaseWeaponAvatar phase_weapon_model weapon_size = proc tti ->
             do libraryA -< (scene_layer_local,phase_weapon_model)
                accumulateSceneA -< (scene_layer_local,lightSource $ case fmap (toSeconds . (t_now `sub`)) m_atk_time of
                    Just t | t < 1.0 -> PointLight {
-                       lightsource_position = Point3D 0 0 $ 0.15 + t*t*realToFrac weapon_size,
-                       lightsource_radius = measure (Point3D 0 0 $ 0.5*realToFrac weapon_size) (Point3D 0 0 0),
+                       lightsource_position = Point3D 0 0 (0.15 + t*t*realToFrac weapon_size),
+                       lightsource_radius = measure (Point3D 0 (0.5*realToFrac weapon_size) 0) (Point3D 0 0 0),
                        lightsource_color = grayscale $ 1.0 - t,
                        lightsource_ambient = grayscale $ (1.0 - t)^2 }
                    _ | otherwise -> NoLight)
@@ -97,7 +97,7 @@ energySwordAvatar energy_color sword_size = proc tti ->
                libraryA -< (scene_layer_local,
                             EnergyThing EnergySword energy_color)
                transformA libraryA -<
-                   (Affine $ translate (Vector3D 0 2.9 0) .
+                   (Affine $ translate (Vector3D 0 0 2.9) .
                              scale (Vector3D 1 blade_length 1),
                        (scene_layer_local,
                             EnergyThing EnergyCylinder energy_color))

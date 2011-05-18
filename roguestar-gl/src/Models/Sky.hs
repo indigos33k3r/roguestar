@@ -112,11 +112,11 @@ biomeAtmosphere _ = (Nothing,Just hot_pink_atmosphere)
 -- | 'sunVectorOf' indicates vector pointing at the sun.
 sunVector :: SkyInfo -> Vector3D
 sunVector sky_info =
-    rotate (Vector3D 1 0 0) (fromDegrees $ (realToFrac $ sky_info_degrees_latitude sky_info) +
-                                             (cosine $ fromDegrees $ realToFrac $ sky_info_degrees_orbital sky_info) * 
-					     (realToFrac $ sky_info_degrees_axial_tilt sky_info)) $
-    rotate (Vector3D 0 0 1) (fromDegrees $ realToFrac $ sky_info_degrees_after_midnight sky_info) $ 
-    Vector3D 0 (-1) 0
+    rotate (Vector3D 1 0 0)
+           (fromDegrees $ (realToFrac $ sky_info_degrees_latitude sky_info) +
+               (cosine $ fromDegrees $ realToFrac $ sky_info_degrees_orbital sky_info) *
+               (realToFrac $ sky_info_degrees_axial_tilt sky_info)) $
+    rotate (Vector3D 0 1 0) (fromDegrees $ realToFrac $ sky_info_degrees_after_midnight sky_info) $ Vector3D 0 0 (-1)
 
 -- | Apparent temperature of a color in kelvins.
 temperatureColor :: Integer -> RGB
@@ -142,8 +142,8 @@ makeSky sky_info | Just atmo <- snd $ biomeAtmosphere $ sky_info_biome sky_info 
     do hilly_silhouette
        model $
            do let v = sunVector sky_info
-              skyHemisphere origin_point_3d (Vector3D 0 1 0) 5.0
-              affine $ scale (Vector3D 2 1 2)
+              skyHemisphere origin_point_3d (Vector3D 0 0 1) 5.0
+              affine $ scale (Vector3D 2 2 2)
               material $ atmosphereScatteringMaterial
                   atmo
                   [(v,adjustColor channel_value maximize $
@@ -172,7 +172,7 @@ skyAbsorbtionFilter sky_info = LightSourceLayerTransform $ \entering_layer origi
 
 -- | The amount of fade of the sun based on falling below the horizon.
 sunlightFadeFactor :: Angle -> Vector3D -> RSdouble
-sunlightFadeFactor tolerance v = max 0 $ lerpBetweenClamped (85,toDegrees $ angleBetween v (Vector3D 0 1 0),95+toDegrees tolerance) (1.0,0.0)
+sunlightFadeFactor tolerance v = max 0 $ lerpBetweenClamped (85,toDegrees $ angleBetween v (Vector3D 0 0 1),95+toDegrees tolerance) (1.0,0.0)
 
 -- | Information about the lighting environment.  All values are between 0 and 1, indicating a
 -- relative scale compared to the normal, full brightness.
@@ -204,13 +204,13 @@ lightingConfiguration sky_info = result
 ambientSkyRadiation :: SkyInfo -> RGB
 ambientSkyRadiation sky_info | Nothing <- snd $ biomeAtmosphere $ sky_info_biome sky_info = blackbody
 ambientSkyRadiation sky_info | Nothing <- fst $ biomeAtmosphere $ sky_info_biome sky_info = blackbody
-ambientSkyRadiation sky_info = abstractAverage $ map (atmosphereScattering atmosphere [sun_info] (Point3D 0 1 0)) test_vectors
+ambientSkyRadiation sky_info = abstractAverage $ map (atmosphereScattering atmosphere [sun_info] (Point3D 0 0 1)) test_vectors
     where atmosphere = fromMaybe mempty $ snd $ biomeAtmosphere $ sky_info_biome sky_info
           sun_info = (sunVector sky_info,maybe blackbody sunColor $ sunInfoOf sky_info)
-	  test_vectors = map vectorNormalize $ 
+	  test_vectors = map vectorNormalize $
 	      do x <- [1,0,-1]
 	         y <- [1,0,-1]
-		 return $ Vector3D x 1 y
+		 return $ Vector3D x y 1
 
 -- 'makeSun' generates a perspectiveSphere of the sun.
 makeSun :: SunInfo -> Modeling
@@ -219,10 +219,10 @@ makeSun sun_info = model $
        let temp = sun_info_kelvins sun_info
        let temperaturePattern t = pattern (cloudy (fromInteger $ temp + sun_info_size_adjustment sun_info) base_star_size) 
                [(0.0,pure $ temperatureColor $ t + 700),(0.5,pure $ temperatureColor t),(1.0,pure $ temperatureColor $ t - 700)]
-       perspectiveSphere (Point3D 0 (-10) 0) size origin_point_3d
-       material $ 
+       perspectiveSphere (Point3D 0 0 (-10)) size origin_point_3d
+       material $
            do pigment $ pure $ grayscale 0
-	      emissive $ pattern (spherical (Point3D 0 (size-10) 0) size) [(0.0,temperaturePattern temp),
+	      emissive $ pattern (spherical (Point3D 0 0 (size-10)) size) [(0.0,temperaturePattern temp),
                                                                            (0.5,temperaturePattern $ temp - 200),
                                                                            (0.75,temperaturePattern $ temp - 500),
                                                                            (0.9,temperaturePattern $ temp - 800),
@@ -230,8 +230,8 @@ makeSun sun_info = model $
 
 hilly_silhouette :: Modeling
 hilly_silhouette = model $
-    do heightDisc (0,0) 8 (\(x,z) -> perlinNoise (Point3D x 0 z) - 6.9 + distanceBetween origin_point_3d (Point3D x 0 z))
-       affine $ scale (Vector3D 1 0.2 1)
+    do heightDisc (0,0) 8 (\(x,y) -> perlinNoise (Point3D x y 0) - 6.9 + distanceBetween origin_point_3d (Point3D x y 0))
+       affine $ scale (Vector3D 1 1 0.2)
        material $ pigment $ pure blackbody
        disregardSurfaceNormals
 

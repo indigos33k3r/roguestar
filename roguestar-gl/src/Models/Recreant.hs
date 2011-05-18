@@ -10,7 +10,7 @@ import Models.Factions
 import Models.FactionData
 
 recreant_antenna_small :: Quality -> Modeling
-recreant_antenna_small _ =
+recreant_antenna_small _ = rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $
     do sor $ linearInterpolation $
            points2d $ reverse
 	            [(1,6.5),
@@ -19,7 +19,7 @@ recreant_antenna_small _ =
                      (1.5,6)]
 
 recreant_antenna_large :: Quality -> Modeling
-recreant_antenna_large _ =
+recreant_antenna_large _ = rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $
     do sor $ linearInterpolation $
            points2d $ reverse
 	            [(2,4.5),
@@ -28,7 +28,7 @@ recreant_antenna_large _ =
                      (2.5,4)]
 
 recreant_body :: Quality -> Modeling
-recreant_body _ =
+recreant_body _ = rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $
     do sor $ linearInterpolation $
                   points2d $ reverse
 		           [(0,3),

@@ -47,10 +47,10 @@ data Vortex = Vortex {
 vortex :: Vortex
 vortex = Vortex {
     vortex_height = 0.5,
-    vortex_containment = 100,
+    vortex_containment = 20,
     vortex_drag = 1.0,
     vortex_binding = 0,
-    vortex_repulsion = 1.0,
+    vortex_repulsion = 0.25,
     vortex_rotation = const 1.0,
     vortex_base_angle = fromDegrees 0,
     vortex_base_force = 10,
@@ -60,7 +60,7 @@ vortexForceFunction :: Vortex -> [(Point3D,Rate Vector3D)] -> ForceFunction
 vortexForceFunction v particles =
     concatForces [
         -- Bind the entire system to the origin of the local coordinate system.
-        quadraticTrap (vortex_containment v) (Point3D 0 (vortex_height v) 0),
+        quadraticTrap (vortex_containment v) (Point3D 0 0 (vortex_height v)),
         -- Damp down runaway behavior.
         drag (vortex_drag v),
         -- Repulse points that get too close.
@@ -70,20 +70,20 @@ vortexForceFunction v particles =
             (map fst particles),
         -- Attract points that wonder too far away.
         concatForces $ map (quadraticTrap (vortex_binding v) . fst) particles,
-        -- Swirl points around the y axis.
+        -- Swirl points around the z axis.
         \_ p _ -> perSecond $ perSecond $
             (vectorNormalize $ vectorToFrom origin_point_3d p) `crossProduct`
-            (Vector3D 0 (vortex_rotation v $ distanceBetween origin_point_3d p) 0),
+            (Vector3D 0 0 (vortex_rotation v $ distanceBetween origin_point_3d p)),
         -- Bounce off the ground.
         constrainForce (\ _ (Point3D x y z) _ ->
                            fromDegrees 90 `sub`
                            angleBetween (vectorToFrom (Point3D x y z) origin_point_3d)
-                                        (Vector3D 0 1 0)
+                                        (Vector3D 0 0 1)
                                < vortex_base_angle v) $
-            \_ (Point3D x _ z) _ -> perSecond $ perSecond $ vectorScaleTo (vortex_base_force v) $
-                vectorScaleTo (sine $ vortex_base_angle v) (Vector3D (-x) 0 (-z)) `add`
-                (Vector3D 0 (cosine $ vortex_base_angle v) 0),
-        \_ _ _ -> perSecond $ perSecond $ Vector3D 0 (negate $ vortex_gravity v) 0
+            \_ (Point3D x y _) _ -> perSecond $ perSecond $ vectorScaleTo (vortex_base_force v) $
+                vectorScaleTo (sine $ vortex_base_angle v) (Vector3D (-x) (-y) 0) `add`
+                (Vector3D 0 0 (cosine $ vortex_base_angle v)),
+        \_ _ _ -> perSecond $ perSecond $ Vector3D 0 0 (negate $ vortex_gravity v)
         ]
 
 glower :: (FRPModel m, FRPModes m ~ RoguestarModes,
@@ -100,33 +100,29 @@ glower library_model = proc (p,_,_) ->
 
 random_particles :: [(Point3D,Rate Vector3D)]
 random_particles = makeAParticle vs
-    where makeAParticle (a:b:c:d:e:f:xs) = (Point3D a (b+0.5) c,perSecond $ Vector3D d e f) : makeAParticle xs
+    where makeAParticle (a:b:c:d:e:f:xs) = (Point3D a b (c+0.5),perSecond $ Vector3D d e f) : makeAParticle xs
           makeAParticle _ = error "Debauchery is perhaps an act of despair in the face of infinity."
           vs = randomRs (-0.5,0.5) $ mkStdGen 5
 
 particleAvatar :: (FRPModel m) => Vortex -> Integer -> LibraryModel -> (Maybe RGB) -> CreatureAvatar e m
-particleAvatar vortex_spec num_particles library_model m_color = genericCreatureAvatar $ proc () ->
+particleAvatar vortex_spec num_particles library_model m_color = genericCreatureAvatar nonrotating $ proc () ->
     do a <- inertia root_coordinate_system origin_point_3d -< ()
        particles <- particleSystem fps120 (genericTake num_particles random_particles) -<
            \particles -> concatForces [vortexForceFunction vortex_spec particles, \_ _ _ -> a]
-       glower library_model -< particles !! 0
-       glower library_model -< particles !! 1
-       glower library_model -< particles !! 2
-       glower library_model -< particles !! 3
-       glower library_model -< particles !! 4
-       glower library_model -< particles !! 5
-       glower library_model -< particles !! 6
-       glower library_model -< particles !! 7
+       (foldr1 (<<<) $ flip map [1..num_particles] $
+           \_ -> proc particles ->
+               do glower library_model -< head particles
+                  returnA -< tail particles) -< particles
        accumulateSceneA -< (scene_layer_local,
                             lightSource $
            case m_color of
-               Just color -> PointLight (Point3D 0 0.5 0)
-                                        (measure (Point3D 0 0.5 0) (Point3D 0 0 0))
+               Just color -> PointLight (abstractAverage $ map (\(p,_,_) -> p) particles)
+                                        (measure (Point3D 0 0 0.5) (Point3D 0 0 0))
                                         color
                                         color
                Nothing -> NoLight)
        t <- threadTime -< ()
-       wield_point <- exportCoordinateSystem -< translate (rotateY (fromRotations $ t `cyclical'` (fromSeconds 3)) $ Vector3D 0.25 0.5 0)
+       wield_point <- exportCoordinateSystem -< translate (rotateY (fromRotations $ t `cyclical'` (fromSeconds 3)) $ Vector3D 0.25 0.0 0.5)
        returnA -< (CreatureThreadOutput {
            cto_wield_point = wield_point })
 

@@ -88,6 +88,8 @@ toModel (SimpleModel Monolith) = monolith
 toModel (SimpleModel PlanetaryAnchorCore) = planetary_anchor_core
 toModel (SimpleModel PlanetaryAnchorFlange) = planetary_anchor_flange
 toModel (SimpleModel Portal) = portal
+toModel (SimpleModel Cybergate) = cybergate
+toModel (SimpleModel Cyberpylon) = cyberpylon
 
 -- |
 -- Models that should be displayed at lower quality.

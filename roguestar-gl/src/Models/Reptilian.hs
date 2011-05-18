@@ -16,7 +16,8 @@ import Models.Factions
 import Models.FactionData
 
 reptilian :: Faction -> Quality -> Modeling
-reptilian f _ = model $
+reptilian f _ = rotate (Vector3D 0 0 1) (fromDegrees 180) $
+                rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $ model $
     do model $
            do tube $ linearInterpolation
                   [(0    ,Point3D 0 0   (-6)),

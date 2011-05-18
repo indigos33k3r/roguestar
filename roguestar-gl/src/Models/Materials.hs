@@ -133,11 +133,16 @@ encephalon_skin = pigment $ pattern (cloudy 32 0.1) [(0.0,pure mauve),(1.0,pure 
  - Material by Energy Type
  - ------------------------------------------------------}
 
+--  Blue:   0.1 0.3 0.9
+--  Yellow: 0.3 0.3 0.0
+--  Red:    0.6 0.0 0.0
+--  Green:  0.0 0.4 0.1
+--  Sum to: 1.0 1.0 1.0
 energyColor :: EnergyColor -> RGB
-energyColor Blue = blue
-energyColor Yellow = yellow
-energyColor Red = red
-energyColor Green = bright_green
+energyColor Blue = RGB 0.1 0.3 0.9
+energyColor Yellow = RGB 0.3 0.3 0.0
+energyColor Red = RGB 0.6 0.0 0.0
+energyColor Green = RGB 0.0 0.4 0.1
 
 energyMaterial :: EnergyColor -> Modeling
 energyMaterial c = material $

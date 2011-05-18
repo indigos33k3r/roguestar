@@ -108,7 +108,7 @@ planarGameplayDispatch = proc () ->
        sky_info <- getSkyInfo -< ()
        sky -< sky_info
        m_lookat <- whenJust (approachA 1.0 (perSecond 3.0)) <<< sticky isJust Nothing <<<
-           arr (fmap (\(x,y) -> Point3D (realToFrac x) 0.25 (negate $ realToFrac y))) <<< centerCoordinates -< ()
+           arr (fmap (\(x,y) -> Point3D (realToFrac x) (realToFrac y) 0.25)) <<< centerCoordinates -< ()
        camera_distance <- approachA 5.0 (perSecond 5.0) <<< readGlobal global_planar_camera_distance -< ()
        let (planar_camera,lookat) = maybe (basic_camera,origin_point_3d) (\x -> (planarCamera camera_distance x,x)) m_lookat
        artificial_light_intensity <- arr lighting_artificial <<< lightingConfiguration -< sky_info
@@ -132,9 +132,9 @@ planarGameplayDispatch = proc () ->
 -- and the look-at point.
 planarCamera :: RSdouble -> Point3D -> Camera
 planarCamera camera_distance look_at = PerspectiveCamera {
-    camera_position = translate (vectorScaleTo camera_distance $ Vector3D 0 (7*(camera_distance/10)**2) camera_distance) look_at,
-    camera_lookat = translate (Vector3D 0 (1/camera_distance) 0) look_at,
-    camera_up = Vector3D 0 1 0,
+    camera_position = translate (vectorScaleTo camera_distance $ Vector3D 0 (-camera_distance) (7*(camera_distance/10)**2)) look_at,
+    camera_lookat = translate (Vector3D 0 0 (1/camera_distance)) look_at,
+    camera_up = Vector3D 0 0 1,
     camera_fov = fromDegrees 75 }
 
 -- | Retrieve the look-at point from the engine.

@@ -174,11 +174,11 @@ suspendedSTMAction action = proc i ->
            animstate_suspended_stm_action s >> action i }
 
 -- | Print a line of text to the game console.  This will print exactly once.
--- Accepts 'Nothing' and prints once immediately when a value is supplied.
 printTextOnce :: (FRPModel m, StateOf m ~ AnimationState) =>
                  FRP e m (Maybe (TextType,B.ByteString)) ()
 printTextOnce = onceA printTextA
 
+-- | Print a line of text to the game console on every frame of animation.
 printTextA :: (FRPModel m, StateOf m ~ AnimationState) =>
               FRP e m (Maybe (TextType,B.ByteString)) ()
 printTextA = proc pt_data ->
@@ -189,6 +189,7 @@ printTextA = proc pt_data ->
                 printText print_text_object pt_type pt_string)
            -< (print_text_object,pt_data)
 
+-- | Print a line of text to the status window (e.g. current hit points, compass).
 statusA :: (FRPModel m, StateOf m ~ AnimationState) =>
            FRP e m (Maybe (StatusField,B.ByteString)) ()
 statusA = proc status_data ->

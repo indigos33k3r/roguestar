@@ -50,9 +50,9 @@ known_terrain_types =
 --
 terrainTileShape :: RSdouble -> RSdouble -> Quality -> Modeling
 terrainTileShape physical_height aesthetic_height q = model $
-    do heightField (-0.5,-0.5) (0.5,0.5) $ \(x,z) -> let y = 1 - max (abs x) (abs z) * 2 in min (max 0 $ sqrt y) (2*y)
-       affine $ scale (Vector3D 1 aesthetic_height 1)
-       deform $ \(SurfaceVertex3D p v) -> SurfaceVertex3D (scale (Vector3D 1 (physical_height/aesthetic_height) 1) p) v
+    do heightField (-0.5,-0.5) (0.5,0.5) $ \(x,y) -> let z = 1 - max (abs x) (abs y) * 2 in min (max 0 $ sqrt z) (2*z)
+       affine $ scale (Vector3D 1 1 aesthetic_height)
+       deform $ \(SurfaceVertex3D p v) -> SurfaceVertex3D (scale (Vector3D 1 1 (physical_height/aesthetic_height)) p) v
        qualityToFixed q
 
 -- |
@@ -81,6 +81,7 @@ terrainTile "downstairs" q = model $
               box (Point3D (-0.5) 0 0.5) (Point3D (-0.45) 0.05 (-0.5))
               box (Point3D 0.5 0 0.5) (Point3D 0.45 0.05 (-0.5))
               material $ pigment $ pure tan
+              affine $ rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0)
 terrainTile "upstairs" q = model $
     do basicTerrainTile "rockyground" q
        model $
@@ -108,6 +109,7 @@ terrainTile "upstairs" q = model $
                    (0.50,pure $ scalarMultiply 0.2 $ adjustColor channel_value maximize $ blackBodyRGB 5300),
                    (0.75,pure $ scalarMultiply 0.1 $ adjustColor channel_value maximize $ blackBodyRGB 5550),
                    (1.00,pure $ scalarMultiply 0.0 $ adjustColor channel_value maximize $ blackBodyRGB 5800)]
+              affine $ rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0)
 terrainTile s q = basicTerrainTile s q
 
 -- |

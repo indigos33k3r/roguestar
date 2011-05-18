@@ -46,7 +46,8 @@ encephalon_suit f _ = model $
        material $ metal f
 
 encephalon :: Faction -> Quality -> Modeling
-encephalon f q = model $ scale' (1/30) $
+encephalon f q = rotate (Vector3D 0 0 1) (fromDegrees 180) $
+                 rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $ model $ scale' (1/30) $
     do encephalon_head f q
        encephalon_suit f q
        translate (Vector3D (-1) 6 4) $ encephalon_eye f q

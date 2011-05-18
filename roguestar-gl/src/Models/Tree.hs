@@ -13,6 +13,6 @@ leafy_blob = model $
 
 tree_branch :: ModelingM ()
 tree_branch = model $
-    do closedCone (Point3D 0 0 0, 1.0) (Point3D 0 1 0, 0.5)
+    do hemisphere (Point3D 0 0 0) (Vector3D 0 0 1) 1.0
        material $ pigment $ pure brown
 

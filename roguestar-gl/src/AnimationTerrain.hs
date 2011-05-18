@@ -18,6 +18,9 @@ import Models.LibraryData
 import ProtocolTypes
 import Scene
 import AnimationExtras
+import qualified Data.ByteString.Char8 as B
+import RSAGL.Scene
+import Control.Arrow.Operations
 
 type TerrainThreadSwitch m = RSwitch Enabled (Maybe ProtocolTypes.TerrainTile) () () m
 
@@ -38,7 +41,7 @@ terrainTile (tid@(ProtocolTypes.TerrainTile terrain_type (x,y))) = proc () ->
        killThreadIf -< actual_size <= 0.0 && not still_here
        transformA (libraryA >>> terrainDecoration tid) -<
            (Affine $ translate
-                         (Vector3D (fromInteger x) 0 (negate $ fromInteger y)) .
+                         (Vector3D (fromInteger x) (fromInteger y) 0) .
                      scale' actual_size,
                (scene_layer_local,Models.LibraryData.TerrainTile terrain_type))
        returnA -< ()
@@ -68,8 +71,8 @@ leafyTree recursion has_leaves =
                                 0.04*realToFrac recursion)
        push_up <- getRandomR (1.5/realToFrac recursion,
                               3.0/realToFrac recursion)
-       leafyTreeBranch (Point3D x 0 y)
-                       (Vector3D 0 push_up 0)
+       leafyTreeBranch (Point3D x y 0)
+                       (Vector3D 0 0 push_up)
                        thickness
                        recursion
                        (has_leaves && not dead_tree)
@@ -93,9 +96,9 @@ leafyTreeBranch point vector thickness recursion has_leaves =
        us <- liftM (take takes) $ getRandomRs (2*branch_inset,1.0-branch_inset)
        other_branches <- mapM (leafyTreeBranchFrom $ b && has_leaves) us
        continue_trunk <- leafyTreeBranchFrom has_leaves $ 1.0 - branch_inset
-       let this_branch = translateToFrom point (Point3D 0 0 0) $
-               rotateToFrom vector (Vector3D 0 1 0) $
-                   scale (Vector3D thickness (vectorLength vector) thickness) $
+       let this_branch = translateToFrom point origin_point_3d $
+               rotateToFrom vector (Vector3D 0 0 1) $
+                   scale (Vector3D thickness thickness (vectorLength vector)) $
                        proc () -> libraryA -< (scene_layer_local,TreeBranch)
        return $ this_branch >>> continue_trunk >>> foldr1 (>>>) other_branches
   where leafyTreeBranchFrom :: (FRPModel m, FRPModes m ~ RoguestarModes) =>
@@ -106,7 +109,7 @@ leafyTreeBranch point vector thickness recursion has_leaves =
                                           new_vector_constraint)
                t <- getRandomR (thickness/3,thickness/2)
                leafyTreeBranch
-                   (lerp u (point,translate vector point))
+                   (lerp u (point,translate (scale' 0.66 vector) point))
                    (vectorScaleTo new_vector_constraint $
                        vector `add` (Vector3D x y z))
                    t

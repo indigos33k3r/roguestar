@@ -1,14 +1,17 @@
 module Models.Stargate
-    (portal)
+    (portal,
+     cybergate,
+     cyberpylon)
     where
 
 import RSAGL.Math
 import RSAGL.Modeling
+import RSAGL.Scene
 import Models.Materials
 import Quality
 
 portal :: Quality -> Modeling
-portal q =
+portal q = rotateToFrom (Vector3D 0 0 1) (Vector3D 0 1 0) $
     do model $
            do model $
                   do box (Point3D (-0.6) 0 (-0.05)) (Point3D (-0.5) 1.618 0.05)
@@ -35,4 +38,22 @@ portal q =
                             (Point3D 0.55 0 0)
               twoSided True
               material treaty_energy_field
+
+cybergate :: Quality -> Modeling
+cybergate _ = model $
+    do model $
+         do closedDisc (Point3D 0 0 0) (Vector3D 0 1 0) 1.0
+            twoSided True
+            material cyborg_glow
+       torus 1.0 0.1
+       affine $ scale $ Vector3D 1 1 1.5
+       affine $ translate $ Vector3D 0 0 1.5
+       material cyborg_metal
+
+cyberpylon :: Quality -> Modeling
+cyberpylon _ = model $
+    do openCone (Point3D 0 0 0,0.5)
+                (Point3D 0 0 1.0,0.0)
+       deform $ \(Point3D _ y _) -> if y > 0 then (affineOf $ scale (Vector3D 1 3 1)) else affineOf id
+       material cyborg_metal
 

@@ -15,7 +15,7 @@ import Models.FactionData
 
 hellion :: Faction -> Quality -> Modeling
 hellion f _ = model $
-    do sphere (Point3D 0 0.6 0) 0.1
+    do sphere (Point3D 0 0 0.6) 0.1
        material $ skin f hellion_skin
 
 hellion_appendage :: Faction -> Quality -> Modeling

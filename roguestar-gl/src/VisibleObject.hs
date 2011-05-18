@@ -230,10 +230,7 @@ objectDetailsLookup obj field = proc _ ->
               tableLookup details_table ("property","value") field
 
 -- | Get an object's faction.  (Using 'objectDetailsLookup'.)
--- Returns 'Gray' by default, if no faction is available,
--- but this should be rare because generally by the time
--- we have an avatar up for the particular type of object,
--- the details for that object are already available.
+-- Returns 'Gray' if it can't find the correct faction.
 objectFaction :: (FRPModel m,StateOf m ~ AnimationState,
                   ThreadIDOf m ~ Maybe Integer,
                   FRPModes m ~ RoguestarModes) =>
@@ -261,7 +258,7 @@ objectIdealPosition :: (FRPModel m,
                        VisibleObjectReference -> FRP e m () (Maybe Point3D)
 objectIdealPosition obj =
     whenJust (approachA 0.25 (perSecond 3)) <<<
-    arr (fmap (\(x,y) -> Point3D (realToFrac x) 0 (negate $ realToFrac y))) <<< 
+    arr (fmap (\(x,y) -> Point3D (realToFrac x) (realToFrac y) 0)) <<<
     objectDestination obj
 
 -- | Goal direction in which the specified object should be pointed.
@@ -289,7 +286,7 @@ objectIdealOrientation obj = proc () ->
        m_a <- objectIdealFacing obj -< ()
        returnA -< do p <- m_p
                      a <- m_a
-		     return $ translate (vectorToFrom p origin_point_3d) $ rotateY a $ root_coordinate_system
+		     return $ translate (vectorToFrom p origin_point_3d) $ rotateZ a $ root_coordinate_system
 
 -- | 'objectIdealOrientation' implementation that is aware of wield points for wieldable objects.  If an object is being
 -- wielded, it will snap to it's wield point.

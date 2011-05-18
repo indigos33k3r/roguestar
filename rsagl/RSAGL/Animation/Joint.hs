@@ -11,8 +11,8 @@ import RSAGL.Math.Types
 
 -- | The result of computing a joint.  It provides AffineTransformations that
 -- describe the orientations of the components of the joint.
--- All affine transformations reorient the +Z axis to aim in the direction
--- of the far point.  For example, in @joint_arm_lower@ the +Z axis aims
+-- All affine transformations reorient the +Y axis to aim in the direction
+-- of the far point.  For example, in @joint_arm_lower@ the +Y axis aims
 -- at the position of the hand.
 data Joint = Joint { joint_shoulder :: Point3D,
                      -- ^ The fixed point of the joint.
@@ -29,7 +29,7 @@ data Joint = Joint { joint_shoulder :: Point3D,
                      joint_arm_hand :: AffineTransformation
                      -- ^ The affine transformation where the origin
                      -- is the hand.  Oriented to preserve as much as
-                     -- possible the +Y axis.
+                     -- possible the +Z axis.
                      }
 
 -- | Compute a joint where given a bend vector, describing the direction
@@ -45,7 +45,7 @@ joint bend shoulder joint_length hand = Joint {
         joint_elbow = elbow,
         joint_arm_lower = modelLookAt elbow (forward $ Left hand) (down $ Right bend),
         joint_arm_upper = modelLookAt shoulder (forward $ Left elbow) (down $ Right bend),
-        joint_arm_hand = modelLookAt hand (backward $ Left elbow) (up $ Right (Vector3D 0 1 0)) }
+        joint_arm_hand = modelLookAt hand (backward $ Left elbow) (up $ Right (Vector3D 0 0 1)) }
     where joint_offset = sqrt (joint_length^2 - (distanceBetween shoulder hand)^2) / 2
           joint_offset_vector = vectorScaleTo joint_offset $ transformation
               (orthogonalFrame (forward $ vectorToFrom hand shoulder) (down bend)) (Vector3D 0 (-1) 0)

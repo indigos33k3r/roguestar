@@ -39,6 +39,8 @@ data SimpleModel =
   | PlanetaryAnchorCore
   | PlanetaryAnchorFlange
   | Portal
+  | Cybergate
+  | Cyberpylon
       deriving (Eq,Ord,Show,Enum,Bounded)
 
 data EnergyThing =

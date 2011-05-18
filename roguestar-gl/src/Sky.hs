@@ -56,8 +56,8 @@ sky = proc sky_info ->
     do sky_on <- readGlobal global_sky_on -< ()
        libraryA -< (scene_layer_sky_sphere,if sky_on then SkySphere sky_info else NullModel)
        let sun_vector = sunVector sky_info
-       whenJust (transformA sun) -< if angleBetween sun_vector (Vector3D 0 1 0) < fromDegrees 135 && sky_on
-           then Just (affineOf $ rotateToFrom (sunVector sky_info) (Vector3D 0 (-1) 0),sky_info)
+       whenJust (transformA sun) -< if angleBetween sun_vector (Vector3D 0 0 1) < fromDegrees 135 && sky_on
+           then Just (affineOf $ rotateToFrom (sunVector sky_info) (Vector3D 0 0 (-1)),sky_info)
            else Nothing
        returnA -< ()
        lighting_configuration <- Sky.lightingConfiguration -< sky_info
@@ -68,17 +68,17 @@ sky = proc sky_info ->
            () | nightlight_intensity > 0.05 && sky_on ->
                     mapLightSource (mapBoth $ scalarMultiply nightlight_intensity) $
                         DirectionalLight {
-                            lightsource_direction = Vector3D 0 1 0,
+                            lightsource_direction = Vector3D 0 0 1,
                             lightsource_color = rgb 0.1 0.1 0.2,
                             lightsource_ambient = rgb 0.0 0.0 0.3 }
            () | otherwise -> NoLight)
        accumulateSceneA -< (scene_layer_local,lightSource $ case () of
            () | skylight_intensity > 0.05 && sky_on ->
                     mapLightSource (mapBoth $ scalarMultiply skylight_intensity) $
-                        skylight (Vector3D 0 1 0) skylight_color
+                        skylight (Vector3D 0 0 1) skylight_color
            () | lighting_artificial lighting_configuration <= 0.05 &&
                 not sky_on ->
-                        skylight (Vector3D 0 1 0) white
+                        skylight (Vector3D 0 0 1) white
            () | otherwise -> NoLight)
 
 sun :: (FRPModel m,StateOf m ~ AnimationState,
@@ -91,9 +91,9 @@ sun = proc sky_info ->
        accumulateSceneA -< (scene_layer_distant,lightSource $ case sunInfoOf sky_info of
             Just sun_info | sunlight_intensity > 0.05 && sky_on ->
                      PointLight {
-                         lightsource_position = Point3D 0 (-10) 0,
+                         lightsource_position = Point3D 0 0 (-10),
                          lightsource_radius = measure origin_point_3d
-                                                      (Point3D 0 (-10) 0),
+                                                      (Point3D 0 0 (-10)),
                          lightsource_color = sunColor sun_info,
                          lightsource_ambient = blackbody}
             _ | otherwise -> NoLight)
