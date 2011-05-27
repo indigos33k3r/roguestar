@@ -9,6 +9,7 @@ module Contact
 import Position
 import Facing
 import DB
+import Reference
 import CreatureData
 import Control.Monad
 import Plane

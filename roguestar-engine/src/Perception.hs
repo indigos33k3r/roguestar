@@ -14,6 +14,7 @@ module Perception
      myFaction,
      Perception.getCreatureFaction,
      whereAmI,
+     Perception.whereIs,
      localBiome,
      compass,
      depth)
@@ -22,6 +23,8 @@ module Perception
 import Control.Monad.Reader
 import Data.Ord
 import DB
+import Reference
+import Location
 import FactionData
 import Creature
 import PlaneVisibility
@@ -69,7 +72,7 @@ whoAmI = DBPerception $ ask
 runPerception :: (DBReadable db) => CreatureRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
 
-visibleObjects :: (DBReadable db,GenericReference a) => (forall m. DBReadable m => a -> DBPerception m Bool) -> DBPerception db [a]
+visibleObjects :: (DBReadable db,ReferenceType a) => (forall m. DBReadable m => Reference a -> DBPerception m Bool) -> DBPerception db [Reference a]
 visibleObjects filterF =
     do me <- whoAmI
        faction <- myFaction
@@ -82,13 +85,14 @@ getCreatureFaction :: (DBReadable db) => CreatureRef -> DBPerception db Faction
 getCreatureFaction creature_ref = liftDB $ Creature.getCreatureFaction creature_ref
 
 whereAmI :: (DBReadable db) => DBPerception db (Facing,Position)
-whereAmI = liftM (fromMaybe (error "whereAmI: I'm not on a plane") . extractParent) $ whereIs =<< whoAmI
+whereAmI = liftM Location.fromLocation $ Perception.whereIs =<< whoAmI
 
 whatPlaneAmIOn :: (DBReadable db) => DBPerception db PlaneRef
-whatPlaneAmIOn = liftM (fromMaybe (error "whatPlaneAmIOn: I'm not on a plane") . extractParent) $ whereIs =<< whoAmI
+whatPlaneAmIOn = liftM (fromParent . Location.fromLocation) $ Perception.whereIs =<< whoAmI
 
-whereIs :: (DBReadable db) => Reference a -> DBPerception db (Location (Reference a) ())
-whereIs ref = liftDB $ dbWhere ref
+whereIs :: (DBReadable db,LocationView (Child a),ReferenceType a) =>
+           Reference a -> DBPerception db (AbstractLocation (Child a))
+whereIs ref = liftDB $ DB.whereIs ref
 
 localBiome :: (DBReadable db) => DBPerception db Biome
 localBiome =
@@ -97,7 +101,7 @@ localBiome =
 
 compass :: (DBReadable db) => DBPerception db Facing
 compass =
-    do let signalling_building_types = [Portal,CyberGate] ++ map Node all_nodes
+    do let signalling_building_types = map Stargate all_stargates ++ map Node all_nodes
        (_,pos) <- whereAmI
        plane <- whatPlaneAmIOn
        liftDB $

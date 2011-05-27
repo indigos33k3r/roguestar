@@ -21,6 +21,7 @@ import Data.Ratio
 import Building
 import Position
 import Control.Applicative
+import Reference
 
 dbGetSeersForFaction :: (DBReadable db) => Faction -> PlaneRef -> db [CreatureRef]
 dbGetSeersForFaction faction plane_ref =
@@ -50,9 +51,9 @@ dbGetVisibleTerrainForCreature creature_ref =
 -- |
 -- Returns a list of all objects that are visible to any creature belonging
 -- to the specified faction on the specified plane.  Accepts a filter to
--- determine what kinds of objects will be tested..
+-- determine what kinds of objects will be tested.
 --
-dbGetVisibleObjectsForFaction :: (DBReadable db,GenericReference a) => (forall m. DBReadable m => a -> m Bool) -> Faction -> PlaneRef -> db [a]
+dbGetVisibleObjectsForFaction :: (DBReadable db, ReferenceType a) => (forall m. DBReadable m => Reference a -> m Bool) -> Faction -> PlaneRef -> db [Reference a]
 dbGetVisibleObjectsForFaction filterF faction plane_ref =
     do critters <- dbGetSeersForFaction faction plane_ref
        liftM (nubBy (=:=) . concat) $ mapRO (dbGetVisibleObjectsForCreature filterF) critters

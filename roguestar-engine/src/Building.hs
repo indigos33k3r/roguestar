@@ -46,7 +46,7 @@ activateBuilding :: BuildingType -> CreatureRef -> BuildingRef -> DB Bool
 activateBuilding (Node n) creature_ref building_ref =
     do captureNode n creature_ref building_ref
        return True
-activateBuilding Portal creature_ref building_ref =
+activateBuilding (Stargate Portal) creature_ref building_ref =
     do m_creature_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere creature_ref
        m_portal_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere building_ref
        when (fmap fst m_creature_position /= fmap fst m_portal_position) $ throwError $ DBError "activateBuilding: creature and portal on different planes"
@@ -56,16 +56,16 @@ activateBuilding Portal creature_ref building_ref =
                    () | cy < py ->
                        do m_subsequent_loc :: Maybe (Location PlaneRef Subsequent) <- liftM listToMaybe $ dbGetContents plane_ref
                           case m_subsequent_loc of
-                              Just loc -> (portalCreatureTo Portal 1 creature_ref $ child loc) >> return True
+                              Just loc -> (portalCreatureTo (Stargate Portal) 1 creature_ref $ child loc) >> return True
                               _ -> throwError $ DBErrorFlag NoStargateAddress
                    () | cy > py ->
                        do m_previous_loc :: Maybe Subsequent <- liftM extractParent $ dbWhere plane_ref
                           case m_previous_loc of
-                              Just loc -> (portalCreatureTo Portal (-1) creature_ref $ subsequent_to loc) >> return True
+                              Just loc -> (portalCreatureTo (Stargate Portal) (-1) creature_ref $ subsequent_to loc) >> return True
                               _ -> throwError $ DBErrorFlag NoStargateAddress
                    () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
            _ -> throwError $ DBError "activateBuilding: can't decode building-creature relative positions"
-activateBuilding CyberGate creature_ref building_ref =
+activateBuilding (Stargate CyberGate) creature_ref building_ref =
     do m_creature_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere creature_ref
        m_portal_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere building_ref
        when (fmap fst m_creature_position /= fmap fst m_portal_position) $ throwError $ DBError "activateBuilding: creature and portal on different planes"

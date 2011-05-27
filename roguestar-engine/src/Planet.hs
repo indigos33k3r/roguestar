@@ -37,12 +37,15 @@ makePlanet plane_location planet_info =
        _ <- makeDungeons planet_name (Beneath plane_ref) 1 planet_info
        return plane_ref
 
-makePlanets :: (PlaneLocation l) => l -> [PlanetInfo]  -> DB PlaneRef
-makePlanets _ [] = return $ error "makePlanetarySystem: empty list"
-makePlanets l (planet_info:rest) =
+makePlanets :: (PlaneLocation l) => l -> [PlanetInfo]  -> DB (PlaneRef,PlaneRef)
+makePlanets _ [] = return $ error "makePlanets: empty list"
+makePlanets l (planet_info:[]) =
     do plane_ref <- makePlanet l planet_info
-       _ <- makePlanets (Subsequent plane_ref) rest
-       return plane_ref
+       return (plane_ref,plane_ref)
+makePlanets l (planet_info:rest) =
+    do first_plane_ref <- makePlanet l planet_info
+       (_,last_plane_ref) <- makePlanets (Subsequent first_plane_ref Portal) rest
+       return (first_plane_ref,last_plane_ref)
 
 makeDungeons :: (PlaneLocation l) =>
                 B.ByteString ->

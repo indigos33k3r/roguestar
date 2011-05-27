@@ -2,8 +2,9 @@
 module PlanetData
     (PlanetInfo(..),
      addTown,
-     all_planets,
-     nonaligned_planets)
+     nonaligned_first_series_planets,
+     nonaligned_second_series_planets,
+     cyborg_planets)
     where
 
 import TerrainData
@@ -45,7 +46,7 @@ nonaligned x name biome = PlanetInfo {
         () | biome == SwampBiome -> AbyssalDungeon
         () | x == 1 -> ShallowDungeon
         () -> DeepDungeon,
-    planet_info_town = [(1,Portal)],
+    planet_info_town = [(1,Stargate Portal)],
     planet_info_node_type = Anchor }
 
 cyber :: B.ByteString -> Biome -> PlanetInfo
@@ -57,23 +58,19 @@ cyber name biome = PlanetInfo {
     planet_info_depth = 5,
     planet_info_biome = biome,
     planet_info_dungeon = FrozenDungeon,
-    planet_info_town = [(1,CyberGate)],
+    planet_info_town = [(1,Stargate CyberGate)],
     planet_info_node_type = Anchor }
 
 addTown :: PlanetInfo -> [(Rational,BuildingType)] -> PlanetInfo
 addTown planet_info town = planet_info { planet_info_town = planet_info_town planet_info ++ town }
 
-all_planets :: [PlanetInfo]
-all_planets = concat [nonaligned_planets]
+removeTown :: PlanetInfo -> [(BuildingType)] -> PlanetInfo
+removeTown planet_info town = planet_info { planet_info_town = filter (\(_,building) -> not $ building `elem` town) $ planet_info_town planet_info }
 
-nonaligned_planets :: [PlanetInfo]
-nonaligned_planets = [
-    cyber "cybernet" IcyRockBiome,
+nonaligned_first_series_planets :: [PlanetInfo]
+nonaligned_first_series_planets = [
     nonaligned 1 "" RockBiome,
     nonaligned 1 "" IcyRockBiome,
-    nonaligned 1 "" TundraBiome,
-    nonaligned 1 "" DesertBiome,
-    nonaligned 1 "" MountainBiome,
     nonaligned 2 "roanoke" SwampBiome,
     nonaligned 2 "pamlico" SwampBiome,
     nonaligned 2 "pungo" ForestBiome,
@@ -82,12 +79,27 @@ nonaligned_planets = [
     nonaligned 2 "eno" SwampBiome `addTown` [(1%20,Node Monolith)],
     nonaligned 2 "yadkin" SwampBiome,
     nonaligned 2 "catawba" ForestBiome,
-    nonaligned 2 "pasquotank" ForestBiome,
-    nonaligned 3 "dogwood" GrasslandBiome,
-    nonaligned 3 "emerald" GrasslandBiome,
+    nonaligned 5 "pasquotank" ForestBiome `addTown` [(1,Stargate CyberGate)]]
+
+nonaligned_second_series_planets :: [PlanetInfo]
+nonaligned_second_series_planets = [
+    nonaligned 1 "" TundraBiome,
+    nonaligned 1 "" DesertBiome,
+    nonaligned 1 "" MountainBiome,
+    nonaligned 2 "dogwood" GrasslandBiome,
     nonaligned 3 "cardinal" GrasslandBiome,
     nonaligned 4 "currituck" OceanBiome,
     nonaligned 4 "hatteras" OceanBiome,
     nonaligned 4 "lookout" OceanBiome,
-    nonaligned 4 "ocracoke" OceanBiome]
+    nonaligned 4 "ocracoke" OceanBiome,
+    nonaligned 7 "emerald" GrasslandBiome `removeTown` [Stargate Portal]]
 
+cyborg_planets = [
+    cyber "" TundraBiome,
+    cyber "" TundraBiome,
+    cyber "" TundraBiome,
+    cyber "rainwater" PolarBiome,
+    cyber "spyglass" PolarBiome,
+    cyber "fairview" IcyRockBiome,
+    cyber "iredale" IcyRockBiome,
+    cyber "belleview" IcyRockBiome `removeTown` [Stargate CyberGate]]

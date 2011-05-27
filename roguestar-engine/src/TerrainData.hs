@@ -40,6 +40,7 @@ data Biome = ShallowDungeon
            | OceanBiome
            | MountainBiome
            | SwampBiome
+           | PolarBiome
              deriving (Read,Show,Eq,Ord,Enum,Bounded)
 
 -- |
@@ -154,6 +155,7 @@ terrainFrequencies DesertBiome = [(10,RockFace),(10,RockyGround),(9,Grass),(1,Wa
 terrainFrequencies OceanBiome = [(5,RockyGround),(10,Sand),(5,Grass),(5,Forest),(25,Water),(50,DeepWater)]
 terrainFrequencies MountainBiome = [(50,RockFace),(25,RockyGround),(5,Rubble),(5,Sand),(5,Grass),(5,Forest),(5,Water)]
 terrainFrequencies SwampBiome = [(40,Forest),(50,Water),(5,Sand),(5,Grass)]
+terrainFrequencies PolarBiome = [(40,Ice),(30,Water),(5,DeepWater),(4,RockyGround),(1,RockFace)]
 
 terrainInterpFn :: (TerrainPatch,TerrainPatch) -> [(Integer,TerrainPatch)]
 terrainInterpFn (a,b) = [(1,a),(1,b)] ++ (terrainInterpRule (a,b)) ++ (terrainInterpRule (b,a))

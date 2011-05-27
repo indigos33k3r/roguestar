@@ -3,7 +3,8 @@
              FlexibleContexts,
              Rank2Types,
              RelaxedPolyRec,
-             ScopedTypeVariables #-}
+             ScopedTypeVariables,
+             TypeFamilies #-}
 
 module DB
     (DBResult,
@@ -38,6 +39,7 @@ module DB
      dbVerify,
      dbGetAncestors,
      dbWhere,
+     whereIs,
      dbGetContents,
      dbSetStartingSpecies,
      dbGetStartingSpecies,
@@ -58,6 +60,8 @@ module DB
 
 import DBPrivate
 import DBData
+import Location
+import Reference
 import CreatureData
 import PlaneData
 import BuildingData
@@ -457,6 +461,9 @@ dbModBuilding = dbModObjectComposable dbGetBuilding dbPutBuilding
 -- This is where we handle making sure that a creature can only wield one tool,
 -- and a Plane can point to only one subsequent Plane.
 --
+-- DEPRECATED: use setLocation
+-- This function is a monster.
+--
 dbSetLocation :: (LocationChild c,LocationParent p) => Location c p -> DB ()
 dbSetLocation loc =
     do logDB log_database DEBUG $ "setting location: " ++ show loc
@@ -464,28 +471,44 @@ dbSetLocation loc =
              fmap parent $ coerceParentTyped _subsequent loc,
              fmap parent $ coerceParentTyped _beneath loc) of
            (Just (Wielded c),_,_) -> dbUnwieldCreature c
-           (_,Just (Subsequent s),_) -> shuntPlane _subsequent s
-           (_,_,Just (Beneath b)) -> shuntPlane _beneath b
+           (_,Just (Subsequent s v),_) -> shuntPlane (\subseq -> subsequent_via subseq == v) s
+           (_,_,Just (Beneath b)) -> shuntPlane (\(Beneath {}) -> True) b
            (_,_,_) -> return ()
        modify (\db -> db { db_hierarchy = HD.insert (unsafeLocation loc) $ db_hierarchy db })
+
+setLocation :: Location () () -> DB ()
+setLocation loc =
+    do logDB log_database DEBUG $ "setting location: " ++ show loc
+       case loc of
+           IsWielded _ (Wielded c) -> dbUnwieldCreature c
+           IsSubsequent _ (Subsequent s v) -> shuntPlane (\subseq -> subsequent_via subseq == v) s
+           IsBeneath _ (Beneath b) -> shuntPlane (\(Beneath {}) -> True) b
+           _ -> return ()
+       modify (\db -> db { db_hierarchy = HD.insert (unsafeLocation loc) $ db_hierarchy db })
+
+-- |
+-- Bump any existing child Plane in a matching to TheUniverse
+--
+shuntPlane :: (LocationView a,LocationProvides a (Child Plane) ~ Provided) => (a -> Bool) -> PlaneRef -> DB ()
+shuntPlane f p =
+    do locations <- liftM (filterLocation f) $ DB.getContents p
+       forM_ locations $ \l ->
+           do (_ :: AbstractLocation (Child Plane),
+               _ :: AbstractLocation (Parent TheUniverse)) <-
+                   moveTo (fromChild $ Location.fromLocation l :: PlaneRef) TheUniverse
+              return ()
 
 -- |
 -- Shunt any wielded objects into inventory.
 --
 dbUnwieldCreature :: CreatureRef -> DB ()
-dbUnwieldCreature c = mapM_ (dbSetLocation . returnToInventory) =<<
-    dbGetContents c
-
--- |
--- Shunt a subordinate plane in the specified position to TheUniverse.
---
-shuntPlane :: (LocationParent p) => Type p -> PlaneRef -> DB ()
-shuntPlane t p = mapM_ (dbSetLocation . shuntToTheUniverse t) =<<
-    dbGetContents p
+dbUnwieldCreature c = mapM_ (dbSetLocation . returnToInventory) =<< dbGetContents c      
 
 -- |
 -- Moves an object, returning the location of the object before and after
 -- the move.
+--
+-- Deprecated: new code should use 'moveTo'.
 --
 dbMove :: (ReferenceType e, LocationChild (Reference e),LocationParent b) =>
           (forall m. DBReadable m => Location (Reference e) () ->
@@ -499,6 +522,25 @@ dbMove moveF ref =
        when (genericParent old =/= genericParent new) $  -- an entity arriving in a new container shouldn't act before, nor be suspended beyond, the next action of the container
            dbSetTimeCoordinate ref =<< dbGetTimeCoordinate (genericParent new)
        return (unsafeLocation old, unsafeLocation new)
+       
+-- |
+-- Moves an object, returning the location of the object before and after
+-- the move.
+--
+moveTo :: (Motion m,
+           LocationView (Child e),
+           LocationView to,
+           LocationProvides (Child e) (MoveFrom m) ~ Provided,
+           LocationProvides (MoveTo m) to ~ Provided,
+           ReferenceType e) =>
+          Reference e -> m -> DB (AbstractLocation (Child e), AbstractLocation to)
+moveTo ref motion =
+    do old <- whereIs ref
+       let new = moveLocation motion $ coerceLocation old
+       setLocation $ (Location.fromLocation new :: Location () ())
+       when (((fromParent $ Location.fromLocation old) :: Reference ()) == (fromParent $ Location.fromLocation new)) $
+           dbSetTimeCoordinate ref =<< dbGetTimeCoordinate (fromParent $ Location.fromLocation new :: Reference ())
+       return (coerceLocation old,coerceLocation new)
 
 dbMoveAllWithin :: (forall m. DBReadable m => 
                        Location (Reference ()) (Reference e) ->
@@ -520,6 +562,11 @@ dbWhere :: (DBReadable db) => Reference e -> db (Location (Reference e) ())
 dbWhere item = asks (unsafeLocation . fromMaybe (error "dbWhere: has no location") .
                        HD.lookupParent (toUID item) . db_hierarchy)
 
+whereIs :: (DBReadable db, ReferenceType e, LocationView (Child e)) => Reference e -> db (AbstractLocation (Child e))
+whereIs item =
+    do location <- asks (fromMaybe (error "whereIs: has no location") . HD.lookupParent (toUID item) . db_hierarchy)
+       return $ fromMaybe (error "whereIs: location type violate") $ filterLocation (const True) $ Just $ abstractLocation location
+
 -- |
 -- Returns all ancestor Locations of this element starting with the location
 -- of the element and ending with theUniverse.
@@ -535,8 +582,14 @@ dbGetAncestors ref =
 -- Returns the location records of this object.
 --
 dbGetContents :: (DBReadable db,GenericReference a) => Reference t -> db [a]
-dbGetContents item = asks (Data.Maybe.mapMaybe fromLocation . HD.lookupChildren 
+dbGetContents item = asks (Data.Maybe.mapMaybe DBData.fromLocation . HD.lookupChildren 
                                (toUID item) . db_hierarchy)
+
+-- |
+-- Returns locations of all children of a reference.
+--
+getContents :: (LocationView (Parent t), DBReadable db) => Reference t -> db [AbstractLocation (Parent t)]
+getContents item = asks (filterLocation (const True) . List.map abstractLocation . HD.lookupChildren (toUID item) . db_hierarchy)
 
 -- |
 -- Gets the time of an object.

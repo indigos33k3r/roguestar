@@ -13,9 +13,7 @@ module DBData
      BuildingRef,
      TheUniverse(..),
      the_universe,
-     (=:=), (=/=),
      GenericReference(..),
-     ReferenceType(..),
      LocationChild(..),
      LocationParent(..),
      Location,
@@ -79,6 +77,7 @@ import BuildingData
 import Data.Maybe
 import Control.Monad
 import Position
+import Reference
 
 --
 -- Type Instances
@@ -156,15 +155,6 @@ instance (LocationChild c,LocationParent p) => GenericReference (Location c p) w
     generalizeReference = genericChild
 
 --
--- Reference Equality
---
-(=:=) :: (GenericReference a,GenericReference b) => a -> b -> Bool
-a =:= b = generalizeReference a == generalizeReference b
-
-(=/=) :: (GenericReference a,GenericReference b) => a -> b -> Bool
-a =/= b = not $ a =:= b
-
---
 -- References
 --
 
@@ -176,32 +166,6 @@ coerceReferenceTyped = const coerceReference
 
 isReferenceTyped :: (ReferenceType a) => Type (Reference a) -> Reference x -> Bool
 isReferenceTyped a = isJust . coerceReferenceTyped a
-
-class ReferenceType a where
-    coerceReference :: Reference x -> Maybe (Reference a)
-
-instance ReferenceType () where
-    coerceReference = Just . unsafeReference
-
-instance ReferenceType Plane where
-    coerceReference (PlaneRef ref) = Just $ PlaneRef ref
-    coerceReference _ = Nothing
-
-instance ReferenceType Tool where
-    coerceReference (ToolRef ref) = Just $ ToolRef ref
-    coerceReference _ = Nothing
-
-instance ReferenceType Creature where
-    coerceReference (CreatureRef ref) = Just $ CreatureRef ref
-    coerceReference _ = Nothing
-
-instance ReferenceType Building where
-    coerceReference (BuildingRef ref) = Just $ BuildingRef ref
-    coerceReference _ = Nothing
-
-instance ReferenceType TheUniverse where
-    coerceReference UniverseRef = Just UniverseRef
-    coerceReference _ = Nothing
 
 --
 -- Locations

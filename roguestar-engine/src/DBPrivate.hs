@@ -113,7 +113,8 @@ data Wielded =
 -- The location of a Plane linked to from another Plane, such as with a Stargate.
 --
 data Subsequent =
-    Subsequent { subsequent_to :: PlaneRef }
+    Subsequent { subsequent_to :: PlaneRef,
+                 subsequent_via :: StargateType }
     deriving (Read,Show,Eq,Ord)
 
 -- |
@@ -130,7 +131,7 @@ data Beneath =
 --
 -- p represents the type of the parent location, such as Standing or Dropped.
 --
-data Location e t =
+data Location c p =
      IsStanding CreatureRef Standing
    | IsDropped ToolRef Dropped
    | InInventory ToolRef Inventory

@@ -7,8 +7,11 @@ module Turns
 import Control.Monad.Maybe
 import Control.Monad.Trans
 import DB
+import Reference
+import Location
 import FactionData
 import SpeciesData
+import CreatureData (Creature)
 import Plane
 import Control.Monad
 import Creature
@@ -92,12 +95,19 @@ spawnNPC terrain_type species plane_ref player_locations =
 dbPerform1CreatureAITurn :: CreatureRef -> DB ()
 dbPerform1CreatureAITurn creature_ref = liftM (const ()) $ atomic (flip dbBehave creature_ref) $
     P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
-        do player <- MaybeT $ liftM listToMaybe $ filterM (liftM (== Player) . P.getCreatureFaction . child) =<< P.visibleObjects (return . const True)
+        do let isPlayer :: (DBReadable db) => CreatureRef -> P.DBPerception db Bool
+               isPlayer creature_ref =
+                   do faction <- P.getCreatureFaction creature_ref
+                      return $ faction == Player
+           (visible_player_creatures :: [CreatureRef]) <- lift $ P.visibleObjects isPlayer
+           -- OH NOES: what if there is more than one player
+           player <- MaybeT $ return $ listToMaybe visible_player_creatures
+           (player_location :: AbstractLocation (Child Creature)) <- lift $ P.whereIs player
            (rand_x :: Integer) <- lift $ getRandomR (1,100)
            rand_face <- lift $ pickM [minBound..maxBound]
            (_,my_position) <- lift P.whereAmI
-	   let face_to_player = faceAt my_position (parent player)
-	   return $ case distanceBetweenChessboard my_position (parent player) of
+	   let face_to_player = faceAt my_position $ (Location.fromLocation player_location :: Position)
+	   return $ case distanceBetweenChessboard my_position (Location.fromLocation player_location :: Position) of
                _ | rand_x < 5 -> Wait -- if AI gets stuck, this will make sure they waste time so the game doesn't hang
                _ | rand_x < 20 -> Step rand_face
 	       1 -> Attack face_to_player

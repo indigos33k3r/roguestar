@@ -19,9 +19,12 @@ module Plane
     where
 
 import Grids
+import Reference
 import DB
 import TerrainData
 import PlaneData
+import BuildingData (Building)
+import CreatureData (Creature)
 import Control.Monad
 import Data.Maybe
 import Data.List
@@ -193,7 +196,7 @@ whatIsOccupying plane_ref position =
 -- Lava is considered passable, but trees are not.
 isTerrainPassable :: (DBReadable db) => PlaneRef -> CreatureRef -> Position -> db Bool
 isTerrainPassable plane_ref creature_ref position = 
-    do (critters :: [Either BuildingRef CreatureRef]) <- liftM (filter (=/= creature_ref)) $ whatIsOccupying plane_ref position
+    do (critters :: [Reference (Either Building Creature)]) <- liftM (filter (=/= creature_ref)) $ whatIsOccupying plane_ref position
        terrain <- terrainAt plane_ref position
        return $ not (terrain `elem` [RockFace,Forest,DeepForest]) && null critters
 
