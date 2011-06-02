@@ -79,7 +79,7 @@ nonaligned_first_series_planets = [
     nonaligned 2 "eno" SwampBiome `addTown` [(1%20,Node Monolith)],
     nonaligned 2 "yadkin" SwampBiome,
     nonaligned 2 "catawba" ForestBiome,
-    nonaligned 5 "pasquotank" ForestBiome `addTown` [(1,Stargate CyberGate)]]
+    (nonaligned 5 "pasquotank" ForestBiome `addTown` [(1,Stargate CyberGate)]) { planet_info_priority = 100.0 }]
 
 nonaligned_second_series_planets :: [PlanetInfo]
 nonaligned_second_series_planets = [
@@ -92,7 +92,7 @@ nonaligned_second_series_planets = [
     nonaligned 4 "hatteras" OceanBiome,
     nonaligned 4 "lookout" OceanBiome,
     nonaligned 4 "ocracoke" OceanBiome,
-    nonaligned 7 "emerald" GrasslandBiome `removeTown` [Stargate Portal]]
+    (nonaligned 7 "emerald" GrasslandBiome `removeTown` [Stargate Portal]) { planet_info_priority = 100.0 }]
 
 cyborg_planets = [
     cyber "" TundraBiome,
@@ -102,4 +102,4 @@ cyborg_planets = [
     cyber "spyglass" PolarBiome,
     cyber "fairview" IcyRockBiome,
     cyber "iredale" IcyRockBiome,
-    cyber "belleview" IcyRockBiome `removeTown` [Stargate CyberGate]]
+    (cyber "belleview" IcyRockBiome `removeTown` [Stargate CyberGate]) { planet_info_priority = 100.0 }]

@@ -102,9 +102,11 @@ instance LocationView (Child Creature) where
 
 instance LocationView Subsequent where
     locationView (AbstractLocation (IsSubsequent _ s)) = Just s
+    locationView _ = Nothing
 
 instance LocationView Beneath where
     locationView (AbstractLocation (IsBeneath _ b)) = Just b
+    locationView _ = Nothing
 
 instance LocationView Position where
     locationView (AbstractLocation (IsStanding _ s)) = Just $ standing_position s
