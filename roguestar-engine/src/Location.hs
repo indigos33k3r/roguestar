@@ -2,7 +2,7 @@
 
 module Location
     (AbstractLocation,
-     LocationView,
+     LocationView(..),
      Child(..),
      Parent(..),
      fromLocation,
@@ -41,7 +41,7 @@ filterLocation f ls =
 --------------------------------------------}
 
 class LocationView a where
-    locationView :: AbstractLocation () -> Maybe a
+    locationView :: AbstractLocation x -> Maybe a
 
 instance LocationView () where
     locationView _ = Just ()

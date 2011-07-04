@@ -12,12 +12,14 @@ import Data.List
 import Facing
 import Data.Maybe
 import Control.Monad.Maybe
+import PlaneData
 import Plane
 import Position
 import TerrainData
 import Control.Monad.Error
 import NodeData
 import CharacterAdvancement
+import Location
 
 -- | The total occupied surface area of a building.
 buildingSize :: (DBReadable db) => BuildingRef -> db Integer
@@ -47,6 +49,13 @@ activateBuilding (Node n) creature_ref building_ref =
     do captureNode n creature_ref building_ref
        return True
 activateBuilding (Stargate Portal) creature_ref building_ref =
+    do m_creature_position :: Maybe (Parent Plane,Position) <- liftM locationView $ whereIs creature_ref
+       m_portal_position :: Maybe (Parent Plane,Position) <- liftM locationView $ whereIs building_ref
+       let planes_do_match :: Bool = fmap fst m_creature_position /= fmap fst m_portal_position
+       when (not planes_do_match) $
+           do throwError $ DBError "activateBuilding: creature and portal on different planes" 
+
+{-
     do m_creature_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere creature_ref
        m_portal_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere building_ref
        when (fmap fst m_creature_position /= fmap fst m_portal_position) $ throwError $ DBError "activateBuilding: creature and portal on different planes"
@@ -79,6 +88,7 @@ activateBuilding (Stargate CyberGate) creature_ref building_ref =
                                _ -> throwError $ DBErrorFlag NoStargateAddress
                     () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
            _ -> throwError $ DBError "activateBuilding: can't decode building-creature relative positions"
+-}
 
 -- | Deposit a creature in front of (-1) or behind (+1) a random portal on the specified plane.  Returns
 -- the dbMove result from the action.
