@@ -24,7 +24,7 @@ type BuildingAvatar e m = FRP e (BuildingAvatarSwitch m) () ()
 buildingAvatar :: (FRPModel m) => BuildingAvatar e m
 buildingAvatar = proc () ->
     do objectTypeGuard (== "building") -< ()
-       m_building_type <- objectDetailsLookup ThisObject "building-type" -< ()
+       m_building_type <- objectDetailsLookup ThisObject "building-shape" -< ()
        switchContinue -< (fmap switchTo m_building_type,())
        returnA -< ()
   where switchTo "monolith" = simpleBuildingAvatar Monolith
