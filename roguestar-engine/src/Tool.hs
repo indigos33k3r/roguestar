@@ -70,7 +70,7 @@ availableWields creature_ref =
        return $ List.union carried_tools pickups
 
 getWielded :: (DBReadable db) => CreatureRef -> db (Maybe ToolRef)
-getWielded = liftM (listToMaybe . map (asChild . identityDetail) . mapLocations) . getContents
+getWielded = liftM (listToMaybe . map (asChild . detail) . filterLocations (\(Wielded {}) -> True)) . getContents
 
 -- | Safely delete tools.
 deleteTool :: ToolRef -> DB ()

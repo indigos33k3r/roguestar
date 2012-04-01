@@ -448,7 +448,7 @@ dbDispatchQuery ["wielded-objects","0"] =
            wieldedPairToTable creature_ref = fmap (\tool_ref -> (B.pack $ show $ toUID tool_ref) `B.append` " " `B.append` (B.pack $ show $ toUID creature_ref))
        return $ "begin-table wielded-objects 0 uid creature\n" `B.append`
                 B.unlines (catMaybes $ zipWith wieldedPairToTable creature_refs wielded_tool_refs) `B.append`
-		"end-table"
+                "end-table"
 
 dbDispatchQuery ["biome"] =
     do m_plane_ref <- dbGetCurrentPlane
