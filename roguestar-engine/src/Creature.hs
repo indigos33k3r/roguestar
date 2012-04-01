@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE TypeFamilies, PatternGuards #-}
 
 module Creature
     (generateInitialPlayerCreature,
@@ -18,6 +18,7 @@ module Creature
      sweepDead)
     where
 
+import Prelude hiding (getContents)
 import CreatureData
 import DB
 import SpeciesData
@@ -32,6 +33,7 @@ import Facing
 import Position
 import Plane
 import PlayerState
+import DetailedLocation
 
 -- |
 -- Generates a new Creature from the specified species.
@@ -52,7 +54,7 @@ generateInitialPlayerCreature species =
 -- |
 -- Generates a new Creature from the specified Species and adds it to the database.
 --
-newCreature :: (CreatureLocation l) => Faction -> Species -> l -> DB CreatureRef
+newCreature :: (LocationConstructor l, ReferenceTypeOf l ~ Creature) => Faction -> Species -> l -> DB CreatureRef
 newCreature faction species loc =
     do creature <- generateCreature faction species
        dbAddCreature creature loc
@@ -85,10 +87,8 @@ rollCreatureAbilityScore score other_ideal creature_ref =
 -- | Ability bonus based on being good at working on specific types of terrain.
 getTerrainAffinity :: (DBReadable db) => CreatureRef -> db Integer
 getTerrainAffinity creature_ref =
-    do l <- liftM (fmap parent) $ getPlanarPosition creature_ref
-       terrain_affinity_points <- case l of
-           Nothing -> return 0
-           Just (plane_ref,pos) -> liftM sum $ forM [minBound..maxBound] $ \face ->
+    do (Parent plane_ref,pos) <- liftM detail $ getPlanarLocation creature_ref
+       terrain_affinity_points <- liftM sum $ forM [minBound..maxBound] $ \face ->
                do t <- terrainAt plane_ref $ offsetPosition (facingToRelative face) pos
                   liftM (creatureAbilityScore $ TerrainAffinity t) $ dbGetCreature creature_ref
        return $ terrain_affinity_points `div` 4
@@ -125,14 +125,12 @@ getCreatureHealth :: (DBReadable db) => CreatureRef -> db Rational
 getCreatureHealth creature_ref = liftM2 (%) (getCreatureAbsoluteHealth creature_ref) (getCreatureMaxHealth creature_ref)
 
 getDead :: (DBReadable db) => Reference a -> db [CreatureRef]
-getDead parent_ref = filterRO (liftM (<= 0) . getCreatureHealth) =<< dbGetContents parent_ref
+getDead parent_ref = filterRO (liftM (<= 0) . getCreatureHealth) =<< liftM asChildren (getContents parent_ref)
 
 deleteCreature :: CreatureRef -> DB ()
-deleteCreature = dbUnsafeDeleteObject $ \l ->
-    do m_dropped_loc <- maybe (return Nothing) (liftM Just . dbDropTool) $ coerceChildTyped _tool l
-       return $ case m_dropped_loc of
-           Just dropped_loc -> generalizeLocation dropped_loc
-           Nothing -> error "dbDeleteCreature: no case for this type of entity"
+deleteCreature creature_ref =
+    do planar <- liftM identityDetail $ getPlanarLocation creature_ref
+       dbUnsafeDeleteObject creature_ref $ const $ return planar
 
 -- | Delete all dead creatures from the database.
 sweepDead :: Reference a -> DB ()

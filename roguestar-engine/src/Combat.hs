@@ -19,6 +19,7 @@ import Data.Maybe
 import DeviceActivation
 import Contact
 import Plane
+import DetailedLocation
 
 data AttackModel =
     RangedAttackModel CreatureRef ToolRef Device
@@ -49,7 +50,7 @@ interactionMode (UnarmedAttackModel {}) = Unarmed
 -- This will fail if the creature is holding anything other than a weapon.
 attackModel :: (DBReadable db) => CreatureRef -> db AttackModel
 attackModel attacker_ref =
-    do m_tool_ref <- dbGetWielded attacker_ref
+    do m_tool_ref <- getWielded attacker_ref
        case m_tool_ref of
            Nothing -> return $ UnarmedAttackModel attacker_ref
            Just tool_ref ->
@@ -87,20 +88,20 @@ data AttackOutcome =
 
 resolveAttack :: (DBReadable db) => AttackModel -> Facing -> db AttackOutcome
 resolveAttack attack_model face =
-    do device_activation <- resolveDeviceActivation (AttackSkill $ interactionMode attack_model) 
+    do device_activation <- resolveDeviceActivation (AttackSkill $ interactionMode attack_model)
                                                     (DamageSkill $ interactionMode attack_model)
                                                     (ReloadSkill $ interactionMode attack_model)
                                                     (toPseudoDevice attack_model)
                                                     (attacker attack_model)
-       m_defender_ref <- liftM listToMaybe $ findContacts (contactMode $ interactionMode attack_model) (attacker attack_model) face
+       m_defender_ref <- liftM (listToMaybe . map asChild . mapLocations) $ findContacts (contactMode $ interactionMode attack_model) (attacker attack_model) face
        case (dao_outcome_type device_activation,m_defender_ref) of
-           (DeviceFailed, _) | Just tool_ref <- weapon attack_model -> 
+           (DeviceFailed, _) | Just tool_ref <- weapon attack_model ->
                return $ AttackMalfunction (attacker attack_model) tool_ref (dao_energy device_activation)
            (DeviceCriticalFailed, _) | Just tool_ref <- weapon attack_model ->
                return $ AttackExplodes (attacker attack_model) tool_ref (dao_energy device_activation)
            (DeviceActivated, Just defender_ref) ->
                do defense_outcome <- resolveDefense (interactionMode attack_model) defender_ref
-                  distance_squared <- liftM (fromMaybe 0) $ dbDistanceBetweenSquared (attacker attack_model) defender_ref
+                  distance_squared <- liftM (fromMaybe 0) $ Plane.distanceBetweenSquared (attacker attack_model) defender_ref
                   let isDisarmingBlow = dao_skill_roll device_activation > do_skill_roll defense_outcome + distance_squared &&
                                         dao_energy device_activation > do_damage_reduction defense_outcome + do_disarm_bonus defense_outcome
                   case () of
@@ -122,9 +123,9 @@ data DefenseOutcome = DefenseOutcome {
     do_damage_reduction :: Integer,
     do_disarm_bonus :: Integer }
 
-resolveDefense :: (DBReadable db) => CreatureInteractionMode -> CreatureRef -> db DefenseOutcome                                                                                             
+resolveDefense :: (DBReadable db) => CreatureInteractionMode -> CreatureRef -> db DefenseOutcome
 resolveDefense interaction_mode defender_ref =
-    do m_tool_ref <- dbGetWielded defender_ref
+    do m_tool_ref <- getWielded defender_ref
        m_tool <- maybe (return Nothing) (liftM Just . dbGetTool) m_tool_ref
        disarm_bonus <- maybe (return 0) toolDurability m_tool_ref
        let pdevice = case m_tool of
@@ -148,7 +149,7 @@ executeAttack (AttackHit attacker_ref m_tool_ref defender_ref damage) =
        dbPushSnapshot $ AttackEvent attacker_ref m_tool_ref defender_ref
 executeAttack (AttackMalfunction attacker_ref tool_ref damage) =
     do injureCreature damage attacker_ref
-       _ <- dbMove dbDropTool tool_ref
+       _ <- move tool_ref =<< dropTool tool_ref
        dbPushSnapshot $ WeaponOverheatsEvent attacker_ref tool_ref
        return ()
 executeAttack (AttackExplodes attacker_ref tool_ref damage) =
@@ -157,7 +158,7 @@ executeAttack (AttackExplodes attacker_ref tool_ref damage) =
        deleteTool tool_ref
 executeAttack (AttackDisarm attacker_ref defender_ref dropped_tool) =
     do dbPushSnapshot $ DisarmEvent attacker_ref defender_ref dropped_tool
-       _ <- dbMove dbDropTool dropped_tool
+       _ <- move dropped_tool =<< dropTool dropped_tool
        return ()
 executeAttack (AttackSunder attacker_ref weapon_ref defender_ref sundered_tool) =
     do dbPushSnapshot $ SunderEvent attacker_ref weapon_ref defender_ref sundered_tool

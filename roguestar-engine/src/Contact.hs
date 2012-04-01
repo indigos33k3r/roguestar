@@ -6,6 +6,7 @@ module Contact
      ContactModeType(..))
     where
 
+import Prelude hiding (getContents)
 import Position
 import Facing
 import DB
@@ -16,6 +17,7 @@ import Plane
 import Data.Ord
 import Data.List as List
 import Data.Maybe
+import DetailedLocation
 
 -- | 'Touch' contacts are on the same or facing square as the subject.
 -- 'Line' contacts are on any point starting on the same square and anywhere directly along a line traced in the
@@ -39,22 +41,22 @@ instance ContactModeType CreatureInteractionMode where
 -- farthest from the subject, except in the case of area contacts, which are
 -- sorted from the center of the area.  The subject is never a contact of
 -- itself.
-findContacts :: (DBReadable db,ReferenceType x,GenericReference a,ContactModeType c) =>
-                c -> Reference x -> Facing -> db [a]
+findContacts :: (DBReadable db,ContactModeType c) =>
+                c -> Reference x -> Facing -> db [DetailedLocation Planar]
 findContacts contact_mode attacker_ref face =
-    do (m_l :: Maybe (PlaneRef,MultiPosition)) <- liftM (fmap parent) $ getPlanarPosition attacker_ref
+    do (m_l :: Maybe (PlaneRef,MultiPosition)) <- liftM fromLocation $ whereIs attacker_ref
        let testF pos (x :: MultiPosition) = case contactMode contact_mode of
                Touch -> min (x `distanceBetweenChessboard` (offsetPosition (facingToRelative face) pos))
                             (x `distanceBetweenChessboard` pos) == 0
                Line -> isFacing (pos,face) x
-               Area -> distanceBetweenSquared (offsetPosition (facingToRelative7 face) pos) x < 49
+               Area -> Position.distanceBetweenSquared (offsetPosition (facingToRelative7 face) pos) x < 49
            center_pos pos = case contactMode contact_mode of
                Area -> offsetPosition (facingToRelative7 face) pos
                _ -> pos
        flip (maybe $ return []) m_l $ \(plane_ref,pos) ->
-           liftM (mapMaybe fromLocation .
-	          sortBy (comparing (distanceBetweenSquared (center_pos pos) . parent)) .
-	          filter ((/= generalizeReference attacker_ref) . child) . 
-	          filter (testF pos . parent)) $ 
-		      dbGetContents plane_ref
+           liftM (sortBy (comparing (Position.distanceBetweenSquared (center_pos pos) . (detail :: DetailedLocation Planar -> MultiPosition))) .
+                  filter ((/= genericReference attacker_ref) . asChild . detail) .
+                  filter (testF pos . detail)) $
+                      (liftM mapLocations $ getContents plane_ref)
+
 

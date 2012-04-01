@@ -1,6 +1,5 @@
 module CharacterAdvancement
-    (CharacterBumpRequest(..),
-     CharacterBumpResult(..),
+    (CharacterBumpResult(..),
      characterFitness,
      bumpCharacter,
      characterLevel,
@@ -11,16 +10,7 @@ module CharacterAdvancement
 import qualified Data.Map as Map
 import CreatureData
 import CharacterData
-
--- |
--- Cause a character to advance in level or to gain a specific CharacterClass.
-data CharacterBumpRequest =
-    -- Award a character points.  If the character gain enough points to advance in character class,
-    -- then do this, otherwise, he just accumulates the points.
-    AwardCharacter Integer
-    -- Apply a specific CharacterClass to a character.  If he already has this CharacterClass,
-    -- then we back off and give him the points instead.
-  | ForceCharacter CharacterClass
+import PowerUpData
 
 data CharacterBumpResult =
     CharacterAwarded  { character_points_awarded :: Integer,
@@ -30,13 +20,12 @@ data CharacterBumpResult =
   | CharacterForced   { character_new_character_class :: CharacterClass,
                         character_new :: Creature }
 
-
 -- |
 -- Increases the character score by the set amount.
 -- If the score is high enough that the character can advance to the next level,
 -- this function will apply that advancement.
 --
-bumpCharacter :: CharacterBumpRequest -> Creature -> CharacterBumpResult
+bumpCharacter :: PowerUpData -> Creature -> CharacterBumpResult
 bumpCharacter (ForceCharacter character_class) c =
         if character_class `elem` Map.keys (creature_levels c)
             then bumpCharacter (AwardCharacter $ characterFitness new_character - characterFitness c) c

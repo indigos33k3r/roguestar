@@ -5,19 +5,7 @@ module CharacterData
      base_character_classes)
     where
 
-data CharacterClass = Barbarian
-                    | Consular
-                    | Engineer
-                    | ForceAdept
-                    | Marine
-                    | Ninja
-                    | Pirate
-                    | Scout
-                    | Shepherd
-                    | StarChild
-                    | Thief
-                    | Warrior
-                    deriving (Eq,Enum,Bounded,Read,Show,Ord)
+import PersistantData
 
 all_character_classes :: [CharacterClass]
 all_character_classes = [minBound..maxBound]

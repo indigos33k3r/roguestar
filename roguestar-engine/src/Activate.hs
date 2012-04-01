@@ -19,7 +19,7 @@ data ActivationOutcome =
 
 resolveActivation :: (DBReadable db) => CreatureRef -> db ActivationOutcome
 resolveActivation creature_ref =
-    do tool_ref <- maybe (throwError $ DBErrorFlag NoToolWielded) return =<< dbGetWielded creature_ref
+    do tool_ref <- maybe (throwError $ DBErrorFlag NoToolWielded) return =<< getWielded creature_ref
        tool <- dbGetTool tool_ref
        case tool of
            DeviceTool {} -> throwError $ DBErrorFlag ToolIs_Innapropriate

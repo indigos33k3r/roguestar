@@ -5,6 +5,7 @@ module PlaneVisibility
      dbGetVisibleObjectsForFaction)
     where
 
+import Prelude hiding (getContents)
 import FactionData
 import DB
 import TerrainData
@@ -22,10 +23,11 @@ import Building
 import Position
 import Control.Applicative
 import Reference
+import DetailedLocation
 
 dbGetSeersForFaction :: (DBReadable db) => Faction -> PlaneRef -> db [CreatureRef]
 dbGetSeersForFaction faction plane_ref =
-    filterM (filterByFaction faction) =<< dbGetContents plane_ref
+    filterM (filterByFaction faction) =<< liftM asChildren (getContents plane_ref)
 
 -- |
 -- Returns a list of all terrain patches that are visible to any creature belonging
@@ -42,18 +44,16 @@ dbGetVisibleTerrainForFaction faction plane_ref =
 --
 dbGetVisibleTerrainForCreature :: (DBReadable db) => CreatureRef -> db [(TerrainPatch,Position)]
 dbGetVisibleTerrainForCreature creature_ref =
-    do loc <- liftM (fmap parent) $ getPlanarPosition creature_ref
+    do loc <- liftM identityDetail $ getPlanarLocation creature_ref
        spot_check <- dbGetSpotCheck creature_ref
-       case loc of
-		Just (plane_ref,creature_at) -> liftM (visibleTerrain creature_at spot_check . plane_terrain) $ dbGetPlane plane_ref
-		Nothing -> return []
+       liftM (visibleTerrain (planar_position loc) spot_check . plane_terrain) $ dbGetPlane (planar_parent loc)
 
 -- |
 -- Returns a list of all objects that are visible to any creature belonging
 -- to the specified faction on the specified plane.  Accepts a filter to
 -- determine what kinds of objects will be tested.
 --
-dbGetVisibleObjectsForFaction :: (DBReadable db, ReferenceType a) => (forall m. DBReadable m => Reference a -> m Bool) -> Faction -> PlaneRef -> db [Reference a]
+dbGetVisibleObjectsForFaction :: (DBReadable db) => (forall m. DBReadable m => Reference () -> m Bool) -> Faction -> PlaneRef -> db [Reference ()]
 dbGetVisibleObjectsForFaction filterF faction plane_ref =
     do critters <- dbGetSeersForFaction faction plane_ref
        liftM (nubBy (=:=) . concat) $ mapRO (dbGetVisibleObjectsForCreature filterF) critters
@@ -62,33 +62,30 @@ dbGetVisibleObjectsForFaction filterF faction plane_ref =
 -- Returns a list of all objects that are visible to the specified creature.
 -- Accepts a filter to determine what kinds of objects will be tested.
 --
-dbGetVisibleObjectsForCreature :: (DBReadable db,GenericReference a) => (forall m. DBReadable m => a -> m Bool) -> CreatureRef -> db [a]
+dbGetVisibleObjectsForCreature :: (DBReadable db) => (forall m. DBReadable m => Reference () -> m Bool) -> CreatureRef -> db [Reference ()]
 dbGetVisibleObjectsForCreature filterF creature_ref =
-    do (loc :: Maybe PlaneRef) <- liftM (fmap parent) $ getPlanarPosition creature_ref
-       case loc of
-		Just plane_ref -> filterRO (\a -> (&&) <$> filterF a <*> (dbIsPlanarVisible creature_ref $ generalizeReference a)) =<< dbGetContents plane_ref
-		Nothing -> return []
-
+    do plane_ref <- liftM (planar_parent . identityDetail) $ getPlanarLocation creature_ref
+       possibles <- liftM asChildren $ getContents plane_ref
+       filterRO (\a -> (&&) <$> filterF a <*> dbIsPlanarVisible creature_ref a) possibles
 -- |
 -- dbIsPlanarVisible (a creature) (some object) is true if the creature can see the object.
 --
 dbIsPlanarVisible :: (DBReadable db,ReferenceType a) => CreatureRef -> Reference a -> db Bool
 dbIsPlanarVisible creature_ref obj_ref | creature_ref =:= obj_ref = return True
 dbIsPlanarVisible creature_ref obj_ref =
-    do (creature_loc :: Maybe (PlaneRef,Position)) <- liftM (fmap parent) $ getPlanarPosition creature_ref
-       (obj_loc :: Maybe (PlaneRef,MultiPosition)) <- liftM (fmap parent) $ getPlanarPosition obj_ref
+    do c <- liftM identityDetail $ getPlanarLocation creature_ref
+       (m_o :: Maybe Planar) <- liftM fromLocation $ whereIs obj_ref
        spot_check <- dbGetOpposedSpotCheck creature_ref obj_ref
-       case (creature_loc,obj_loc) of
-		(Nothing,_) -> return False
-		(_,Nothing) -> return False
-		(Just (c_plane,_),Just (o_plane,_)) | c_plane /= o_plane -> return False --never see objects on different planes
-		(Just (_,cp),Just (_,ops)) | distanceBetweenChessboard cp ops <= 1 -> return True --automatically see 8-adjacent objects
-		(Just (_,cp),Just (_,ops)) | distanceBetweenSquared cp ops > (maximumRangeForSpotCheck spot_check)^2 -> return False --cull objects that are too far away to ever be seen
-		(Just (c_plane,cp),Just (_,ops)) -> liftM or $ forM (positionPairs cp ops) $ 
-                    \(Position (cx,cy),Position (ox,oy)) ->
-                        do let delta_at = (ox-cx,oy-cy)
-		           terrain <- liftM plane_terrain $ dbGetPlane c_plane -- falling through all other tests, cast a ray for visibility
-		           return $ castRay (cx,cy) (ox,oy) (spot_check - distanceCostForSight Here delta_at) (terrainOpacity . gridAt terrain)
+       case m_o of
+            Nothing -> return False
+            Just o | planar_parent c /= planar_parent o -> return False --never see objects on different planes
+            Just o | distanceBetweenChessboard (planar_position c) (planar_multiposition o) <= 1 -> return True --automatically see 8-adjacent objects
+            Just o | Position.distanceBetweenSquared (planar_position c) (planar_multiposition o) > (maximumRangeForSpotCheck spot_check)^2 -> return False --cull objects that are too far away to ever be seen
+            Just o -> liftM or $ forM (positionPairs (planar_position c) (planar_multiposition o)) $
+                \(Position (cx,cy),Position (ox,oy)) ->
+                    do let delta_at = (ox-cx,oy-cy)
+                       terrain <- liftM plane_terrain $ dbGetPlane (planar_parent c) -- falling through all other tests, cast a ray for visibility
+                       return $ castRay (cx,cy) (ox,oy) (spot_check - distanceCostForSight Here delta_at) (terrainOpacity . gridAt terrain)
 
 dbGetOpposedSpotCheck :: (DBReadable db) => CreatureRef -> Reference a -> db Integer
 dbGetOpposedSpotCheck creature_ref object_ref =
@@ -101,14 +98,14 @@ planarLightingBonus = liftM (\x -> max 0 $ 17 - x*5) . planeDepth
 
 dbGetSpotCheck :: (DBReadable db) => CreatureRef -> db Integer
 dbGetSpotCheck creature_ref =
-    do (m_plane_ref :: Maybe PlaneRef) <- liftM (fmap parent) $ getPlanarPosition creature_ref
-       bonus <- maybe (return 0) planarLightingBonus $ m_plane_ref
+    do plane_ref <- liftM (planar_parent . identityDetail) $ getPlanarLocation creature_ref
+       bonus <- planarLightingBonus $ plane_ref
        ability_score <- liftM (creatureAbilityScore SpotSkill) $ dbGetCreature creature_ref
        return $ ability_score + bonus
 
 dbGetHideCheck :: (DBReadable db) => Reference a -> db Integer
-dbGetHideCheck ref | Just creature_ref <- coerceReferenceTyped _creature ref = liftM (creatureAbilityScore HideSkill) $ dbGetCreature creature_ref
-dbGetHideCheck ref | Just building_ref <- coerceReferenceTyped _building ref = liftM negate $ buildingSize building_ref
+dbGetHideCheck ref | Just (creature_ref :: CreatureRef) <- coerceReference ref = liftM (creatureAbilityScore HideSkill) $ dbGetCreature creature_ref
+dbGetHideCheck ref | Just (building_ref :: BuildingRef) <- coerceReference ref = liftM negate $ buildingSize building_ref
 dbGetHideCheck _   | otherwise = return 1
 
 -- |

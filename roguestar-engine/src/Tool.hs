@@ -1,78 +1,88 @@
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 
 module Tool
-    (dbPickupTool,
-     dbWieldTool,
-     dbDropTool,
-     dbAvailablePickups,
+    (pickupTool,
+     wieldTool,
+     dropTool,
+     availablePickups,
      availableWields,
-     dbGetWielded,
+     getWielded,
      deleteTool,
      toolDurability)
     where
 
+import Prelude hiding (getContents)
 import DB
+import Reference
+import DetailedLocation
 import Control.Monad.Error
 import Data.Maybe
 import Data.List as List
 import ToolData
 import Substances
+import Plane
+import PlaneData
 
-dbPickupTool :: (DBReadable db,LocationParent a) =>
+pickupTool :: (DBReadable db) =>
                 CreatureRef ->
-                Location ToolRef a ->
-                db (Location ToolRef Inventory)
-dbPickupTool c l =
-    do (c_where :: Maybe (Position,PlaneRef)) <- liftM extractParent $ dbWhere c
-       when ((c_where /= extractParent l && Just c /= extractParent l) || isNothing c_where) $ 
-	         throwError (DBErrorFlag ToolIs_NotAtFeet)
-       return $ toInventory (Inventory c) l
+                ToolRef ->
+                db (Inventory)
+pickupTool creature_ref tool_ref =
+    do creature_loc <- whereIs creature_ref
+       tool_loc <- whereIs tool_ref
+       distance_between <- distanceBetweenSquared creature_ref tool_ref
+       when (parentReference tool_loc =/= parentReference creature_loc || distance_between /= Just 0) $
+           throwError (DBErrorFlag ToolIs_NotAtFeet)
+       return $ Inventory creature_ref
 
--- | Move a tool into wielded position for whatever creature is carrying it.
-dbWieldTool :: (DBReadable db,LocationParent a) =>
-               Location ToolRef a -> db (Location ToolRef Wielded)
-dbWieldTool l =
-    case () of
-        () | Just l' <- coerceParent l -> return l' -- if it coerces into our return type, then it's already wielded
-        () | Just (Dropped plane_ref position) <- extractParent l ->
-            do pickupers <- liftM (map child . filter ((== position) . parent)) $ dbGetContents plane_ref
-               case pickupers of -- the creature that is standing over the tool -- there can be only one
-                   [single_pickuper] -> return $ toWielded (Wielded single_pickuper) l
-                   _ -> throwError $ DBError "dbWieldTool: there were multiple creatures in reach of a single tool"
-        () | Just (Inventory c) <- extractParent l -> return $ toWielded (Wielded c) l
-        () | otherwise -> throwError $ DBErrorFlag ToolIs_NotWieldable
+-- | Move a tool into wielded position for whatever creature is carrying or standing over it.
+wieldTool :: (DBReadable db) => ToolRef -> db Wielded
+wieldTool tool_ref =
+    do l <- whereIs tool_ref
+       case () of
+           () | Just l' <- fromLocation l -> return l' -- if it coerces into our return type, then it's already wielded
+           () | Just (Dropped plane_ref position) <- fromLocation l ->
+               do pickupers <- liftM (mapLocations . filterLocations (== position)) $ getContents plane_ref
+                  case pickupers of -- the creature that is standing over the tool -- there can be only one
+                      [Child single_pickuper] -> return $ Wielded single_pickuper
+                      [] -> throwError $ DBErrorFlag ToolIs_Unreachable
+                      _ -> throwError $ DBError "dbWieldTool: there were multiple creatures in reach of a single tool"
+           () | Just (Inventory c) <- fromLocation l -> return $ Wielded c
+           () | otherwise -> throwError $ DBErrorFlag ToolIs_NotWieldable
 
-dbDropTool :: (DBReadable db,LocationParent a) =>
-              Location ToolRef a -> db (Location ToolRef Dropped)
-dbDropTool l =
-    do lp <- liftM extractParent $ dbWhere (genericParent l)
-       flip (maybe (throwError $ DBErrorFlag NotStanding)) lp $ \(creature_position,plane_ref) ->
-           do return $ toDropped (Dropped plane_ref creature_position) l
+dropTool :: (DBReadable db) => ToolRef -> db Dropped
+dropTool tool_ref =
+    do tool_location <- liftM identityDetail $ getPlanarLocation tool_ref
+       return $ Dropped (planar_parent tool_location) (planar_position tool_location)
 
-dbAvailablePickups :: (DBReadable db) => CreatureRef -> db [ToolRef]
-dbAvailablePickups creature_ref =
-    do m_creature_where <- liftM extractParent $ dbWhere creature_ref
-       flip (maybe (return [])) m_creature_where $ \(creature_position :: Position,plane_ref :: PlaneRef) ->
-           do contents <- dbGetContents plane_ref
-              return $ map child $ filter ((== creature_position) . parent) contents
+availablePickups :: (DBReadable db) => CreatureRef -> db [ToolRef]
+availablePickups creature_ref =
+    do (Parent plane_ref :: Parent Plane, creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
+       pickups <- liftM (mapLocations . filterLocations (==creature_position)) $ getContents plane_ref
+       return $ map (asChild . identityDetail) pickups
 
 -- | List of tools that the specified creature may choose to wield.
 -- That is, they are either on the ground or in the creature's inventory.
 availableWields :: (DBReadable db) => CreatureRef -> db [ToolRef]
-availableWields creature_ref = liftM2 List.union (dbAvailablePickups creature_ref) (dbGetContents creature_ref)
+availableWields creature_ref =
+    do carried_tools :: [ToolRef] <- liftM (map (asChild . identityDetail) . mapLocations) $ getContents creature_ref
+       pickups <- availablePickups creature_ref
+       return $ List.union carried_tools pickups
 
-dbGetWielded :: (DBReadable db) => CreatureRef -> db (Maybe ToolRef)
-dbGetWielded = liftM (listToMaybe . map (child . asLocationTyped _tool _wielded)) . dbGetContents
+getWielded :: (DBReadable db) => CreatureRef -> db (Maybe ToolRef)
+getWielded = liftM (listToMaybe . map (asChild . identityDetail) . mapLocations) . getContents
 
 -- | Safely delete tools.
 deleteTool :: ToolRef -> DB ()
-deleteTool = dbUnsafeDeleteObject (error "deleteTool: impossible case: tools shouldn't contain anything")
+deleteTool tool_ref = dbUnsafeDeleteObject tool_ref $
+    (error "deleteTool: impossible case: tools shouldn't contain anything" :: forall m. (DBReadable m) => Reference () -> m Planar)
 
 toolDurability :: (DBReadable db) => ToolRef -> db Integer
-toolDurability tool_ref = 
+toolDurability tool_ref =
     do t <- dbGetTool tool_ref
        return $ case t of
           DeviceTool _ d -> deviceDurability d
           Sphere (MaterialSubstance m) -> material_construction_value (materialValue m) + 10
           Sphere (GasSubstance {}) -> 10
           Sphere (ChromaliteSubstance {}) -> 110
+

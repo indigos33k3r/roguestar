@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, Rank2Types, FlexibleContexts #-}
+{-# LANGUAGE ExistentialQuantification, Rank2Types, FlexibleContexts, ScopedTypeVariables #-}
 
 -- |
 -- Perception is essentially a catalogue of information that can be
@@ -24,7 +24,6 @@ import Control.Monad.Reader
 import Data.Ord
 import DB
 import Reference
-import Location
 import FactionData
 import Creature
 import PlaneVisibility
@@ -37,6 +36,8 @@ import TerrainData
 import BuildingData
 import Building
 import Plane
+import DetailedLocation
+import Building
 
 newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT CreatureRef db a) }
 
@@ -72,11 +73,11 @@ whoAmI = DBPerception $ ask
 runPerception :: (DBReadable db) => CreatureRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
 
-visibleObjects :: (DBReadable db,ReferenceType a) => (forall m. DBReadable m => Reference a -> DBPerception m Bool) -> DBPerception db [Reference a]
+visibleObjects :: (DBReadable db) => (forall m. DBReadable m => Reference () -> DBPerception m Bool) -> DBPerception db [Location]
 visibleObjects filterF =
     do me <- whoAmI
        faction <- myFaction
-       liftDB $ maybe (return []) (dbGetVisibleObjectsForFaction (\a -> runPerception me $ filterF a) faction) =<< liftM extractParent (dbWhere me)
+       liftDB $ mapRO DB.whereIs =<< maybe (return []) (dbGetVisibleObjectsForFaction (\a -> runPerception me $ filterF a) faction) =<< liftM fromLocation (DB.whereIs me)
 
 myFaction :: (DBReadable db) => DBPerception db Faction
 myFaction = Perception.getCreatureFaction =<< whoAmI
@@ -85,30 +86,34 @@ getCreatureFaction :: (DBReadable db) => CreatureRef -> DBPerception db Faction
 getCreatureFaction creature_ref = liftDB $ Creature.getCreatureFaction creature_ref
 
 whereAmI :: (DBReadable db) => DBPerception db (Facing,Position)
-whereAmI = liftM Location.fromLocation $ Perception.whereIs =<< whoAmI
+whereAmI = liftM detail $ Perception.whereIs =<< whoAmI
 
 whatPlaneAmIOn :: (DBReadable db) => DBPerception db PlaneRef
-whatPlaneAmIOn = liftM (fromParent . Location.fromLocation) $ Perception.whereIs =<< whoAmI
+whatPlaneAmIOn = liftM (planar_parent . identityDetail) $ (\x -> liftDB $ getPlanarLocation x) =<< whoAmI
 
-whereIs :: (DBReadable db,LocationView (Child a),ReferenceType a) =>
-           Reference a -> DBPerception db (AbstractLocation (Child a))
-whereIs ref = liftDB $ DB.whereIs ref
+whereIs :: (DBReadable db, ReferenceType a) =>
+           Reference a -> DBPerception db (DetailedLocation (Child a))
+whereIs ref = liftM (fromMaybe (error "Perception.whereIs: not a child of its own location record") . fromLocation) $ liftDB $ DB.whereIs ref
 
 localBiome :: (DBReadable db) => DBPerception db Biome
 localBiome =
     do plane_ref <- whatPlaneAmIOn
        liftDB $ liftM plane_biome $ dbGetPlane plane_ref
 
+
+-- Let's look into re-writing this with A*:
+-- http://hackage.haskell.org/packages/archive/astar/0.2.1/doc/html/Data-Graph-AStar.html
 compass :: (DBReadable db) => DBPerception db Facing
 compass =
-    do let signalling_building_types = map Stargate all_stargates ++ map Node all_nodes
-       (_,pos) <- whereAmI
+    do (_,pos) <- whereAmI
        plane <- whatPlaneAmIOn
        liftDB $
-           do buildings <- liftM (sortBy $ comparing $ distanceBetweenSquared pos . parent) $
-                  filterM (liftM (`elem` signalling_building_types) . buildingType . child) =<<
-                               dbGetContents plane
-              return $ maybe Here (faceAt pos . parent) $ listToMaybe buildings
+           do (all_buildings :: [DetailedLocation (Child Building)]) <- liftM mapLocations $ DB.getContents plane
+              all_signallers <- filterRO (liftM (== Just Magnetic) . buildingSignal . asChild . detail) all_buildings
+              let multipositionOf :: DetailedLocation (Child Building) -> MultiPosition
+                  multipositionOf = detail
+                  sorted_signallers = sortBy (comparing $ Position.distanceBetweenSquared pos . multipositionOf) all_signallers
+              return $ maybe Here (faceAt pos . detail) $ listToMaybe sorted_signallers
 
 depth :: (DBReadable db) => DBPerception db Integer
 depth =

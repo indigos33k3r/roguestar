@@ -1,11 +1,8 @@
-{-# OPTIONS_GHC -fglasgow-exts #-}
-
 module DBPrivate
     (Reference(..),
      unsafeReference,
      toUID,
      Location(..),
-     unsafeLocation,
      Position(..),
      Standing(..),
      Dropped(..),
@@ -27,6 +24,7 @@ import CreatureData
 import ToolData
 import PlaneData
 import BuildingData
+import PlanetData
 import Position
 
 --
@@ -34,8 +32,8 @@ import Position
 -- to guarantee that such data structures are always consistent with the game logic,
 -- e.g. a planet can not be wielded as a weapon.
 --
--- DB and DBData import and re-export most of DBPrivate.  Other modules should not
--- import DBPrivate.
+-- DB and DBData import and re-export most of DBPrivate, but the un-exported portions
+-- of this module are unsafe.  Other modules should not import DBPrivate.
 --
 
 -- |
@@ -52,11 +50,11 @@ type BuildingRef = Reference Building
 -- A typesafe reference to any entity.
 --
 data Reference a = CreatureRef { uid:: Integer }
-	         | PlaneRef { uid :: Integer }
-	         | ToolRef { uid :: Integer }
+                 | PlaneRef { uid :: Integer }
+                 | ToolRef { uid :: Integer }
                  | BuildingRef { uid :: Integer }
                  | UniverseRef
-		     deriving (Eq,Ord,Read,Show)
+                       deriving (Eq,Ord,Read,Show)
 
 unsafeReference :: Reference a -> Reference b
 unsafeReference (CreatureRef x) = CreatureRef x
@@ -92,7 +90,7 @@ data Dropped =
 data Constructed =
     Constructed { constructed_plane :: PlaneRef,
                   constructed_position :: Position,
-                  constructed_type :: BuildingType }
+                  constructed_shape :: BuildingShape }
     deriving (Read,Show,Eq,Ord)
 
 -- |
@@ -114,7 +112,7 @@ data Wielded =
 --
 data Subsequent =
     Subsequent { subsequent_to :: PlaneRef,
-                 subsequent_via :: StargateType }
+                 subsequent_via :: PlanetRegion }
     deriving (Read,Show,Eq,Ord)
 
 -- |
@@ -125,13 +123,12 @@ data Beneath =
     deriving (Read,Show,Eq,Ord)
 
 -- |
--- A relational data structure defining the location of any entity.
 --
--- c represents the type of the child entity, such as a Creature or Tool.
+-- Represents a location.
 --
--- p represents the type of the parent location, such as Standing or Dropped.
+-- Up to roguestar 0.6, Locations were typed.  As of 0.7 locations are untyped, but I added DetailedLocations.
 --
-data Location c p =
+data Location =
      IsStanding CreatureRef Standing
    | IsDropped ToolRef Dropped
    | InInventory ToolRef Inventory
@@ -142,17 +139,7 @@ data Location c p =
    | IsBeneath PlaneRef Beneath
     deriving (Read,Show,Eq)
 
-unsafeLocation :: Location a b -> Location c d
-unsafeLocation (IsStanding a b) = IsStanding a b
-unsafeLocation (IsDropped a b) = IsDropped a b
-unsafeLocation (InInventory a b) = InInventory a b
-unsafeLocation (IsWielded a b) = IsWielded a b
-unsafeLocation (IsConstructed a b) = IsConstructed a b
-unsafeLocation (InTheUniverse a) = InTheUniverse a
-unsafeLocation (IsSubsequent a b) = IsSubsequent a b
-unsafeLocation (IsBeneath a b) = IsBeneath a b
-
-instance HierarchicalRelation (Location e t) where
+instance HierarchicalRelation Location where
     parent (IsStanding _ t) = toUID $ standing_plane t
     parent (IsDropped _ t) = toUID $ dropped_plane t
     parent (InInventory _ t) = toUID $ inventory_creature t

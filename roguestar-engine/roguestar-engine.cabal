@@ -23,7 +23,7 @@ executable roguestar-engine
                mtl >=1.1.0.2, random >=1.0.0.2 && <1.1,
                old-time >=1.0.0.3 && <1.1, array >=0.3.0.0 && <0.3.1,
                containers >=0.3.0.0, base >=4 && <5
-  other-modules: TravelData, VisibilityData, FactionData, Behavior, Alignment, PlaneData, Grids, Perception, PlaneVisibility, Turns, Plane, CreatureData, Protocol, Character, Tool, Substances, HierarchicalDatabase, Travel, ToolData, CharacterData, Creature, Facing, DBPrivate, RNG, Species, Position, TerrainData, Combat, Tests, DBData, GridRayCaster, BeginGame, SpeciesData, TimeCoordinate, DB, AttributeGeneration, CreatureAttribute, Building, BuildingData, Town, Random, PlayerState, MakeData, DBErrorFlag, Construction, Make, Activate, Contact, DeviceActivation, WorkCluster, Planet, PlanetData, Logging, NodeData, CharacterAdvancement
+  other-modules: TravelData, VisibilityData, FactionData, Behavior, Alignment, PlaneData, Grids, Perception, PlaneVisibility, Turns, Plane, CreatureData, Protocol, Character, Tool, Substances, HierarchicalDatabase, Travel, ToolData, CharacterData, Creature, Facing, DBPrivate, RNG, Species, Position, TerrainData, Combat, Tests, DBData, GridRayCaster, BeginGame, SpeciesData, TimeCoordinate, DB, AttributeGeneration, CreatureAttribute, Building, BuildingData, Town, Random, PlayerState, MakeData, DBErrorFlag, Construction, Make, Activate, Contact, DeviceActivation, WorkCluster, Planet, PlanetData, Logging, PowerUpData, CharacterAdvancement, PersistantData
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)

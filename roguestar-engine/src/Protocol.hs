@@ -4,6 +4,7 @@ module Protocol
     (mainLoop)
     where
 
+import Prelude hiding (getContents)
 import Data.Char
 import Reference
 import Data.List as List
@@ -12,7 +13,7 @@ import Creature
 import Character
 import DB
 import System.Exit
-import System.IO
+import System.IO hiding (getContents)
 import BeginGame
 import Data.Maybe
 import Plane
@@ -40,6 +41,7 @@ import Control.Exception
 import WorkCluster
 import qualified Data.ByteString.Char8 as B
 import qualified Perception
+import DetailedLocation
 -- Don't call dbBehave, use dbPerformPlayerTurn
 import Behavior hiding (dbBehave)
 -- We need to construct References based on UIDs, so we cheat a little:
@@ -55,19 +57,21 @@ mainLoop db_init =
        work_cluster <- newWorkCluster
        replaceWorkOperation work_cluster . evaluateGame =<< readMVar db_var
        let foreverLoopThenQuit = flip finally (putMVar wait_quit ()) . forever
-       _ <- forkIO $ foreverLoopThenQuit $ writeChan input_chan =<< B.getLine
-       _ <- forkIO $ foreverLoopThenQuit $
+       _ <- forkIO $ foreverLoopThenQuit $ writeChan input_chan =<< B.getLine  --read loop
+       _ <- forkIO $ foreverLoopThenQuit $  --write loop
            do next_line <- liftM (B.map toLower . B.unlines . B.lines) (readChan output_chan)
               when (B.length next_line > 0) $
                   do B.putStrLn next_line
                      B.putStrLn "over"
               hFlush stdout
        _ <- forkIO $ foreverLoopThenQuit $
+           -- read and dispatch commands, querys are run predictively
+           -- (before they are actually received) and in parallel
            do next_command <- readChan input_chan
               case (B.words $ B.map toLower next_command) of
                   ["quit"] -> exitWith ExitSuccess
                   ["reset"] -> stopping query_count $ modifyMVar_ db_var (const $ return initial_db)
-                  ("game":"query":args) -> 
+                  ("game":"query":args) ->
                       do querrying query_count $
                              do result <- workRequest work_cluster (Query, args)
                                 complete Nothing output_chan result
@@ -207,13 +211,13 @@ menuState = liftM menuIndex playerState
 -- in the current state, this has no effect.
 --
 modifyMenuState :: (Integer -> Integer) -> DB ()
-modifyMenuState f_ = 
+modifyMenuState f_ =
     do number_of_tools <- liftM genericLength toolMenuElements
        let f = (\x -> if number_of_tools == 0 then 0 else x `mod` number_of_tools) . f_
        setPlayerState . modifyMenuIndex f =<< playerState
 
 dbDispatchQuery :: (DBReadable db) => [B.ByteString] -> db B.ByteString
-dbDispatchQuery ["state"] = 
+dbDispatchQuery ["state"] =
     do state <- playerState
        return $ case state of
                            SpeciesSelectionState -> "answer: state species-selection"
@@ -339,14 +343,13 @@ dbDispatchQuery ["visible-objects","0"] =
     do maybe_plane_ref <- dbGetCurrentPlane
        (objects :: [Reference ()]) <- maybe (return [])
            (dbGetVisibleObjectsForFaction (return . const True) Player) maybe_plane_ref
-       (object_locations :: [Location (Reference ()) ()]) <- mapM dbWhere objects
-       table_rows <- mapM (dbObjectToTableRow . child) object_locations
+       table_rows <- mapM dbObjectToTableRow objects
        return ("begin-table visible-objects 0 object-unique-id x y facing\n" `B.append`
                (B.unlines $ table_rows) `B.append`
                "end-table")
         where dbObjectToTableRow obj_ref =
-                do l <- dbWhere obj_ref
-                   return $ case (extractParent l,extractParent l) of
+                do l <- whereIs obj_ref
+                   return $ case (fromLocation l,fromLocation l) of
                                  (Just (Position (x,y)),maybe_face) -> B.unwords $ map B.pack $ [show $ toUID obj_ref,show x,show y,show $ fromMaybe Here maybe_face]
                                  _ -> ""
 
@@ -357,13 +360,13 @@ dbDispatchQuery ["object-details",uid] = ro $
          (dbGetVisibleObjectsForFaction (\ref ->
               do let f = (== uid) . B.pack . show . toUID
                  let m_wielder = coerceReference ref
-                 m_wield <- maybe (return Nothing) dbGetWielded m_wielder
+                 m_wield <- maybe (return Nothing) getWielded m_wielder
                  return $ maybe False f m_wield || f ref) Player)
          maybe_plane_ref
-     let creature_refs = mapMaybe (coerceReferenceTyped _creature) visibles
-     wielded <- liftM catMaybes $ mapM dbGetWielded creature_refs
-     let tool_refs = mapMaybe (coerceReferenceTyped _tool) visibles ++ wielded
-     let building_refs = mapMaybe (coerceReferenceTyped _building) visibles
+     let (creature_refs :: [CreatureRef]) = mapMaybe coerceReference visibles
+     wielded <- liftM catMaybes $ mapM getWielded creature_refs
+     let (tool_refs :: [ToolRef]) = mapMaybe coerceReference visibles ++ wielded
+     let (building_refs :: [BuildingRef]) = mapMaybe coerceReference visibles
      creatures <- liftM (zip creature_refs) $ mapRO dbGetCreature creature_refs
      tools <- liftM (zip tool_refs) $ mapRO dbGetTool tool_refs
      buildings <- liftM (zip building_refs) $ mapRO dbGetBuilding building_refs
@@ -405,10 +408,10 @@ dbDispatchQuery ["object-details",uid] = ro $
                "tool-type " `B.append` toolType tool `B.append` "\n" `B.append`
                "tool " `B.append` toolName tool `B.append` "\n"
          buildingToTableData :: (DBReadable db) => (BuildingRef,Building) -> db B.ByteString
-         buildingToTableData (ref,Building) = objectTableWrapper ref $
-             do building_type <- buildingType ref
+         buildingToTableData (ref,Building {}) = objectTableWrapper ref $
+             do building_shape <- buildingShape ref
                 return $ "object-type building\n" `B.append`
-                         "building-type " `B.append` B.pack (showBuilding building_type) `B.append` "\n"
+                         "building-shape " `B.append` B.pack (show building_shape) `B.append` "\n"
 
 dbDispatchQuery ["player-stats","0"] = dbRequiresPlayerCenteredState dbQueryPlayerStats
 
@@ -416,11 +419,12 @@ dbDispatchQuery ["center-coordinates","0"] = dbRequiresPlanarTurnState dbQueryCe
 
 dbDispatchQuery ["base-classes","0"] = dbRequiresClassSelectionState dbQueryBaseClasses
 
-dbDispatchQuery ["pickups","0"] = dbRequiresPlayerTurnState $ \creature_ref -> 
-    liftM (showToolMenuTable "pickups" "0") $ toolsToMenuTable =<< dbAvailablePickups creature_ref
+dbDispatchQuery ["pickups","0"] = dbRequiresPlayerTurnState $ \creature_ref ->
+    liftM (showToolMenuTable "pickups" "0") $ toolsToMenuTable =<< availablePickups creature_ref
 
 dbDispatchQuery ["inventory","0"] = dbRequiresPlayerTurnState $ \creature_ref ->
-    liftM (showToolMenuTable "inventory" "0") $ toolsToMenuTable =<< dbGetContents creature_ref
+    do inventory <- liftM (map asChild . mapLocations) $ getContents creature_ref
+       liftM (showToolMenuTable "inventory" "0") $ toolsToMenuTable inventory
 
 dbDispatchQuery ["menu","0"] =
     liftM (showToolMenuTable "menu" "0") $ toolsToMenuTable =<< toolMenuElements
@@ -437,8 +441,9 @@ dbDispatchQuery ["menu",s] | Just window_size <- readNumber s =
 
 dbDispatchQuery ["wielded-objects","0"] =
     do m_plane_ref <- dbGetCurrentPlane
-       creature_refs <- maybe (return []) (dbGetVisibleObjectsForFaction (return . const True) Player) m_plane_ref
-       wielded_tool_refs <- mapM dbGetWielded creature_refs
+       visible_refs <- maybe (return []) (dbGetVisibleObjectsForFaction (return . const True) Player) m_plane_ref
+       let (creature_refs :: [CreatureRef]) = mapMaybe coerceReference visible_refs
+       wielded_tool_refs <- mapM getWielded creature_refs
        let wieldedPairToTable :: CreatureRef -> Maybe ToolRef -> Maybe B.ByteString
            wieldedPairToTable creature_ref = fmap (\tool_ref -> (B.pack $ show $ toUID tool_ref) `B.append` " " `B.append` (B.pack $ show $ toUID creature_ref))
        return $ "begin-table wielded-objects 0 uid creature\n" `B.append`
@@ -592,18 +597,18 @@ dbDispatchAction ["make-end"] =
            _ -> throwError $ DBError "protocol-error: not in make or make-what state"
 
 dbDispatchAction ["pickup"] = dbRequiresPlayerTurnState $ \creature_ref ->
-    do pickups <- dbAvailablePickups creature_ref
+    do pickups <- availablePickups creature_ref
        case pickups of
            [tool_ref] -> dbPerformPlayerTurn (Pickup tool_ref) creature_ref >> return ()
-	   [] -> throwError $ DBErrorFlag NothingAtFeet
-	   _ -> setPlayerState (PlayerCreatureTurn creature_ref (PickupMode 0))
+           [] -> throwError $ DBErrorFlag NothingAtFeet
+           _ -> setPlayerState (PlayerCreatureTurn creature_ref (PickupMode 0))
 
 dbDispatchAction ["pickup",tool_uid] = dbRequiresPlayerTurnState $ \creature_ref ->
     do tool_ref <- readUID ToolRef tool_uid
        dbPerformPlayerTurn (Pickup tool_ref) creature_ref
 
 dbDispatchAction ["drop"] = dbRequiresPlayerTurnState $ \creature_ref ->
-    do inventory <- dbGetContents creature_ref
+    do inventory <- liftM (map asChild . mapLocations) $ getContents creature_ref
        case inventory of
            [tool_ref] -> dbPerformPlayerTurn (Drop tool_ref) creature_ref >> return ()
 	   [] -> throwError $ DBErrorFlag NothingInInventory
@@ -674,12 +679,12 @@ toolMenuElements :: (DBReadable db) => db [ToolRef]
 toolMenuElements =
     do state <- playerState
        case state of
-           PlayerCreatureTurn c (PickupMode {}) -> dbAvailablePickups c
+           PlayerCreatureTurn c (PickupMode {}) -> availablePickups c
            PlayerCreatureTurn c (WieldMode {}) -> availableWields c
            PlayerCreatureTurn c (MakeMode _ make_prep) | needsChromalite make_prep -> filterM (liftM (isJust . hasChromalite) . dbGetTool) =<< availableWields c
            PlayerCreatureTurn c (MakeMode _ make_prep) | needsMaterial make_prep -> filterM (liftM (isJust . hasMaterial) . dbGetTool) =<< availableWields c
            PlayerCreatureTurn c (MakeMode _ make_prep) | needsGas make_prep -> filterM (liftM (isJust . hasGas) . dbGetTool) =<< availableWields c
-           PlayerCreatureTurn c _ -> dbGetContents c
+           PlayerCreatureTurn c _ -> liftM (map asChild . mapLocations) $ getContents c
            _ -> return []
 
 -- |
@@ -745,8 +750,8 @@ baseClassesTable creature =
 
 dbQueryCenterCoordinates :: (DBReadable db) => CreatureRef -> db B.ByteString
 dbQueryCenterCoordinates creature_ref =
-    do l <- dbWhere creature_ref
-       case (extractParent l,extractParent l :: Maybe Facing) of
+    do l <- whereIs creature_ref
+       case (fromLocation l,fromLocation l :: Maybe Facing) of
 		(Just (Position (x,y)),Nothing) -> 
                     return (begin_table `B.append`
 			    "x " `B.append` B.pack (show x) `B.append` "\n" `B.append`

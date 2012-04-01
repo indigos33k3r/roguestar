@@ -15,9 +15,6 @@ module DB
      setPlayerState,
      SnapshotEvent(..),
      DBError(..),
-     CreatureLocation(..),
-     ToolLocation(..),
-     PlaneLocation(..),
      initial_db,
      DB_BaseType(db_error_flag),
      dbActionCount,
@@ -34,13 +31,12 @@ module DB
      dbModPlane,
      dbModTool,
      dbModBuilding,
-     dbMove,
      dbUnwieldCreature,
      dbVerify,
      dbGetAncestors,
-     dbWhere,
      whereIs,
-     dbGetContents,
+     getContents,
+     move,
      dbSetStartingSpecies,
      dbGetStartingSpecies,
      ro, atomic,
@@ -58,9 +54,9 @@ module DB
      module Random)
     where
 
+import Prelude hiding (getContents)
 import DBPrivate
 import DBData
-import Location
 import Reference
 import CreatureData
 import PlaneData
@@ -98,7 +94,7 @@ data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_planes :: Map PlaneRef Plane,
                                  db_tools :: Map ToolRef Tool,
                                  db_buildings :: Map BuildingRef Building,
-                                 db_hierarchy :: HD.HierarchicalDatabase (Location (Reference ()) ()),
+                                 db_hierarchy :: HD.HierarchicalDatabase Location,
                                  db_time_coordinates :: Map (Reference ()) TimeCoordinate,
                                  db_error_flag :: String,
                                  db_prior_snapshot :: Maybe DB_BaseType,
@@ -189,10 +185,10 @@ ro :: (DBReadable db) => (forall m. DBReadable m => m a) -> db a
 ro db = dbSimulate db
 
 filterRO :: (DBReadable db) => (forall m. DBReadable m => a -> m Bool) -> [a] -> db [a]
-filterRO f xs = liftM (`using` parList rwhnf) $ filterM (dbSimulate . f) xs
+filterRO f xs = liftM (`using` parList rseq) $ filterM (dbSimulate . f) xs
 
 mapRO :: (DBReadable db) => (forall m. DBReadable m => a -> m b) -> [a] -> db [b]
-mapRO f xs = liftM (`using` parList rwhnf) $ mapM (dbSimulate . f) xs
+mapRO f xs = liftM (`using` parList rseq) $ mapM (dbSimulate . f) xs
 
 sortByRO :: (DBReadable db,Ord b) => (forall m. DBReadable m => a -> m b) -> [a] -> db [a]
 sortByRO f xs =
@@ -225,7 +221,7 @@ initial_db = DB_BaseType {
     db_buildings = Map.fromList [],
     db_hierarchy = HD.fromList [],
     db_error_flag = [],
-    db_time_coordinates = Map.fromList [(generalizeReference the_universe, zero_time)],
+    db_time_coordinates = Map.fromList [(genericReference the_universe, zero_time)],
     db_prior_snapshot = Nothing,
     db_action_count = 0 }
 
@@ -258,103 +254,63 @@ dbNextObjectRef :: DB Integer
 dbNextObjectRef = do modify $ \db -> db { db_next_object_ref = succ $ db_next_object_ref db }
                      gets db_next_object_ref
 
-class (LocationParent l) => CreatureLocation l where
-    creatureLocation :: CreatureRef -> l -> Location CreatureRef l
-
-class (LocationParent l) => ToolLocation l where
-    toolLocation :: ToolRef -> l -> Location ToolRef l
-
-class (LocationParent l) => BuildingLocation l where
-    buildingLocation :: BuildingRef -> l -> Location BuildingRef l
-
-class (LocationParent l) => PlaneLocation l where
-    planeLocation :: PlaneRef -> l -> Location PlaneRef l
-
-instance CreatureLocation Standing where
-    creatureLocation a l = IsStanding (unsafeReference a) l
-
-instance ToolLocation Dropped where
-    toolLocation a l = IsDropped (unsafeReference a) l
-
-instance ToolLocation Inventory where
-    toolLocation a l = InInventory (unsafeReference a) l
-
-instance ToolLocation Wielded where
-    toolLocation a l = IsWielded (unsafeReference a) l
-
-instance BuildingLocation Constructed where
-    buildingLocation a l = IsConstructed (unsafeReference a) l
-
-instance PlaneLocation TheUniverse where
-    planeLocation a _ = InTheUniverse a
-
-instance PlaneLocation Subsequent where
-    planeLocation a l = IsSubsequent a l
-
-instance PlaneLocation Beneath where
-    planeLocation a l = IsBeneath a l
-
 -- |
 -- Adds something to a map in the database using a new object reference.
 --
-dbAddObjectComposable :: (ReferenceType a,
-                          LocationChild (Reference a),
-                          LocationParent l) =>
+dbAddObjectComposable :: (ReferenceType a) =>
                          (Integer -> (Reference a)) ->
                          (Reference a -> a -> DB ()) ->
-                         (Reference a -> l -> Location (Reference a) l) ->
+                         (Reference a -> l -> Location) ->
                          a -> l -> DB (Reference a)
 dbAddObjectComposable constructReference updateObject constructLocation thing loc =
     do ref <- liftM constructReference $ dbNextObjectRef
        updateObject ref thing
-       dbSetLocation $ constructLocation ref loc
-       genericParent_ref <- liftM genericParent $ dbWhere ref
-       dbSetTimeCoordinate (generalizeReference ref) =<< dbGetTimeCoordinate (generalizeReference genericParent_ref)
+       setLocation $ constructLocation ref loc
+       genericParent_ref <- liftM parentReference $ whereIs ref
+       dbSetTimeCoordinate (genericReference ref) =<< dbGetTimeCoordinate (genericReference genericParent_ref)
        return ref
 
 -- |
 -- Adds a new Creature to the database.
 --
-dbAddCreature :: (CreatureLocation l) => Creature -> l -> DB CreatureRef
-dbAddCreature = dbAddObjectComposable CreatureRef dbPutCreature creatureLocation
+dbAddCreature :: (LocationConstructor l, ReferenceTypeOf l ~ Creature) => Creature -> l -> DB CreatureRef
+dbAddCreature = dbAddObjectComposable CreatureRef dbPutCreature (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Plane to the database.
 --
-dbAddPlane :: (PlaneLocation l) => Plane -> l -> DB PlaneRef
-dbAddPlane = dbAddObjectComposable PlaneRef dbPutPlane planeLocation
+dbAddPlane :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => Plane -> l -> DB PlaneRef
+dbAddPlane = dbAddObjectComposable PlaneRef dbPutPlane (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Tool to the database.
 --
-dbAddTool :: (ToolLocation l) => Tool -> l -> DB ToolRef
-dbAddTool = dbAddObjectComposable ToolRef dbPutTool toolLocation
+dbAddTool :: (LocationConstructor l, ReferenceTypeOf l ~ Tool) => Tool -> l -> DB ToolRef
+dbAddTool = dbAddObjectComposable ToolRef dbPutTool (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Tool to the database.
 --
-dbAddBuilding :: (BuildingLocation l) => Building -> l -> DB BuildingRef
-dbAddBuilding = dbAddObjectComposable BuildingRef dbPutBuilding buildingLocation
+dbAddBuilding :: (LocationConstructor l, ReferenceTypeOf l ~ Building) => Building -> l -> DB BuildingRef
+dbAddBuilding = dbAddObjectComposable BuildingRef dbPutBuilding (\r l -> constructLocation r l Nothing)
 
 -- |
 -- This deletes an object, which will cause future references to the same object
 -- to fail.  Accepts a function to move all of the objects nested within the
 -- object being deleted.
 --
-dbUnsafeDeleteObject :: (ReferenceType e) =>
-        (forall m. DBReadable m =>
-         Location (Reference ()) (Reference e) ->
-         m (Location (Reference ()) ())) ->
+dbUnsafeDeleteObject :: (LocationConstructor l, ReferenceTypeOf l ~ ()) =>
     Reference e ->
+    (forall m. (DBReadable m) => Reference () -> m l) ->
     DB ()
-dbUnsafeDeleteObject f ref =
-    do _ <- dbMoveAllWithin f ref
+dbUnsafeDeleteObject ref f =
+    do _ <- moveAllWithin ref f
        modify $ \db -> db {
            db_creatures = Map.delete (unsafeReference ref) $ db_creatures db,
            db_planes = Map.delete (unsafeReference ref) $ db_planes db,
            db_tools = Map.delete (unsafeReference ref) $ db_tools db,
            db_hierarchy = HD.delete (toUID ref) $ db_hierarchy db,
-           db_time_coordinates = Map.delete (generalizeReference ref) $ db_time_coordinates db }
+           db_time_coordinates = Map.delete (genericReference ref) $ db_time_coordinates db }
 
 -- |
 -- Puts an object into the database using getter and setter functions.
@@ -397,9 +353,9 @@ dbPutBuilding = dbPutObjectComposable db_buildings $
 -- |
 -- Gets an object from the database using getter functions.
 --
-dbGetObjectComposable :: (DBReadable db,Ord a,GenericReference a) => String -> (DB_BaseType -> Map a b) -> a -> db b
+dbGetObjectComposable :: (DBReadable db) => String -> (DB_BaseType -> Map (Reference a) b) -> Reference a -> db b
 dbGetObjectComposable type_info get_fn ref = 
-    asks (fromMaybe (error $ "dbGetObjectComposable: Nothing.  UID was " ++ show (toUID $ generalizeReference ref) ++ ", type info was " ++ type_info) . Map.lookup ref . get_fn)
+    asks (fromMaybe (error $ "dbGetObjectComposable: Nothing.  UID was " ++ show (toUID ref) ++ ", type info was " ++ type_info) . Map.lookup ref . get_fn)
 
 -- |
 -- Gets a Creature from a CreatureRef
@@ -456,27 +412,8 @@ dbModTool = dbModObjectComposable dbGetTool dbPutTool
 dbModBuilding :: (Building -> Building) -> BuildingRef -> DB ()
 dbModBuilding = dbModObjectComposable dbGetBuilding dbPutBuilding
 
--- |
--- Set the location of an object.
--- This is where we handle making sure that a creature can only wield one tool,
--- and a Plane can point to only one subsequent Plane.
---
--- DEPRECATED: use setLocation
--- This function is a monster.
---
-dbSetLocation :: (LocationChild c,LocationParent p) => Location c p -> DB ()
-dbSetLocation loc =
-    do logDB log_database DEBUG $ "setting location: " ++ show loc
-       case (fmap parent $ coerceParentTyped _wielded loc,
-             fmap parent $ coerceParentTyped _subsequent loc,
-             fmap parent $ coerceParentTyped _beneath loc) of
-           (Just (Wielded c),_,_) -> dbUnwieldCreature c
-           (_,Just (Subsequent s v),_) -> shuntPlane (\subseq -> subsequent_via subseq == v) s
-           (_,_,Just (Beneath b)) -> shuntPlane (\(Beneath {}) -> True) b
-           (_,_,_) -> return ()
-       modify (\db -> db { db_hierarchy = HD.insert (unsafeLocation loc) $ db_hierarchy db })
-
-setLocation :: Location () () -> DB ()
+-- | A low-level set location instruction.  Merely guarantees the consistency of the location graph.
+setLocation :: Location -> DB ()
 setLocation loc =
     do logDB log_database DEBUG $ "setting location: " ++ show loc
        case loc of
@@ -484,70 +421,46 @@ setLocation loc =
            IsSubsequent _ (Subsequent s v) -> shuntPlane (\subseq -> subsequent_via subseq == v) s
            IsBeneath _ (Beneath b) -> shuntPlane (\(Beneath {}) -> True) b
            _ -> return ()
-       modify (\db -> db { db_hierarchy = HD.insert (unsafeLocation loc) $ db_hierarchy db })
+       modify (\db -> db { db_hierarchy = HD.insert loc $ db_hierarchy db })
 
 -- |
--- Bump any existing child Plane in a matching to TheUniverse
+-- Bump any existing child Plane matching the predicate to TheUniverse.
+-- Used to guarantee that a Plane can have only one child of a particular type.
+-- (only one plane Beneath, only one plane Subsequent via a particular type of gateway).
 --
-shuntPlane :: (LocationView a,LocationProvides a (Child Plane) ~ Provided) => (a -> Bool) -> PlaneRef -> DB ()
+shuntPlane :: (LocationDetail a) => (a -> Bool) -> PlaneRef -> DB ()
 shuntPlane f p =
-    do locations <- liftM (filterLocation f) $ DB.getContents p
-       forM_ locations $ \l ->
-           do (_ :: AbstractLocation (Child Plane),
-               _ :: AbstractLocation (Parent TheUniverse)) <-
-                   moveTo (fromChild $ Location.fromLocation l :: PlaneRef) TheUniverse
-              return ()
+    do locations <- liftM (List.filter (maybe False f . fromLocation)) $ DB.getContents p
+       mapM_ (maybe (return ()) setLocation . shuntToTheUniverse) locations
 
 -- |
 -- Shunt any wielded objects into inventory.
 --
 dbUnwieldCreature :: CreatureRef -> DB ()
-dbUnwieldCreature c = mapM_ (dbSetLocation . returnToInventory) =<< dbGetContents c      
+dbUnwieldCreature c = mapM_ (maybe (return ()) setLocation . returnToInventory) =<< getContents c
 
 -- |
 -- Moves an object, returning the location of the object before and after
 -- the move.
 --
--- Deprecated: new code should use 'moveTo'.
---
-dbMove :: (ReferenceType e, LocationChild (Reference e),LocationParent b) =>
-          (forall m. DBReadable m => Location (Reference e) () ->
-                                     m (Location (Reference e) b)) ->
-          (Reference e) ->
-          DB (Location (Reference e) (),Location (Reference e) b)
-dbMove moveF ref =
-    do old <- dbWhere ref
-       new <- ro $ moveF (unsafeLocation old)
-       dbSetLocation (unsafeLocation new :: Location (Reference ()) ())
-       when (genericParent old =/= genericParent new) $  -- an entity arriving in a new container shouldn't act before, nor be suspended beyond, the next action of the container
-           dbSetTimeCoordinate ref =<< dbGetTimeCoordinate (genericParent new)
-       return (unsafeLocation old, unsafeLocation new)
-       
--- |
--- Moves an object, returning the location of the object before and after
--- the move.
---
-moveTo :: (Motion m,
-           LocationView (Child e),
-           LocationView to,
-           LocationProvides (Child e) (MoveFrom m) ~ Provided,
-           LocationProvides (MoveTo m) to ~ Provided,
-           ReferenceType e) =>
-          Reference e -> m -> DB (AbstractLocation (Child e), AbstractLocation to)
-moveTo ref motion =
+move :: (LocationConstructor l, ReferenceTypeOf l ~ e) => Reference e -> l -> DB (Location,Location)
+move ref location_data =
     do old <- whereIs ref
-       let new = moveLocation motion $ coerceLocation old
-       setLocation $ (Location.fromLocation new :: Location () ())
-       when (((fromParent $ Location.fromLocation old) :: Reference ()) == (fromParent $ Location.fromLocation new)) $
-           dbSetTimeCoordinate ref =<< dbGetTimeCoordinate (fromParent $ Location.fromLocation new :: Reference ())
-       return (coerceLocation old,coerceLocation new)
+       let new = constructLocation ref location_data (Just old)
+       setLocation new
+       when (childReference old /= childReference new) $
+           throwError $ DBError "moveTo: Object changed identity during move!"
+       when (parentReference old == parentReference new) $
+           dbSetTimeCoordinate ref =<< dbGetTimeCoordinate (parentReference new)
+       return (old,new)
 
-dbMoveAllWithin :: (forall m. DBReadable m => 
-                       Location (Reference ()) (Reference e) ->
-		       m (Location (Reference ()) ())) ->
-                   Reference e ->
-		   DB [(Location (Reference ()) (Reference e),Location (Reference ()) ())]
-dbMoveAllWithin f ref = mapM (liftM (first unsafeLocation) . dbMove (f . unsafeLocation)) =<< dbGetContents ref
+moveAllWithin :: (LocationConstructor l, ReferenceTypeOf l ~ ()) =>
+                 Reference e ->
+                 (forall m. (DBReadable m) => Reference () -> m l) ->
+                 DB [(Location,Location)]
+moveAllWithin ref f =
+    do all_entities <- liftM (List.map childReference) $ getContents ref
+       forM all_entities $ \e -> move e =<< f e
 
 -- |
 -- Verifies that a reference is in the database.
@@ -555,54 +468,38 @@ dbMoveAllWithin f ref = mapM (liftM (first unsafeLocation) . dbMove (f . unsafeL
 dbVerify :: (DBReadable db) => Reference e -> db Bool
 dbVerify ref = asks (isJust . HD.parentOf (toUID ref) . db_hierarchy)
 
--- |
--- Returns the location of this object.
---
-dbWhere :: (DBReadable db) => Reference e -> db (Location (Reference e) ())
-dbWhere item = asks (unsafeLocation . fromMaybe (error "dbWhere: has no location") .
-                       HD.lookupParent (toUID item) . db_hierarchy)
-
-whereIs :: (DBReadable db, ReferenceType e, LocationView (Child e)) => Reference e -> db (AbstractLocation (Child e))
-whereIs item =
-    do location <- asks (fromMaybe (error "whereIs: has no location") . HD.lookupParent (toUID item) . db_hierarchy)
-       return $ fromMaybe (error "whereIs: location type violate") $ filterLocation (const True) $ Just $ abstractLocation location
+whereIs :: (DBReadable db) => Reference e -> db Location
+whereIs item = asks (fromMaybe (error "whereIs: has no location") . HD.lookupParent (toUID item) . db_hierarchy)
 
 -- |
 -- Returns all ancestor Locations of this element starting with the location
--- of the element and ending with theUniverse.
+-- of the element and ending with TheUniverse.
 --
-dbGetAncestors :: (DBReadable db,ReferenceType e) => Reference e -> db [Location (Reference ()) ()]
-dbGetAncestors ref | isReferenceTyped _the_universe ref = return []
+dbGetAncestors :: (DBReadable db) => Reference e -> db [Location]
+dbGetAncestors ref | genericReference ref == genericReference the_universe = return []
 dbGetAncestors ref =
-    do this <- dbWhere $ generalizeReference ref
-       rest <- dbGetAncestors $ genericParent this
+    do this <- whereIs ref
+       rest <- dbGetAncestors $ parentReference this
        return $ this : rest
-
--- |
--- Returns the location records of this object.
---
-dbGetContents :: (DBReadable db,GenericReference a) => Reference t -> db [a]
-dbGetContents item = asks (Data.Maybe.mapMaybe DBData.fromLocation . HD.lookupChildren 
-                               (toUID item) . db_hierarchy)
 
 -- |
 -- Returns locations of all children of a reference.
 --
-getContents :: (LocationView (Parent t), DBReadable db) => Reference t -> db [AbstractLocation (Parent t)]
-getContents item = asks (filterLocation (const True) . List.map abstractLocation . HD.lookupChildren (toUID item) . db_hierarchy)
+getContents :: (DBReadable db) => Reference t -> db [Location]
+getContents item = asks (HD.lookupChildren (toUID item) . db_hierarchy)
 
 -- |
 -- Gets the time of an object.
 --
 dbGetTimeCoordinate :: (DBReadable db,ReferenceType a) => Reference a -> db TimeCoordinate
 dbGetTimeCoordinate ref = asks (fromMaybe (error "dbGetTimeCoordinate: missing time coordinate.") . 
-                                  Map.lookup (generalizeReference ref) . db_time_coordinates)
+                                  Map.lookup (genericReference ref) . db_time_coordinates)
 
 -- |
 -- Sets the time of an object.
 --
-dbSetTimeCoordinate :: (ReferenceType a) => Reference a -> TimeCoordinate -> DB ()
-dbSetTimeCoordinate ref tc = modify (\db -> db { db_time_coordinates = Map.insert (generalizeReference ref) tc $ db_time_coordinates db })
+dbSetTimeCoordinate :: Reference a -> TimeCoordinate -> DB ()
+dbSetTimeCoordinate ref tc = modify (\db -> db { db_time_coordinates = Map.insert (genericReference ref) tc $ db_time_coordinates db })
 
 -- |
 -- Advances the time of an object.
@@ -618,7 +515,7 @@ dbNextTurn [] = error "dbNextTurn: empty list"
 dbNextTurn refs =
     asks (\db -> fst $ minimumBy (comparing snd) $
                    List.map (\r -> (r,fromMaybe (error "dbNextTurn: missing time coordinate") $
-                                      Map.lookup (generalizeReference r) (db_time_coordinates db))) refs)
+                                      Map.lookup (genericReference r) (db_time_coordinates db))) refs)
 
 -- |
 -- Answers the starting species.

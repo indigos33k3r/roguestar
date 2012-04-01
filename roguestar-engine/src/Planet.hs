@@ -1,9 +1,12 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Planet
     (makePlanets,
      generatePlanetInfo)
     where
 
 import PlanetData
+import PlaneData
 import DB
 import Plane
 import TerrainData
@@ -16,7 +19,7 @@ import Data.ByteString.Char8 as B
 import FactionData
 import BuildingData
 
-makePlanet :: (PlaneLocation l) => l -> PlanetInfo -> DB PlaneRef
+makePlanet :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => l -> PlanetInfo -> DB PlaneRef
 makePlanet plane_location planet_info =
     do seed <- getRandom
        seed_down <- getRandom
@@ -37,17 +40,17 @@ makePlanet plane_location planet_info =
        _ <- makeDungeons planet_name (Beneath plane_ref) 1 planet_info
        return plane_ref
 
-makePlanets :: (PlaneLocation l) => l -> [PlanetInfo]  -> DB (PlaneRef,PlaneRef)
+makePlanets :: Subsequent -> [PlanetInfo]  -> DB (PlaneRef,PlaneRef)
 makePlanets _ [] = return $ error "makePlanets: empty list"
 makePlanets l (planet_info:[]) =
     do plane_ref <- makePlanet l planet_info
        return (plane_ref,plane_ref)
 makePlanets l (planet_info:rest) =
     do first_plane_ref <- makePlanet l planet_info
-       (_,last_plane_ref) <- makePlanets (Subsequent first_plane_ref Portal) rest
+       (_,last_plane_ref) <- makePlanets (Subsequent first_plane_ref $ subsequent_via l) rest
        return (first_plane_ref,last_plane_ref)
 
-makeDungeons :: (PlaneLocation l) =>
+makeDungeons :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) =>
                 B.ByteString ->
                 l ->
                 Integer ->
@@ -67,7 +70,7 @@ makeDungeons planet_name plane_location i planet_info =
                    if i < n then [stairsDown seed_down i] else [] })
            plane_location
        when (i == n) $
-           do _ <- createTown plane_ref [Node $ planet_info_node_type planet_info]
+           do _ <- createTown plane_ref $ Data.List.replicate (fromInteger n) powerup
               return ()
        when (i < n) $
            do _ <- makeDungeons planet_name (Beneath plane_ref) (succ i) planet_info

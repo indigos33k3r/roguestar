@@ -6,11 +6,13 @@ module Behavior
      dbBehave)
     where
 
+import Prelude hiding (getContents)
 import DB
 import Position
 import Facing
 import Data.Ratio
 import Tool
+import ToolData
 import Control.Monad.Error
 import Combat
 import Activate
@@ -26,6 +28,10 @@ import TerrainData
 import Make
 import Construction
 import Building
+import Reference
+import DetailedLocation
+import Plane
+import PlaneData
 
 --
 -- Every possible behavior that a creature might take, AI or Human.
@@ -55,25 +61,22 @@ data Behavior =
 -- if occupied by a creature this is 'Attack'.
 facingBehavior :: (DBReadable db) => CreatureRef -> Facing -> db Behavior
 facingBehavior creature_ref face =
-    do (m_standing :: Maybe (PlaneRef,Position)) <- liftM (fmap parent) $ getPlanarPosition creature_ref
-       case m_standing of
-           Nothing -> return Wait
-           Just (plane_ref,pos) ->
-               do let facing_pos = offsetPosition (facingToRelative face) pos
-                  t <- terrainAt plane_ref facing_pos
-                  who :: [CreatureRef] <- whatIsOccupying plane_ref facing_pos
-                  what :: [BuildingRef] <- whatIsOccupying plane_ref facing_pos
-                  case t of
-                      _ | not (null who) -> return $ Attack face
-                      _ | not (null what) -> return $ ActivateBuilding face
-                      Forest -> return $ ClearTerrain face
-                      DeepForest -> return $ ClearTerrain face
-                      RockFace -> return $ ClearTerrain face
-                      _ -> return $ Step face
+    do ((Parent plane_ref,pos) :: (Parent Plane,Position)) <- liftM detail $ getPlanarLocation creature_ref
+       let facing_pos = offsetPosition (facingToRelative face) pos
+       t <- terrainAt plane_ref facing_pos
+       who :: [CreatureRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
+       what :: [BuildingRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
+       case t of
+           _ | not (null who) -> return $ Attack face
+           _ | not (null what) -> return $ ActivateBuilding face
+           Forest -> return $ ClearTerrain face
+           DeepForest -> return $ ClearTerrain face
+           RockFace -> return $ ClearTerrain face
+           _ -> return $ Step face
 
 dbBehave :: Behavior -> CreatureRef -> DB ()
 dbBehave (Step face) creature_ref =
-    do (move_from,move_to) <- dbMove (stepCreature face) creature_ref
+    do (move_from,move_to) <- move creature_ref =<< stepCreature face creature_ref
        dbAdvanceTime creature_ref =<< case () of
            () | (move_from == move_to) -> return 0
            () | face == Here -> quickActionTime creature_ref -- counts as turning in place
@@ -95,18 +98,18 @@ dbBehave (Jump face) creature_ref =
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
 
 dbBehave (TurnInPlace face) creature_ref =
-    do _ <- dbMove (turnCreature face) creature_ref
+    do _ <- move creature_ref =<< turnCreature face creature_ref
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
 dbBehave (Pickup tool_ref) creature_ref =
-    do _ <- dbMove (dbPickupTool creature_ref) tool_ref
+    do _ <- move tool_ref =<< pickupTool creature_ref tool_ref
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
 dbBehave (Wield tool_ref) creature_ref =
     do available <- availableWields creature_ref
-       already_wielded <- dbGetWielded creature_ref
+       already_wielded <- getWielded creature_ref
        when (not $ tool_ref `elem` available) $ throwError $ DBErrorFlag ToolIs_Unreachable
-       _ <- dbMove dbWieldTool tool_ref
+       _ <- move tool_ref =<< wieldTool tool_ref
        dbAdvanceTime creature_ref =<< case () of
            () | Just tool_ref == already_wielded -> return 0 -- already wielded, so this was an empty action
            () | otherwise -> quickActionTime creature_ref
@@ -116,23 +119,23 @@ dbBehave (Unwield) creature_ref =
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
 dbBehave (Drop tool_ref) creature_ref =
-    do tool_parent <- liftM extractParent $ dbWhere tool_ref
-       already_wielded <- dbGetWielded creature_ref
-       when (tool_parent /= Just creature_ref) $ throwError $ DBErrorFlag ToolIs_NotInInventory
-       _ <- dbMove dbDropTool tool_ref
+    do tool_parent <- liftM parentReference $ whereIs tool_ref
+       already_wielded <- getWielded creature_ref
+       when (tool_parent =/= creature_ref) $ throwError $ DBErrorFlag ToolIs_NotInInventory
+       _ <- move tool_ref =<< dropTool tool_ref
        dbAdvanceTime creature_ref =<< case () of
            () | Just tool_ref == already_wielded -> return 0  -- instantly drop a tool if it's already held in the hand
            () | otherwise -> quickActionTime creature_ref
 
 dbBehave (Fire face) creature_ref =
-    do _ <- dbMove (turnCreature face) creature_ref
+    do _ <- move creature_ref =<< turnCreature face creature_ref
        ranged_attack_model <- rangedAttackModel creature_ref
        _ <- atomic executeAttack $ resolveAttack ranged_attack_model face
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        return ()
 
 dbBehave (Attack face) creature_ref =
-    do _ <- dbMove (turnCreature face) creature_ref
+    do _ <- move creature_ref =<< turnCreature face creature_ref
        melee_attack_model <- meleeAttackModel creature_ref
        _ <- atomic executeAttack $ resolveAttack melee_attack_model face
        dbAdvanceTime creature_ref =<< move1ActionTime creature_ref
@@ -140,16 +143,14 @@ dbBehave (Attack face) creature_ref =
 
 dbBehave Wait creature_ref = dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
-dbBehave Vanish creature_ref = 
+dbBehave Vanish creature_ref =
     do dbAdvanceTime creature_ref =<< quickActionTime creature_ref
-       _ <- runMaybeT $
-           do (plane_ref :: PlaneRef) <- MaybeT $ liftM (fmap parent) $ getPlanarPosition creature_ref
-              lift $
-                  do faction <- getCreatureFaction creature_ref
-                     is_visible_to_anyone_else <- liftM (any (creature_ref `elem`)) $ 
-	                 mapM (\fact -> dbGetVisibleObjectsForFaction (return . const True) fact plane_ref) 
-                             ({- all factions except this one: -} delete faction [minBound..maxBound])
-                     when (not is_visible_to_anyone_else) $ deleteCreature creature_ref
+       (Parent plane_ref :: Parent Plane) <- liftM detail $ getPlanarLocation creature_ref
+       faction <- getCreatureFaction creature_ref
+       is_visible_to_anyone_else <- liftM (any (genericReference creature_ref `elem`)) $
+           mapM (\fact -> dbGetVisibleObjectsForFaction (return . const True) fact plane_ref)
+                ({- all factions except this one: -} delete faction [minBound..maxBound])
+       when (not is_visible_to_anyone_else) $ deleteCreature creature_ref
        return ()
 
 dbBehave Activate creature_ref =
@@ -163,14 +164,14 @@ dbBehave (Make make_prep) creature_ref =
        return ()
 
 dbBehave (ClearTerrain face) creature_ref =
-    do _ <- dbMove (turnCreature face) creature_ref
+    do _ <- move creature_ref =<< turnCreature face creature_ref
        ok <- modifyFacingTerrain clearTerrain face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
        return ()
 
 dbBehave (ActivateBuilding face) creature_ref =
-    do _ <- dbMove (turnCreature face) creature_ref
+    do _ <- move creature_ref =<< turnCreature face creature_ref
        ok <- activateFacingBuilding face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
@@ -182,7 +183,7 @@ dbBehave (ActivateBuilding face) creature_ref =
 -- | A value indicating the degree of difficulty a creature suffers on account of the inventory it is carrying.
 inventoryBurden :: (DBReadable db) => CreatureRef -> db Rational
 inventoryBurden creature_ref =
-    do inventory_size <- liftM (genericLength . map (asType _tool)) $ dbGetContents creature_ref
+    do inventory_size <- liftM (genericLength . filterLocations (\(Child tool_ref :: Child Tool) -> True)) $ getContents creature_ref
        inventory_skill <- liftM roll_ideal $ rollCreatureAbilityScore InventorySkill 0 creature_ref
        return $ (inventory_size ^ 2) % inventory_skill
 

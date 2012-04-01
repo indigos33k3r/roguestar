@@ -77,19 +77,19 @@ dbCreateStartingPlane creature =
 -- The character class should not be pre-applied to the creature.
 --
 dbBeginGame :: Creature -> CharacterClass -> DB ()
-dbBeginGame creature character_class = 
+dbBeginGame creature character_class =
     do let first_level_creature = applyCharacterClass character_class creature
        plane_ref <- dbCreateStartingPlane creature
        landing_site <- pickRandomClearSite 200 30 2 (Position (0,0)) (not . (`elem` difficult_terrains)) plane_ref
        creature_ref <- dbAddCreature first_level_creature (Standing plane_ref landing_site Here)
-       _ <- createTown plane_ref [Stargate Portal,Node Monolith]
+       _ <- createTown plane_ref [basic_stargate,monolith]
        let starting_equip = startingEquipmentBySpecies (creature_species creature) ++ startingEquipmentByClass character_class
        forM_ starting_equip $ \tool -> dbAddTool tool (Inventory creature_ref)
        forM_ [0..10] $ \_ -> do tool_position <- pickRandomClearSite 200 1 2 landing_site (not . (`elem` difficult_terrains)) plane_ref
                                 tool_type <- weightedPickM [(8,phase_pistol),(5,phaser),(3,phase_rifle),(8,kinetic_fleuret),(3,kinetic_sabre),
                                                               (5,Sphere $ toSubstance Nitrogen),(5,Sphere $ toSubstance Ionidium),(5,Sphere $ toSubstance Aluminum)]
                                 dbAddTool tool_type (Dropped plane_ref tool_position)
-       (_,end_of_nonaligned_first_series) <- makePlanets (Subsequent plane_ref Portal) =<< generatePlanetInfo nonaligned_first_series_planets
-       _ <- makePlanets (Subsequent end_of_nonaligned_first_series Portal) =<< generatePlanetInfo nonaligned_second_series_planets
-       _ <- makePlanets (Subsequent end_of_nonaligned_first_series CyberGate) =<< generatePlanetInfo cyborg_planets
+       (_,end_of_nonaligned_first_series) <- makePlanets (Subsequent plane_ref NonAlignedRegion) =<< generatePlanetInfo nonaligned_first_series_planets
+       _ <- makePlanets (Subsequent end_of_nonaligned_first_series NonAlignedRegion) =<< generatePlanetInfo nonaligned_second_series_planets
+       _ <- makePlanets (Subsequent end_of_nonaligned_first_series CyborgRegion) =<< generatePlanetInfo cyborg_planets
        setPlayerState $ PlayerCreatureTurn creature_ref NormalMode

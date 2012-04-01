@@ -2,10 +2,13 @@
 
 module Building
     (buildingSize,
-     buildingType,
+     buildingShape,
+     buildingBehavior,
+     buildingSignal,
      activateFacingBuilding)
     where
 
+import Prelude hiding (getContents)
 import DB
 import BuildingData
 import Data.List
@@ -17,97 +20,90 @@ import Plane
 import Position
 import TerrainData
 import Control.Monad.Error
-import NodeData
+import PowerUpData
 import CharacterAdvancement
-import Location
+import DetailedLocation
 
 -- | The total occupied surface area of a building.
 buildingSize :: (DBReadable db) => BuildingRef -> db Integer
-buildingSize = liftM (genericLength . buildingOccupies) . buildingType
+buildingSize = liftM (genericLength . buildingOccupies) . buildingShape
 
-buildingType :: (DBReadable db) => BuildingRef -> db BuildingType
-buildingType building_ref =
-    do constructed <- liftM extractParent $ dbWhere building_ref
+buildingShape :: (DBReadable db) => BuildingRef -> db BuildingShape
+buildingShape building_ref =
+    do constructed <- liftM fromLocation $ whereIs building_ref
        case constructed of
-           Just (Constructed _ _ building_type) -> return building_type
-           _ -> error "buildingSize: impossible case"
+           Just building_shape -> return building_shape
+           _ -> error "buildingType: impossible case"
+
+buildingSignal :: (DBReadable db) => BuildingRef -> db (Maybe BuildingSignal)
+buildingSignal  = liftM building_signal . dbGetBuilding
+
+buildingBehavior :: (DBReadable db) => BuildingRef -> db BuildingBehavior
+buildingBehavior building_ref = liftM building_behavior $ dbGetBuilding building_ref
 
 deleteBuilding :: BuildingRef -> DB ()
-deleteBuilding = dbUnsafeDeleteObject (error "deleteBuilding: impossible case, buildings shouldn't contain anything.")
+deleteBuilding building_ref = dbUnsafeDeleteObject building_ref
+                                                   (error "deleteBuilding: impossible case" :: forall m. DBReadable m => Reference () -> m Planar)
 
 -- | Activate the facing building, returns True iff any building was actually activated.
 activateFacingBuilding :: Facing -> CreatureRef -> DB Bool
 activateFacingBuilding face creature_ref = liftM (fromMaybe False) $ runMaybeT $
-    do (plane_ref,position) <- MaybeT $ liftM extractParent $ dbWhere creature_ref
-       buildings <- lift $ whatIsOccupying plane_ref $ offsetPosition (facingToRelative face) position
-       liftM or $ lift $ forM buildings $ \building_ref ->
-           do building_type <- buildingType building_ref
-              activateBuilding building_type creature_ref building_ref
+    do (plane_ref,position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
+       buildings <- lift $ liftM mapLocations $ whatIsOccupying plane_ref $ offsetPosition (facingToRelative face) position
+       liftM or $ lift $ forM buildings $ \(Child building_ref) ->
+           do building_behavior <- buildingBehavior building_ref
+              activateBuilding building_behavior creature_ref building_ref
 
-activateBuilding :: BuildingType -> CreatureRef -> BuildingRef -> DB Bool
-activateBuilding (Node n) creature_ref building_ref =
-    do captureNode n creature_ref building_ref
+activateBuilding :: BuildingBehavior -> CreatureRef -> BuildingRef -> DB Bool
+activateBuilding (PowerUp pud) creature_ref building_ref =
+    do captureNode pud creature_ref building_ref
        return True
-activateBuilding (Stargate Portal) creature_ref building_ref =
-    do m_creature_position :: Maybe (Parent Plane,Position) <- liftM locationView $ whereIs creature_ref
-       m_portal_position :: Maybe (Parent Plane,Position) <- liftM locationView $ whereIs building_ref
-       let planes_do_match :: Bool = fmap fst m_creature_position /= fmap fst m_portal_position
-       when (not planes_do_match) $
-           do throwError $ DBError "activateBuilding: creature and portal on different planes" 
-
-{-
-    do m_creature_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere creature_ref
-       m_portal_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere building_ref
-       when (fmap fst m_creature_position /= fmap fst m_portal_position) $ throwError $ DBError "activateBuilding: creature and portal on different planes"
-       case (m_creature_position,m_portal_position) of
-           (Just (plane_ref,Position (_,cy)),Just (_,Position (_,py))) ->
-               case () of
-                   () | cy < py ->
-                       do m_subsequent_loc :: Maybe (Location PlaneRef Subsequent) <- liftM listToMaybe $ dbGetContents plane_ref
-                          case m_subsequent_loc of
-                              Just loc -> (portalCreatureTo (Stargate Portal) 1 creature_ref $ child loc) >> return True
-                              _ -> throwError $ DBErrorFlag NoStargateAddress
-                   () | cy > py ->
-                       do m_previous_loc :: Maybe Subsequent <- liftM extractParent $ dbWhere plane_ref
-                          case m_previous_loc of
-                              Just loc -> (portalCreatureTo (Stargate Portal) (-1) creature_ref $ subsequent_to loc) >> return True
-                              _ -> throwError $ DBErrorFlag NoStargateAddress
-                   () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
-           _ -> throwError $ DBError "activateBuilding: can't decode building-creature relative positions"
-activateBuilding (Stargate CyberGate) creature_ref building_ref =
-    do m_creature_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere creature_ref
-       m_portal_position :: Maybe (PlaneRef,Position) <- liftM extractParent $ dbWhere building_ref
-       when (fmap fst m_creature_position /= fmap fst m_portal_position) $ throwError $ DBError "activateBuilding: creature and portal on different planes"
-       case (m_creature_position,m_portal_position) of
-           (Just (plane_ref,Position (cx,cy)),Just (_,Position (px,py))) ->
-                case () of
-                    () | cy < py && cx == px ->
-                        do m_subsequent_loc :: Maybe (Location PlaneRef Subsequent) <- liftM listToMaybe $ dbGetContents plane_ref
-                           case m_subsequent_loc of
-                               Just loc -> (portalCreatureTo (Node Monolith) 0 creature_ref $ child loc) >> return True
-                               _ -> throwError $ DBErrorFlag NoStargateAddress
-                    () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
-           _ -> throwError $ DBError "activateBuilding: can't decode building-creature relative positions"
--}
+activateBuilding (TwoWayStargate region) creature_ref building_ref =
+    do (Parent plane_ref :: Parent Plane,Position (bx,by))
+            <- liftM detail $ getPlanarLocation building_ref
+       (Position (cx,cy)) <- liftM detail $ getPlanarLocation creature_ref
+       case () of
+           () | cy - by == (-1) ->
+               do subsequent_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) return
+                      =<< getSubsequent region plane_ref
+                  portalCreatureTo (Just $ TwoWayStargate region) 1 creature_ref subsequent_plane
+           () | cy - by == 1 ->
+               do previous_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) return
+                      =<< liftM fromLocation (whereIs plane_ref)
+                  portalCreatureTo (Just $ TwoWayStargate region) (-1) creature_ref previous_plane
+           () | otherwise ->
+               do throwError $ DBErrorFlag BuildingApproachWrongAngle
+       return True
+activateBuilding (OneWayStargate region) creature_ref building_ref =
+    do (Parent plane_ref :: Parent Plane,Position (bx,by))
+            <- liftM detail $ getPlanarLocation building_ref
+       (Position (cx,cy)) <- liftM detail $ getPlanarLocation creature_ref
+       case () of
+           () | cy - by == 1 ->
+               do subsequent_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) return
+                      =<< getSubsequent region plane_ref
+                  portalCreatureTo Nothing 0 creature_ref subsequent_plane
+           () | otherwise -> throwError $ DBErrorFlag BuildingApproachWrongAngle
+       return True
 
 -- | Deposit a creature in front of (-1) or behind (+1) a random portal on the specified plane.  Returns
 -- the dbMove result from the action.
-portalCreatureTo :: BuildingType -> Integer -> CreatureRef -> PlaneRef -> DB (Location CreatureRef (),Location CreatureRef Standing)
-portalCreatureTo building_type offset creature_ref plane_ref =
-    do portals <- filterM (liftM (== building_type) . buildingType) =<< dbGetContents plane_ref
+portalCreatureTo :: Maybe BuildingBehavior -> Integer -> CreatureRef -> PlaneRef -> DB (Location,Location)
+portalCreatureTo building_behavior offset creature_ref plane_ref =
+    do (all_buildings :: [BuildingRef]) <- liftM mapLocations (getContents plane_ref)
+       portals <- filterM (liftM ((== building_behavior) . Just) . buildingBehavior) all_buildings
        ideal_position <- if null portals
            then liftM2 (\x y -> Position (x,y)) (getRandomR (-40,40)) (getRandomR (-40,40))
            else do portal <- pickM portals
-                   m_position <- liftM (fmap (offsetPosition (0,offset)) . extractParent) $ dbWhere portal
-                   return $ fromMaybe (Position (0,0)) m_position
+                   liftM (offsetPosition (0,offset) . detail) $ getPlanarLocation portal
        position <- pickRandomClearSite 1 0 0 ideal_position (not . (`elem` impassable_terrains)) plane_ref
        dbPushSnapshot $ TeleportEvent creature_ref
-       dbMove (return . toStanding (Standing plane_ref position Here)) creature_ref
+       move creature_ref $ Standing plane_ref position Here
 
-captureNode :: NodeType -> CreatureRef -> BuildingRef -> DB ()
-captureNode n creature_ref building_ref =
+captureNode :: PowerUpData -> CreatureRef -> BuildingRef -> DB ()
+captureNode power_up_data creature_ref building_ref =
     do c <- dbGetCreature creature_ref
-       let result = bumpCharacter (nodeEffect n) c
+       let result = bumpCharacter power_up_data c
        dbModCreature (const $ character_new result) creature_ref
        deleteBuilding building_ref
        dbPushSnapshot $ BumpEvent {

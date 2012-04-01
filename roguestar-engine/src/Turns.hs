@@ -4,11 +4,11 @@ module Turns
     (dbPerformPlayerTurn)
     where
 
+import Prelude hiding (getContents)
 import Control.Monad.Maybe
 import Control.Monad.Trans
 import DB
 import Reference
-import Location
 import FactionData
 import SpeciesData
 import CreatureData (Creature)
@@ -24,6 +24,7 @@ import qualified Perception as P
 import Position
 import PlayerState
 import Logging
+import DetailedLocation
 
 dbPerformPlayerTurn :: Behavior -> CreatureRef -> DB ()
 dbPerformPlayerTurn beh creature_ref =
@@ -42,9 +43,9 @@ dbFinishPendingAITurns =
 dbFinishPlanarAITurns :: PlaneRef -> DB ()
 dbFinishPlanarAITurns plane_ref =
     do sweepDead plane_ref
-       (all_creatures_on_plane :: [CreatureRef]) <- dbGetContents plane_ref
+       (all_creatures_on_plane :: [CreatureRef]) <- liftM mapLocations $ getContents plane_ref
        any_players_left <- liftM (any (== Player)) $ mapM getCreatureFaction all_creatures_on_plane
-       next_turn <- dbNextTurn $ map generalizeReference all_creatures_on_plane ++ [generalizeReference plane_ref]
+       next_turn <- dbNextTurn $ map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
        case next_turn of
            _ | not any_players_left ->
                do setPlayerState GameOver
@@ -52,7 +53,7 @@ dbFinishPlanarAITurns plane_ref =
            ref | ref =:= plane_ref ->
                do dbPerform1PlanarAITurn plane_ref
                   dbFinishPlanarAITurns plane_ref
-           ref | Just creature_ref <- coerceReferenceTyped _creature ref ->
+           ref | Just creature_ref <- coerceReference ref ->
                do faction <- getCreatureFaction creature_ref
                   if (faction /= Player)
                       then do dbPerform1CreatureAITurn creature_ref
@@ -69,12 +70,12 @@ monster_spawns = [(RecreantFactory,Recreant), (Dirt,DustVortex)]
 
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
 dbPerform1PlanarAITurn plane_ref =
-    do creature_locations <- dbGetContents plane_ref
-       player_locations <- filterRO (liftM (== Player) . getCreatureFaction . child) creature_locations
-       num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . child) creature_locations
+    do (creature_locations :: [DetailedLocation (Child Creature)]) <- liftM mapLocations $ getContents plane_ref
+       player_locations <- filterRO (liftM (== Player) . getCreatureFaction . asChild . detail) creature_locations
+       num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 2) $
            do (terrain_type,species) <- pickM monster_spawns
-              _ <- spawnNPC terrain_type species plane_ref $ map parent $ player_locations
+              _ <- spawnNPC terrain_type species plane_ref $ map detail $ player_locations
               return ()
        dbAdvanceTime plane_ref (1%planar_turn_frequency)
 
@@ -95,22 +96,22 @@ spawnNPC terrain_type species plane_ref player_locations =
 dbPerform1CreatureAITurn :: CreatureRef -> DB ()
 dbPerform1CreatureAITurn creature_ref = liftM (const ()) $ atomic (flip dbBehave creature_ref) $
     P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
-        do let isPlayer :: (DBReadable db) => CreatureRef -> P.DBPerception db Bool
-               isPlayer creature_ref =
+        do let isPlayer :: (DBReadable db) => Reference () -> P.DBPerception db Bool
+               isPlayer ref | Just (creature_ref :: CreatureRef) <- coerceReference ref =
                    do faction <- P.getCreatureFaction creature_ref
                       return $ faction == Player
-           (visible_player_creatures :: [CreatureRef]) <- lift $ P.visibleObjects isPlayer
-           -- OH NOES: what if there is more than one player
-           player <- MaybeT $ return $ listToMaybe visible_player_creatures
-           (player_location :: AbstractLocation (Child Creature)) <- lift $ P.whereIs player
+               isPlayer _ | otherwise = return False
+           (visible_player_locations :: [DetailedLocation (Child Creature)]) <- lift $ liftM mapLocations $ P.visibleObjects isPlayer
+           -- FIXME: what if there is more than one player
+           player_location <- MaybeT $ return $ listToMaybe visible_player_locations
            (rand_x :: Integer) <- lift $ getRandomR (1,100)
            rand_face <- lift $ pickM [minBound..maxBound]
            (_,my_position) <- lift P.whereAmI
-	   let face_to_player = faceAt my_position $ (Location.fromLocation player_location :: Position)
-	   return $ case distanceBetweenChessboard my_position (Location.fromLocation player_location :: Position) of
+           let face_to_player = faceAt my_position $ (detail player_location :: Position)
+           return $ case distanceBetweenChessboard my_position (detail player_location :: Position) of
                _ | rand_x < 5 -> Wait -- if AI gets stuck, this will make sure they waste time so the game doesn't hang
                _ | rand_x < 20 -> Step rand_face
-	       1 -> Attack face_to_player
+               1 -> Attack face_to_player
                -- x | x >= 10 -> Jump face_to_player  -- disable this until we can handle non-player teleporting sanely
-	       _ -> Step face_to_player
+               _ -> Step face_to_player
 

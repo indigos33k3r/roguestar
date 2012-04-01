@@ -1,21 +1,21 @@
-{-# LANGUAGE FlexibleInstances,
-             MultiParamTypeClasses,
-             FunctionalDependencies,
-             UndecidableInstances,
-             ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternGuards, TypeFamilies #-}
 
 module DBData
     (Reference,
      toUID,
+     genericReference,
      CreatureRef,
      PlaneRef,
      ToolRef,
      BuildingRef,
      TheUniverse(..),
      the_universe,
-     GenericReference(..),
-     LocationChild(..),
-     LocationParent(..),
+     parentReference,
+     childReference,
+     LocationSource(..),
+     LocationDetail(..),
+     Child(..),
+     Parent(..),
      Location,
      Position(..),
      Standing(..),
@@ -25,45 +25,7 @@ module DBData
      Constructed(..),
      Subsequent(..),
      Beneath(..),
-     Type,
-     _nullary,
-     _creature,
-     _tool,
-     _plane,
-     _building,
-     _standing,
-     _dropped,
-     _inventory,
-     _wielded,
-     _constructed,
-     _subsequent,
-     _beneath,
-     _position,
-     _multiposition,
-     _facing,
-     _the_universe,
-     asLocationTyped,
-     asType,
-     parent,
-     child,
-     coerceReferenceTyped,
-     isReferenceTyped,
-     coerceParentTyped,
-     isParentTyped,
-     coerceChildTyped,
-     isChildTyped,
-     coerceLocationRecord,
-     coerceParent,
-     coerceChild,
-     genericParent,
-     genericChild,
-     generalizeParent,
-     generalizeChild,
-     generalizeLocation,
-     toStanding,
-     toDropped,
-     toInventory,
-     toWielded,
+     LocationConstructor(..),
      returnToInventory,
      shuntToTheUniverse)
     where
@@ -80,79 +42,31 @@ import Position
 import Reference
 
 --
--- Type Instances
---
-newtype Type a = Type a
-
-_nullary :: Type (Reference ())
-_nullary = Type $ error "_nullary: undefined"
-
-_creature :: Type CreatureRef
-_creature = Type $ error "_creature: undefined"
-
-_tool :: Type ToolRef
-_tool = Type $ error "_tool: undefined"
-
-_plane :: Type PlaneRef
-_plane = Type $ error "_plane: undefined"
-
-_building :: Type BuildingRef
-_building = Type $ error "_building: undefined"
-
-_standing :: Type Standing
-_standing = Type $ error "_standing: undefined"
-
-_dropped :: Type Dropped
-_dropped = Type $ error "_dropped: undefined"
-
-_inventory :: Type Inventory
-_inventory = Type $ error "_inventory: undefined"
-
-_wielded :: Type Wielded
-_wielded = Type $ error "_wielded: undefined"
-
-_constructed :: Type Constructed
-_constructed = Type $ error "_constructed: undefined"
-
-_subsequent :: Type Subsequent
-_subsequent = Type $ error "_subsequent: undefined"
-
-_beneath :: Type Beneath
-_beneath = Type $ error "_subsequent: undefined"
-
-_position :: Type Position
-_position = Type $ error "_position: undefined"
-
-_multiposition :: Type MultiPosition
-_multiposition = Type $ error "_multiposition: undefined"
-
-_facing :: Type Facing
-_facing = Type $ error "_facing: undefined"
-
-_the_universe :: Type (Reference TheUniverse)
-_the_universe = Type $ error "_the_universe: undefined"
-
---
 -- Getting References generically.
 --
-class GenericReference a where
-    fromLocation :: (ReferenceType x) => Location (Reference x) b -> Maybe a
-    generalizeReference :: a -> Reference ()
+class LocationSource a where
+    toLocation :: a -> Location
 
-instance (GenericReference a,GenericReference b) => GenericReference (Either a b) where
+instance LocationSource Location where
+    toLocation = id
+
+class LocationDetail a where
+    fromLocation :: Location -> Maybe a
+
+instance (LocationDetail a,LocationDetail b) => LocationDetail (Either a b) where
     fromLocation x = case (fromLocation x,fromLocation x) of
             (Just a,_) -> Just $ Left a
             (_,Just b) -> Just $ Right b
             _ | otherwise -> Nothing
-    generalizeReference = either generalizeReference generalizeReference
 
-instance (ReferenceType a) => GenericReference (Reference a) where
-    fromLocation = coerceReference . genericChild
-    generalizeReference = unsafeReference
+instance (LocationDetail a,LocationDetail b) => LocationDetail ((,) a b) where
+    fromLocation x = liftM2 (,) (fromLocation x) (fromLocation x)
 
-instance (LocationChild c,LocationParent p) => GenericReference (Location c p) where
-    fromLocation = coerceLocationRecord
-    generalizeReference = genericChild
+instance (ReferenceType a) => LocationDetail (Reference a) where
+    fromLocation = coerceReference . childReference
+
+instance LocationDetail Location where
+    fromLocation = Just
 
 --
 -- References
@@ -161,195 +75,143 @@ instance (LocationChild c,LocationParent p) => GenericReference (Location c p) w
 the_universe :: Reference TheUniverse
 the_universe = UniverseRef
 
-coerceReferenceTyped :: (ReferenceType a) => Type (Reference a) -> Reference x -> Maybe (Reference a)
-coerceReferenceTyped = const coerceReference
-
-isReferenceTyped :: (ReferenceType a) => Type (Reference a) -> Reference x -> Bool
-isReferenceTyped a = isJust . coerceReferenceTyped a
+genericReference :: Reference a -> Reference ()
+genericReference = unsafeReference
 
 --
 -- Locations
 --
-generalizeLocation :: Location e t -> Location (Reference ()) ()
-generalizeLocation = unsafeLocation
 
-generalizeParent :: Location e t -> Location e ()
-generalizeParent = unsafeLocation
+parentReference :: Location -> Reference ()
+parentReference (IsStanding _ s) = unsafeReference $ standing_plane s
+parentReference (IsDropped _ d) = unsafeReference $ dropped_plane d
+parentReference (InInventory _ c) = unsafeReference $ inventory_creature c
+parentReference (IsWielded _ c) = unsafeReference $ wielded_creature c
+parentReference (IsConstructed _ c) = unsafeReference $ constructed_plane c
+parentReference (InTheUniverse _) = unsafeReference UniverseRef
+parentReference (IsSubsequent _ b) = unsafeReference $ subsequent_to b
+parentReference (IsBeneath _ b) = unsafeReference $ beneath_of b
 
-generalizeChild :: Location e t -> Location (Reference ()) t
-generalizeChild = unsafeLocation
+childReference :: Location -> Reference ()
+childReference (IsStanding r _) = unsafeReference r
+childReference (IsDropped r _) = unsafeReference r
+childReference (InInventory r _) = unsafeReference r
+childReference (IsWielded r _) = unsafeReference r
+childReference (IsConstructed r _) = unsafeReference r
+childReference (InTheUniverse r) = unsafeReference r
+childReference (IsSubsequent r _) = unsafeReference r
+childReference (IsBeneath r _) = unsafeReference r
 
-genericParent :: Location e t -> Reference ()
-genericParent (IsStanding _ s) = unsafeReference $ standing_plane s
-genericParent (IsDropped _ d) = unsafeReference $ dropped_plane d
-genericParent (InInventory _ c) = unsafeReference $ inventory_creature c
-genericParent (IsWielded _ c) = unsafeReference $ wielded_creature c
-genericParent (IsConstructed _ c) = unsafeReference $ constructed_plane c
-genericParent (InTheUniverse _) = unsafeReference UniverseRef
-genericParent (IsSubsequent _ b) = unsafeReference $ subsequent_to b
-genericParent (IsBeneath _ b) = unsafeReference $ beneath_of b
+instance LocationDetail Standing where
+    fromLocation (IsStanding _ s) = Just s
+    fromLocation _ = Nothing
 
-genericChild :: Location e t -> Reference ()
-genericChild (IsStanding r _) = unsafeReference r
-genericChild (IsDropped r _) = unsafeReference r
-genericChild (InInventory r _) = unsafeReference r
-genericChild (IsWielded r _) = unsafeReference r
-genericChild (IsConstructed r _) = unsafeReference r
-genericChild (InTheUniverse r) = unsafeReference r
-genericChild (IsSubsequent r _) = unsafeReference r
-genericChild (IsBeneath r _) = unsafeReference r
+instance LocationDetail Dropped where
+    fromLocation (IsDropped _ d) = Just d
+    fromLocation _ = Nothing
 
-asLocationTyped :: (LocationChild e,LocationParent t) =>
-                   Type e -> Type t -> Location e t -> Location e t
-asLocationTyped _ _ = id
+instance LocationDetail Inventory where
+    fromLocation (InInventory _ i) = Just i
+    fromLocation _ = Nothing
 
-asType :: Type e -> e -> e
-asType _ = id
+instance LocationDetail Wielded where
+    fromLocation (IsWielded _ i) = Just i
+    fromLocation _ = Nothing
 
-coerceParentTyped :: (LocationParent p) =>
-                       Type p -> Location c x -> Maybe (Location c p)
-coerceParentTyped = const coerceParent
+instance LocationDetail Constructed where
+    fromLocation (IsConstructed _ i) = Just i
+    fromLocation _ = Nothing
 
-isParentTyped :: (LocationParent p) => Type p -> Location c x -> Bool
-isParentTyped t = isJust . coerceParentTyped t
+instance LocationDetail BuildingShape where
+    fromLocation (IsConstructed _ c) = Just $ constructed_shape c
+    fromLocation _ = Nothing
 
-coerceChildTyped :: (LocationChild c) =>
-                     Type c -> Location x p -> Maybe (Location c p)
-coerceChildTyped = const coerceChild
+instance LocationDetail TheUniverse where
+    fromLocation (InTheUniverse {}) = Just TheUniverse
+    fromLocation _ = Nothing
 
-isChildTyped :: (LocationChild c) => Type c -> Location x p -> Bool
-isChildTyped t  = isJust . coerceChildTyped t
+instance LocationDetail Subsequent where
+    fromLocation (IsSubsequent _ i) = Just i
+    fromLocation _ = Nothing
 
-coerceParent :: forall c x p. (LocationParent p) =>
-                Location c x -> Maybe (Location c p)
-coerceParent l =
-    do (_ :: p) <- extractParent l
-       return $ unsafeLocation l
+instance LocationDetail Beneath where
+    fromLocation (IsBeneath _ i) = Just i
+    fromLocation _ = Nothing
 
-coerceChild :: forall x p c. (LocationChild c) =>
-                Location x p -> Maybe (Location c p)
-coerceChild l =
-    do (_ :: c) <- extractChild l
-       return $ unsafeLocation l
+instance LocationDetail Position where
+    fromLocation (IsStanding _ s) = Just $ standing_position s
+    fromLocation (IsDropped _ d) = Just $ dropped_position d
+    fromLocation (InInventory {}) = Nothing
+    fromLocation (IsWielded {}) = Nothing
+    fromLocation (IsConstructed _ c) = Just $ constructed_position c
+    fromLocation (InTheUniverse {}) = Nothing
+    fromLocation (IsSubsequent {}) = Nothing
+    fromLocation (IsBeneath {}) = Nothing
 
-coerceLocationRecord :: forall x y c p. (LocationChild c,LocationParent p) =>
-                        Location x y -> Maybe (Location c p)
-coerceLocationRecord l =
-    do (_ :: p) <- extractParent l
-       (_ :: c) <- extractChild l
-       return $ unsafeLocation l
+instance LocationDetail MultiPosition where
+    fromLocation (IsConstructed b c) = Just $ multiPosition (constructed_position c) (buildingOccupies $ constructed_shape c)
+    fromLocation x = fmap (toMultiPosition :: Position -> MultiPosition) $ fromLocation x
 
-parent :: (LocationParent p) => Location c p -> p
-parent l = fromMaybe (error "parent: type error") $ extractParent l
+instance LocationDetail Facing where
+    fromLocation (IsStanding _ s) = Just $ standing_facing s
+    fromLocation (IsDropped {}) = Nothing
+    fromLocation (InInventory {}) = Nothing
+    fromLocation (IsWielded {}) = Nothing
+    fromLocation (IsConstructed {}) = Nothing
+    fromLocation (InTheUniverse {}) = Nothing
+    fromLocation (IsSubsequent {}) = Nothing
+    fromLocation (IsBeneath {}) = Nothing
 
-child :: (LocationChild c) => Location c p -> c
-child l = fromMaybe (error "child: type error") $ extractChild l
+newtype Parent a = Parent { asParent :: Reference a }
+newtype Child a = Child { asChild :: Reference a }
 
-class (Eq a,Ord a) => LocationParent a where
-    extractParent :: Location e t -> Maybe a
+instance ReferenceType a => LocationDetail (Parent a) where
+    fromLocation = fmap Parent . coerceReference . parentReference
 
-class (Eq a,Ord a) => LocationChild a where
-    extractChild :: Location e t -> Maybe a
+instance ReferenceType a => LocationDetail (Child a) where
+    fromLocation = fmap Child . coerceReference . childReference
 
-instance LocationParent Standing where
-    extractParent (IsStanding _ s) = Just s
-    extractParent _ = Nothing
+class LocationConstructor l where
+    type ReferenceTypeOf l :: *
+    constructLocation :: Reference (ReferenceTypeOf l) -> l -> Maybe Location -> Location
 
-instance LocationParent Dropped where
-    extractParent (IsDropped _ d) = Just d
-    extractParent _ = Nothing
+instance LocationConstructor Standing where
+    type ReferenceTypeOf Standing = Creature
+    constructLocation a l _ = IsStanding a l
 
-instance LocationParent Inventory where
-    extractParent (InInventory _ i) = Just i
-    extractParent _ = Nothing
+instance LocationConstructor Dropped where
+    type ReferenceTypeOf Dropped = Tool
+    constructLocation a l _ = IsDropped a l
 
-instance LocationParent Wielded where
-    extractParent (IsWielded _ i) = Just i
-    extractParent _ = Nothing
+instance LocationConstructor Inventory where
+    type ReferenceTypeOf Inventory = Tool
+    constructLocation a l _ = InInventory a l
 
-instance LocationParent Constructed where
-    extractParent (IsConstructed _ i) = Just i
-    extractParent _ = Nothing
+instance LocationConstructor Wielded where
+    type ReferenceTypeOf Wielded = Tool
+    constructLocation a l _ = IsWielded a l
 
-instance LocationParent TheUniverse where
-    extractParent (InTheUniverse {}) = Just TheUniverse
-    extractParent _ = Nothing
+instance LocationConstructor Constructed where
+    type ReferenceTypeOf Constructed = Building
+    constructLocation a l _ = IsConstructed a l
 
-instance LocationParent Subsequent where
-    extractParent (IsSubsequent _ i) = Just i
-    extractParent _ = Nothing
+instance LocationConstructor TheUniverse where
+    type ReferenceTypeOf TheUniverse = Plane
+    constructLocation a _ _ = InTheUniverse a
 
-instance LocationParent Beneath where
-    extractParent (IsBeneath _ i) = Just i
-    extractParent _ = Nothing
+instance LocationConstructor Subsequent where
+    type ReferenceTypeOf Subsequent = Plane
+    constructLocation a l _ = IsSubsequent a l
 
-instance LocationParent () where
-    extractParent = const $ Just ()
+instance LocationConstructor Beneath where
+    type ReferenceTypeOf Beneath = Plane
+    constructLocation a l _ = IsBeneath a l
 
-instance LocationParent Position where
-    extractParent (IsStanding _ s) = Just $ standing_position s
-    extractParent (IsDropped _ d) = Just $ dropped_position d
-    extractParent (InInventory {}) = Nothing
-    extractParent (IsWielded {}) = Nothing
-    extractParent (IsConstructed _ c) = Just $ constructed_position c
-    extractParent (InTheUniverse {}) = Nothing
-    extractParent (IsSubsequent {}) = Nothing
-    extractParent (IsBeneath {}) = Nothing
+returnToInventory :: Location -> Maybe Location
+returnToInventory l | Just (Child tool,Parent creature) <- fromLocation l = Just $ InInventory tool (Inventory creature)
+returnToInventory _ | otherwise = Nothing
 
-instance LocationParent MultiPosition where
-    extractParent (IsConstructed _ c) = Just $ multiPosition (constructed_position c) (buildingOccupies $ constructed_type c)
-    extractParent x = fmap (toMultiPosition :: Position -> MultiPosition) $ extractParent x
-
-instance LocationParent Facing where
-    extractParent (IsStanding _ s) = Just $ standing_facing s
-    extractParent (IsDropped {}) = Nothing
-    extractParent (InInventory {}) = Nothing
-    extractParent (IsWielded {}) = Nothing
-    extractParent (IsConstructed {}) = Nothing
-    extractParent (InTheUniverse {}) = Nothing
-    extractParent (IsSubsequent {}) = Nothing
-    extractParent (IsBeneath {}) = Nothing
-
-instance ReferenceType a => LocationParent (Reference a) where
-    extractParent = coerceReference . genericParent
-
-instance ReferenceType a => LocationChild (Reference a) where
-    extractChild = coerceReference . genericChild
-
-instance (LocationParent a,LocationParent b) => LocationParent (a,b) where
-    extractParent l = liftM2 (,) (extractParent l) (extractParent l)
-
-instance (LocationChild a,LocationChild b) => LocationChild (a,b) where
-    extractChild l = liftM2 (,) (extractChild l) (extractChild l)
-
---
--- Manipulating Locations
---
-toStanding :: (LocationParent t) =>
-              Standing ->
-              Location CreatureRef t ->
-              Location CreatureRef Standing
-toStanding s l | isChildTyped _creature l = IsStanding (child l) s
-toStanding _ _ = error "toStanding: type error"
-
-toDropped :: (LocationParent t) => Dropped -> Location ToolRef t -> Location ToolRef Dropped
-toDropped d l | isChildTyped _tool l = IsDropped (child l) d
-toDropped _ _ = error "toDropped: type error"
-
-toInventory :: (LocationParent t) => Inventory -> Location ToolRef t -> Location ToolRef Inventory
-toInventory i l | isChildTyped _tool l = InInventory (child l) i
-toInventory _ _ = error "toInventory: type error"
-
-toWielded :: (LocationParent t) => Wielded -> Location ToolRef t -> Location ToolRef Wielded
-toWielded i l | isChildTyped _tool l = IsWielded (child l) i
-toWielded _ _ = error "toWielded: type error"
-
-returnToInventory :: Location ToolRef Wielded -> Location ToolRef Inventory
-returnToInventory l = InInventory (child l) (Inventory c)
-    where Wielded c = parent l
-
-shuntToTheUniverse :: Type p ->
-                      Location PlaneRef p ->
-                      Location PlaneRef TheUniverse
-shuntToTheUniverse _ l = InTheUniverse (child l)
+shuntToTheUniverse :: Location -> Maybe Location
+shuntToTheUniverse l | Just (Child plane) <- fromLocation l = Just $ InTheUniverse plane
+shuntToTHeUniverse _ | otherwise = Nothing
 

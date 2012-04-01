@@ -12,6 +12,8 @@ The binary packages:
 And the library packages:
 
 * rsagl (RogueStar Animation and Graphics Library)
+* rsagl-math
+* rsagl-frp
 
 The library packages must be installed before the binary packages can
 even be configured.
