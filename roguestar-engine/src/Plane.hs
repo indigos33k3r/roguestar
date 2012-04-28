@@ -207,7 +207,7 @@ setTerrainAt plane_ref (Position pos) patch = dbModPlane (\p -> p { plane_terrai
 -- Typically this is zero or one creatures, and zero or more tools.  Might be a building.
 whatIsOccupying :: (DBReadable db) => PlaneRef -> Position -> db [PlanarLocation]
 whatIsOccupying plane_ref position =
-    liftM (filter ((== 0) . (distanceBetweenChessboard position :: MultiPosition -> Integer) . detail) . mapLocations) $ getContents plane_ref
+    liftM (mapLocations . filterLocations (\(x :: MultiPosition) -> distanceBetweenChessboard position x == 0)) $ getContents plane_ref
 
 -- | Answers True iff a creature may walk or swim or drop objects at the position.
 -- Lava is considered passable, but trees are not.
