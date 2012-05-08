@@ -1,33 +1,105 @@
-name: roguestar-engine
-version: 0.7.0.0
-cabal-version:       >=1.2
-build-type: Simple
-license: OtherLicense
-license-file: LICENSE
-maintainer: Christopher Lane Hinson <lane@downstairspeople.org>
-homepage: http://roguestar.downstairspeople.org/
-synopsis: Sci-fi roguelike game.  Backend.
-description: Requires roguestar and roguestar-glut.
-category: Game
-author: Christopher Lane Hinson
-tested-with: GHC ==6.12.1
- 
-executable roguestar-engine
-  main-is: Main.hs
-  hs-source-dirs: src
-  build-depends: hslogger >=1.1.0 ,
-               priority-sync >=0.2.1.1 && <0.3, PSQueue >=1.1 && <1.2,
-               bytestring >=0.9.1.5, parallel >=2.2.0.1 ,
-               stm >=2.1.1.2, data-memocombinators >=0.4.0 && <0.5,
-               MonadRandom >=0.1.4 && <0.2, MaybeT >=0.1.2 && <0.2,
-               mtl >=1.1.0.2, random >=1.0.0.2 && <1.1,
-               old-time >=1.0.0.3 && <1.1, array >=0.3.0.0 && <0.3.1,
-               containers >=0.3.0.0, base >=4 && <5
-  other-modules: TravelData, VisibilityData, FactionData, Behavior, Alignment, PlaneData, Grids, Perception, PlaneVisibility, Turns, Plane, CreatureData, Protocol, Character, Tool, Substances, HierarchicalDatabase, Travel, ToolData, CharacterData, Creature, Facing, DBPrivate, RNG, Species, Position, TerrainData, Combat, Tests, DBData, GridRayCaster, BeginGame, SpeciesData, TimeCoordinate, DB, AttributeGeneration, CreatureAttribute, Building, BuildingData, Town, Random, PlayerState, MakeData, DBErrorFlag, Construction, Make, Activate, Contact, DeviceActivation, WorkCluster, Planet, PlanetData, Logging, PowerUpData, CharacterAdvancement, PersistantData
+name:          roguestar
+version:       0.7.1.0
+cabal-version: >=1.2
+build-type:    Simple
+license:       OtherLicense
+license-file:  LICENSE
+maintainer:    Christopher Lane Hinson <lane@downstairspeople.org>
+homepage:      http://roguestar.downstairspeople.org/
+synopsis:      Sci-fi roguelike game.
+description:   A sci-fi roguelike game.
+category:      Game
+author:        Christopher Lane Hinson
+tested-with:   GHC ==7.0.4
+
+executable roguestar-server
+  main-is:        Roguestar/Server/Main.hs
+  hs-source-dirs: .
+  build-depends:  snap >=0.8,
+                  snap-core >=0.8,
+                  text >=0.11,
+                  containers >=0.3.0.0,
+                  base >=4
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
     ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
   else
     ghc-options: -threaded -fno-warn-type-defaults
-  
+
+library
+  hs-source-dirs: .
+  build-depends:  hslogger >=1.1.0,
+                  bytestring >=0.9.1.5,
+                  parallel >=2.2.0.1,
+                  stm >=2.1.1.2,
+                  data-memocombinators >=0.4.0,
+                  MonadRandom >=0.1.4,
+                  MaybeT >=0.1.2,
+                  mtl >=1.1.0.2,
+                  random >=1.0.0.2,
+                  old-time >=1.0.0.3,
+                  array >=0.3.0.0,
+                  containers >=0.3.0.0,
+                  base >=4
+  other-modules:  Roguestar.Lib.TravelData,
+                  Roguestar.Lib.VisibilityData,
+                  Roguestar.Lib.FactionData,
+                  Roguestar.Lib.Behavior,
+                  Roguestar.Lib.Alignment,
+                  Roguestar.Lib.PlaneData,
+                  Roguestar.Lib.Grids,
+                  Roguestar.Lib.Perception,
+                  Roguestar.Lib.PlaneVisibility,
+                  Roguestar.Lib.Turns,
+                  Roguestar.Lib.Plane,
+                  Roguestar.Lib.CreatureData,
+                  Roguestar.Lib.Character,
+                  Roguestar.Lib.Tool,
+                  Roguestar.Lib.Substances,
+                  Roguestar.Lib.HierarchicalDatabase,
+                  Roguestar.Lib.Travel,
+                  Roguestar.Lib.ToolData,
+                  Roguestar.Lib.CharacterData,
+                  Roguestar.Lib.Creature,
+                  Roguestar.Lib.Facing,
+                  Roguestar.Lib.DBPrivate,
+                  Roguestar.Lib.RNG,
+                  Roguestar.Lib.Species,
+                  Roguestar.Lib.Position,
+                  Roguestar.Lib.TerrainData,
+                  Roguestar.Lib.Combat,
+                  Roguestar.Lib.Tests,
+                  Roguestar.Lib.DBData,
+                  Roguestar.Lib.GridRayCaster,
+                  Roguestar.Lib.BeginGame,
+                  Roguestar.Lib.SpeciesData,
+                  Roguestar.Lib.TimeCoordinate,
+                  Roguestar.Lib.DB,
+                  Roguestar.Lib.AttributeGeneration,
+                  Roguestar.Lib.CreatureAttribute,
+                  Roguestar.Lib.Building,
+                  Roguestar.Lib.BuildingData,
+                  Roguestar.Lib.Town,
+                  Roguestar.Lib.Random,
+                  Roguestar.Lib.PlayerState,
+                  Roguestar.Lib.MakeData,
+                  Roguestar.Lib.DBErrorFlag,
+                  Roguestar.Lib.Construction,
+                  Roguestar.Lib.Make,
+                  Roguestar.Lib.Activate,
+                  Roguestar.Lib.Contact,
+                  Roguestar.Lib.DeviceActivation,
+                  Roguestar.Lib.Planet,
+                  Roguestar.Lib.PlanetData,
+                  Roguestar.Lib.Logging,
+                  Roguestar.Lib.CharacterAdvancement,
+                  Roguestar.Lib.PersistantData,
+                  Roguestar.Lib.PowerUpData
+  ghc-prof-options: -prof -auto-all
+  ghc-shared-options: -prof -auto-all
+  if impl(ghc >= 7.0)
+    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
+  else
+    ghc-options: -threaded -fno-warn-type-defaults
+
