@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Roguestar.Lib.Travel
+module Roguestar.Lib.Behavior.Travel
     (stepCreature,
      turnCreature,
      ClimbOutcome,

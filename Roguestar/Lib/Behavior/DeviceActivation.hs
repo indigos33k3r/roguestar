@@ -1,4 +1,4 @@
-module Roguestar.Lib.DeviceActivation
+module Roguestar.Lib.Behavior.DeviceActivation
     (DeviceActivationOutcomeType(..),
      DeviceActivationOutcome(..),
      resolveDeviceActivation)

@@ -1,4 +1,4 @@
-module Roguestar.Lib.Make
+module Roguestar.Lib.Behavior.Make
     (module Roguestar.Lib.MakeData,
      MakeOutcome,
      resolveMake,

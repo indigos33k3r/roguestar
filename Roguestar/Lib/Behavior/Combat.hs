@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, FlexibleContexts #-}
 
-module Roguestar.Lib.Combat
+module Roguestar.Lib.Behavior.Combat
     (AttackModel,
      meleeAttackModel,
      rangedAttackModel,
@@ -16,7 +16,7 @@ import Roguestar.Lib.ToolData
 import Control.Monad.Error
 import Roguestar.Lib.Facing
 import Data.Maybe
-import Roguestar.Lib.DeviceActivation
+import Roguestar.Lib.Behavior.DeviceActivation
 import Roguestar.Lib.Contact
 import Roguestar.Lib.Plane as Plane
 import Roguestar.Lib.DetailedLocation

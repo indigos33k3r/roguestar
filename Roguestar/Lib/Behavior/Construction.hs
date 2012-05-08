@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | All construction (terrain clearing, etc) actions that a creature might take.
-module Roguestar.Lib.Construction
+module Roguestar.Lib.Behavior.Construction
     (modifyFacingTerrain,
      clearTerrain)
     where
