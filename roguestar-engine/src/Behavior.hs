@@ -8,6 +8,7 @@ module Behavior
 
 import Prelude hiding (getContents)
 import DB
+import Logging
 import Position
 import Facing
 import Data.Ratio
@@ -66,16 +67,23 @@ facingBehavior creature_ref face =
        t <- terrainAt plane_ref facing_pos
        who :: [CreatureRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
        what :: [BuildingRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
-       case t of
+       result <- case t of
            _ | not (null who) -> return $ Attack face
            _ | not (null what) -> return $ ActivateBuilding face
            Forest -> return $ ClearTerrain face
            DeepForest -> return $ ClearTerrain face
            RockFace -> return $ ClearTerrain face
            _ -> return $ Step face
+       logDB log_behavior INFO ("facingBehavior is: " ++ show result)
+       return result
 
 dbBehave :: Behavior -> CreatureRef -> DB ()
-dbBehave (Step face) creature_ref =
+dbBehave the_behavior the_creature =
+    do logDB log_behavior INFO ("Running behavior: behavior=" ++ show the_behavior ++ " creature=" ++ (show $ toUID the_creature))
+       dbBehave_ the_behavior the_creature
+
+dbBehave_ :: Behavior -> CreatureRef -> DB ()
+dbBehave_ (Step face) creature_ref =
     do (move_from,move_to) <- move creature_ref =<< stepCreature face creature_ref
        dbAdvanceTime creature_ref =<< case () of
            () | (move_from == move_to) -> return 0
@@ -83,29 +91,29 @@ dbBehave (Step face) creature_ref =
            () | face `elem` [North,South,East,West] -> move1ActionTime creature_ref
            () | otherwise -> move2ActionTime creature_ref
 
-dbBehave StepDown creature_ref =
+dbBehave_ StepDown creature_ref =
     do _ <- atomic executeClimb $ resolveClimb creature_ref ClimbDown
        -- FIXME: should be conditional
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
 
-dbBehave StepUp creature_ref =
+dbBehave_ StepUp creature_ref =
     do _ <- atomic executeClimb $ resolveClimb creature_ref ClimbUp
        -- FIXME: should be conditional
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
 
-dbBehave (Jump face) creature_ref =
+dbBehave_ (Jump face) creature_ref =
     do _ <- atomic executeTeleportJump $ resolveTeleportJump creature_ref face
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
 
-dbBehave (TurnInPlace face) creature_ref =
+dbBehave_ (TurnInPlace face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
-dbBehave (Pickup tool_ref) creature_ref =
+dbBehave_ (Pickup tool_ref) creature_ref =
     do _ <- move tool_ref =<< pickupTool creature_ref tool_ref
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
-dbBehave (Wield tool_ref) creature_ref =
+dbBehave_ (Wield tool_ref) creature_ref =
     do available <- availableWields creature_ref
        already_wielded <- getWielded creature_ref
        when (not $ tool_ref `elem` available) $ throwError $ DBErrorFlag ToolIs_Unreachable
@@ -114,11 +122,11 @@ dbBehave (Wield tool_ref) creature_ref =
            () | Just tool_ref == already_wielded -> return 0 -- already wielded, so this was an empty action
            () | otherwise -> quickActionTime creature_ref
 
-dbBehave (Unwield) creature_ref =
+dbBehave_ (Unwield) creature_ref =
     do dbUnwieldCreature creature_ref
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
-dbBehave (Drop tool_ref) creature_ref =
+dbBehave_ (Drop tool_ref) creature_ref =
     do tool_parent <- liftM parentReference $ whereIs tool_ref
        already_wielded <- getWielded creature_ref
        when (tool_parent =/= creature_ref) $ throwError $ DBErrorFlag ToolIs_NotInInventory
@@ -127,23 +135,23 @@ dbBehave (Drop tool_ref) creature_ref =
            () | Just tool_ref == already_wielded -> return 0  -- instantly drop a tool if it's already held in the hand
            () | otherwise -> quickActionTime creature_ref
 
-dbBehave (Fire face) creature_ref =
+dbBehave_ (Fire face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        ranged_attack_model <- rangedAttackModel creature_ref
        _ <- atomic executeAttack $ resolveAttack ranged_attack_model face
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        return ()
 
-dbBehave (Attack face) creature_ref =
+dbBehave_ (Attack face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        melee_attack_model <- meleeAttackModel creature_ref
        _ <- atomic executeAttack $ resolveAttack melee_attack_model face
        dbAdvanceTime creature_ref =<< move1ActionTime creature_ref
        return ()
 
-dbBehave Wait creature_ref = dbAdvanceTime creature_ref =<< quickActionTime creature_ref
+dbBehave_ Wait creature_ref = dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
-dbBehave Vanish creature_ref =
+dbBehave_ Vanish creature_ref =
     do dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        (Parent plane_ref :: Parent Plane) <- liftM detail $ getPlanarLocation creature_ref
        faction <- getCreatureFaction creature_ref
@@ -153,24 +161,24 @@ dbBehave Vanish creature_ref =
        when (not is_visible_to_anyone_else) $ deleteCreature creature_ref
        return ()
 
-dbBehave Activate creature_ref =
+dbBehave_ Activate creature_ref =
     do _ <- atomic executeActivation $ resolveActivation creature_ref
        dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        return ()
 
-dbBehave (Make make_prep) creature_ref =
+dbBehave_ (Make make_prep) creature_ref =
     do _ <- atomic executeMake $ resolveMake creature_ref make_prep
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
        return ()
 
-dbBehave (ClearTerrain face) creature_ref =
+dbBehave_ (ClearTerrain face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        ok <- modifyFacingTerrain clearTerrain face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
        dbAdvanceTime creature_ref =<< fullActionTime creature_ref
        return ()
 
-dbBehave (ActivateBuilding face) creature_ref =
+dbBehave_ (ActivateBuilding face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        ok <- activateFacingBuilding face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable

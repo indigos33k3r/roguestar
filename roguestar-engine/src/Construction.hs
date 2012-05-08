@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -- | All construction (terrain clearing, etc) actions that a creature might take.
 module Construction
     (modifyFacingTerrain,
@@ -6,6 +8,7 @@ module Construction
 
 import DB
 import Plane
+import PlaneData
 import TerrainData
 import Facing
 import Control.Monad
@@ -18,7 +21,7 @@ import Data.Maybe
 -- True iff any terrain modification actually occured.
 modifyFacingTerrain :: (TerrainPatch -> TerrainPatch) -> Facing -> CreatureRef -> DB Bool
 modifyFacingTerrain f face creature_ref = liftM (fromMaybe False) $ runMaybeT $
-    do (plane_ref,position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
+    do (Parent plane_ref :: Parent Plane,position :: Position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
        let target_position = offsetPosition (facingToRelative face) position
        prev_terrain <- lift $ terrainAt plane_ref target_position
        let new_terrain = f prev_terrain

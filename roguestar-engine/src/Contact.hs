@@ -14,6 +14,7 @@ import Reference
 import CreatureData
 import Control.Monad
 import Plane
+import PlaneData
 import Data.Ord
 import Data.List as List
 import Data.Maybe
@@ -44,7 +45,7 @@ instance ContactModeType CreatureInteractionMode where
 findContacts :: (DBReadable db,ContactModeType c) =>
                 c -> Reference x -> Facing -> db [DetailedLocation Planar]
 findContacts contact_mode attacker_ref face =
-    do (m_l :: Maybe (PlaneRef,MultiPosition)) <- liftM fromLocation $ whereIs attacker_ref
+    do (m_l :: Maybe (Parent Plane,MultiPosition)) <- liftM fromLocation $ whereIs attacker_ref
        let testF pos (x :: MultiPosition) = case contactMode contact_mode of
                Touch -> min (x `distanceBetweenChessboard` (offsetPosition (facingToRelative face) pos))
                             (x `distanceBetweenChessboard` pos) == 0
@@ -53,7 +54,7 @@ findContacts contact_mode attacker_ref face =
            center_pos pos = case contactMode contact_mode of
                Area -> offsetPosition (facingToRelative7 face) pos
                _ -> pos
-       flip (maybe $ return []) m_l $ \(plane_ref,pos) ->
+       flip (maybe $ return []) m_l $ \(Parent plane_ref,pos) ->
            liftM (sortBy (comparing (Position.distanceBetweenSquared (center_pos pos) . (detail :: DetailedLocation Planar -> MultiPosition))) .
                   filter ((/= genericReference attacker_ref) . asChild . detail) .
                   filter (testF pos . detail)) $

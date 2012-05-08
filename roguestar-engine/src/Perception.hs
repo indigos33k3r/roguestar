@@ -77,7 +77,14 @@ visibleObjects :: (DBReadable db) => (forall m. DBReadable m => Reference () -> 
 visibleObjects filterF =
     do me <- whoAmI
        faction <- myFaction
-       liftDB $ mapRO DB.whereIs =<< maybe (return []) (dbGetVisibleObjectsForFaction (\a -> runPerception me $ filterF a) faction) =<< liftM fromLocation (DB.whereIs me)
+       m_parent_plane <- liftDB $ liftM fromLocation (DB.whereIs me)
+       visible_objects <- case m_parent_plane of
+           (Just (Parent plane_ref)) -> liftDB $ dbGetVisibleObjectsForFaction
+                                            (\a -> runPerception me $ filterF a)
+                                            faction
+                                            plane_ref
+           Nothing -> return []
+       liftDB $ mapRO DB.whereIs visible_objects
 
 myFaction :: (DBReadable db) => DBPerception db Faction
 myFaction = Perception.getCreatureFaction =<< whoAmI

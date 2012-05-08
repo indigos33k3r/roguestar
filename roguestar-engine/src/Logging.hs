@@ -3,6 +3,7 @@ module Logging
      log_plane,
      log_travel,
      log_turns,
+     log_behavior,
      module System.Log.Logger)
     where
 
@@ -19,4 +20,7 @@ log_travel = "engine.travel"
 
 log_turns :: String
 log_turns = "engine.turns"
+
+log_behavior :: String
+log_behavior = "engine.behavior"
 

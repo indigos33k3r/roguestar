@@ -30,8 +30,9 @@ dbPerformPlayerTurn :: Behavior -> CreatureRef -> DB ()
 dbPerformPlayerTurn beh creature_ref =
     do logDB log_turns INFO $ "Beginning player action: " ++ show beh
        dbBehave beh creature_ref
-       logDB log_turns INFO $ "Finishing AI turns."
+       logDB log_turns INFO $ "Doing AI turns:"
        dbFinishPendingAITurns
+       logDB log_turns INFO $ "Finished all player and AI turns."
 
 dbFinishPendingAITurns :: DB ()
 dbFinishPendingAITurns =
@@ -42,13 +43,15 @@ dbFinishPendingAITurns =
 
 dbFinishPlanarAITurns :: PlaneRef -> DB ()
 dbFinishPlanarAITurns plane_ref =
-    do sweepDead plane_ref
-       (all_creatures_on_plane :: [CreatureRef]) <- liftM mapLocations $ getContents plane_ref
+    do logDB log_turns INFO $ "Running turns for plane: id=" ++ show (toUID plane_ref)
+       sweepDead plane_ref
+       (all_creatures_on_plane :: [CreatureRef]) <- liftM asChildren $ getContents plane_ref
        any_players_left <- liftM (any (== Player)) $ mapM getCreatureFaction all_creatures_on_plane
        next_turn <- dbNextTurn $ map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
        case next_turn of
            _ | not any_players_left ->
-               do setPlayerState GameOver
+               do logDB log_turns INFO $ "Game over condition detected"
+                  setPlayerState GameOver
                   return ()
            ref | ref =:= plane_ref ->
                do dbPerform1PlanarAITurn plane_ref
@@ -70,7 +73,8 @@ monster_spawns = [(RecreantFactory,Recreant), (Dirt,DustVortex)]
 
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
 dbPerform1PlanarAITurn plane_ref =
-    do (creature_locations :: [DetailedLocation (Child Creature)]) <- liftM mapLocations $ getContents plane_ref
+    do logDB log_turns INFO $ "Beginning planar AI turn (for the plane itself):"
+       (creature_locations :: [DetailedLocation (Child Creature)]) <- liftM mapLocations $ getContents plane_ref
        player_locations <- filterRO (liftM (== Player) . getCreatureFaction . asChild . detail) creature_locations
        num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 2) $
@@ -85,7 +89,8 @@ dbPerform1PlanarAITurn plane_ref =
 -- (presumably the list of positions of all player characters).
 spawnNPC :: TerrainPatch -> Species -> PlaneRef -> [Position] -> DB Bool
 spawnNPC terrain_type species plane_ref player_locations =
-    do p <- pickM player_locations
+    do logDB log_turns INFO $ "Spawning an NPC"
+       p <- pickM player_locations
        m_spawn_position <- pickRandomClearSite_withTimeout (Just 2) 7 0 0 p (== terrain_type) plane_ref
        case m_spawn_position of
            Nothing -> return False
@@ -94,8 +99,9 @@ spawnNPC terrain_type species plane_ref player_locations =
                   return True
 
 dbPerform1CreatureAITurn :: CreatureRef -> DB ()
-dbPerform1CreatureAITurn creature_ref = liftM (const ()) $ atomic (flip dbBehave creature_ref) $
-    P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
+dbPerform1CreatureAITurn creature_ref =
+    do logDB log_turns INFO $ "Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
+       liftM (const ()) $ atomic (flip dbBehave creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
         do let isPlayer :: (DBReadable db) => Reference () -> P.DBPerception db Bool
                isPlayer ref | Just (creature_ref :: CreatureRef) <- coerceReference ref =
                    do faction <- P.getCreatureFaction creature_ref

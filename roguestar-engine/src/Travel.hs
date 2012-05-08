@@ -47,7 +47,7 @@ walkCreature face (x',y') creature_ref =
        case () of
            () | not is_passable ->
                do logDB log_travel WARNING $ "Terrain not passable."
-                  fail ""
+                  return $ detail l
            () | otherwise ->
                return $ standing
 
@@ -82,7 +82,7 @@ resolveClimb creature_ref direction = liftM (fromMaybe ClimbFailed) $ runMaybeT 
                ClimbDown -> (Downstairs,Upstairs)
        when (terrain_type /= expected_starting_terrain) $
            do lift $ logDB log_travel WARNING $ "Not standing on correct stairway."
-              fail ""
+              MaybeT $ return Nothing
        lift $ logDB log_travel DEBUG $ "Stepping " ++ show direction ++ " from: " ++ show (plane_ref,pos)
        plane_destination <- MaybeT $ case direction of
                  ClimbDown -> getBeneath plane_ref

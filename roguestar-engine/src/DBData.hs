@@ -62,9 +62,6 @@ instance (LocationDetail a,LocationDetail b) => LocationDetail (Either a b) wher
 instance (LocationDetail a,LocationDetail b) => LocationDetail ((,) a b) where
     fromLocation x = liftM2 (,) (fromLocation x) (fromLocation x)
 
-instance (ReferenceType a) => LocationDetail (Reference a) where
-    fromLocation = coerceReference . childReference
-
 instance LocationDetail Location where
     fromLocation = Just
 

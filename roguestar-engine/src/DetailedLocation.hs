@@ -97,6 +97,7 @@ type instance LocationAssignmentTable Planar           Position                 
 type instance LocationAssignmentTable Planar           (Parent Plane, MultiPosition) = Supported
 type instance LocationAssignmentTable Planar           (Parent Plane, Position)      = Supported
 type instance LocationAssignmentTable (Child a)        (Child a)                     = Supported
+type instance LocationAssignmentTable (Child Creature) Standing                      = Supported
 type instance LocationAssignmentTable (Child Creature) (Parent Plane)                = Supported
 type instance LocationAssignmentTable (Child Creature) Position                      = Supported
 type instance LocationAssignmentTable (Child Creature) MultiPosition                 = Supported

@@ -48,7 +48,7 @@ deleteBuilding building_ref = dbUnsafeDeleteObject building_ref
 -- | Activate the facing building, returns True iff any building was actually activated.
 activateFacingBuilding :: Facing -> CreatureRef -> DB Bool
 activateFacingBuilding face creature_ref = liftM (fromMaybe False) $ runMaybeT $
-    do (plane_ref,position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
+    do (Parent plane_ref,position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
        buildings <- lift $ liftM mapLocations $ whatIsOccupying plane_ref $ offsetPosition (facingToRelative face) position
        liftM or $ lift $ forM buildings $ \(Child building_ref) ->
            do building_behavior <- buildingBehavior building_ref
@@ -68,7 +68,7 @@ activateBuilding (TwoWayStargate region) creature_ref building_ref =
                       =<< getSubsequent region plane_ref
                   portalCreatureTo (Just $ TwoWayStargate region) 1 creature_ref subsequent_plane
            () | cy - by == 1 ->
-               do previous_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) return
+               do previous_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) (return . asParent)
                       =<< liftM fromLocation (whereIs plane_ref)
                   portalCreatureTo (Just $ TwoWayStargate region) (-1) creature_ref previous_plane
            () | otherwise ->
@@ -90,7 +90,7 @@ activateBuilding (OneWayStargate region) creature_ref building_ref =
 -- the dbMove result from the action.
 portalCreatureTo :: Maybe BuildingBehavior -> Integer -> CreatureRef -> PlaneRef -> DB (Location,Location)
 portalCreatureTo building_behavior offset creature_ref plane_ref =
-    do (all_buildings :: [BuildingRef]) <- liftM mapLocations (getContents plane_ref)
+    do (all_buildings :: [BuildingRef]) <- liftM asChildren (getContents plane_ref)
        portals <- filterM (liftM ((== building_behavior) . Just) . buildingBehavior) all_buildings
        ideal_position <- if null portals
            then liftM2 (\x y -> Position (x,y)) (getRandomR (-40,40)) (getRandomR (-40,40))

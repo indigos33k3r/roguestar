@@ -179,7 +179,7 @@ instance DBReadable DB where
                Nothing ->  return Nothing
 
 logDB :: (DBReadable db) => String -> Priority -> String -> db ()
-logDB l p s = return $! unsafePerformIO $ logM l p s
+logDB l p s = return $! unsafePerformIO $ logM l p $ l ++ ": " ++ s
 
 ro :: (DBReadable db) => (forall m. DBReadable m => m a) -> db a
 ro db = dbSimulate db
