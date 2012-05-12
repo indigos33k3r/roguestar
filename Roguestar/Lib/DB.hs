@@ -37,8 +37,8 @@ module Roguestar.Lib.DB
      whereIs,
      getContents,
      move,
-     dbSetStartingSpecies,
-     dbGetStartingSpecies,
+     setStartingSpecies,
+     getStartingSpecies,
      ro, atomic,
      logDB,
      mapRO, filterRO, sortByRO,
@@ -520,14 +520,14 @@ dbNextTurn refs =
 -- |
 -- Answers the starting species.
 --
-dbGetStartingSpecies :: DB (Maybe Species)
-dbGetStartingSpecies = do gets db_starting_species
+getStartingSpecies :: DB (Maybe Species)
+getStartingSpecies = do gets db_starting_species
 
 -- |
 -- Sets the starting species.
 --
-dbSetStartingSpecies :: Species -> DB ()
-dbSetStartingSpecies the_species = modify (\db -> db { db_starting_species = Just the_species })
+setStartingSpecies :: Species -> DB ()
+setStartingSpecies the_species = modify (\db -> db { db_starting_species = Just the_species })
 
 -- |
 -- Takes a snapshot of a SnapshotEvent in progress.

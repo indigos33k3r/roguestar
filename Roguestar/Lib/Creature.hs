@@ -48,8 +48,7 @@ generateCreature faction species = generateAttributes faction species $ mconcat 
 generateInitialPlayerCreature :: Species -> DB ()
 generateInitialPlayerCreature species =
     do newc <- generateCreature Player species
-       dbSetStartingSpecies species
-       setPlayerState (ClassSelectionState newc)
+       setStartingSpecies species
 
 -- |
 -- Generates a new Creature from the specified Species and adds it to the database.

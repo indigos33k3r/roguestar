@@ -1,7 +1,6 @@
 module Roguestar.Lib.SpeciesData
     (Species(..),
-     all_species,
-     player_species)
+     all_species)
     where
 
 data Species =
@@ -22,19 +21,4 @@ data Species =
 
 all_species :: [Species]
 all_species = [minBound..maxBound]
-
-player_species :: [Species]
-player_species = [
-    Anachronid,
-    Androsynth,
-    Ascendant,
-    Caduceator,
-    Encephalon,
-    Goliath,
-    Hellion,
-    Kraken,
-    Myrmidon,
-    Perennial,
-    Recreant,
-    Reptilian]
 

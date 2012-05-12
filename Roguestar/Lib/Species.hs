@@ -1,7 +1,6 @@
 
 module Roguestar.Lib.Species
-    (player_species_names,
-     SpeciesData(..),
+    (SpeciesData(..),
      speciesInfo)
     where
 
@@ -12,9 +11,6 @@ import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.CreatureAttribute
 import Data.Monoid
 import Roguestar.Lib.TerrainData
-
-player_species_names :: [String]
-player_species_names = map (map toLower . show) player_species
 
 data SpeciesData = SpeciesData {
         species_recurring_attributes :: CreatureAttribute,

@@ -93,3 +93,4 @@ dbBeginGame creature character_class =
        _ <- makePlanets (Subsequent end_of_nonaligned_first_series NonAlignedRegion) =<< generatePlanetInfo nonaligned_second_series_planets
        _ <- makePlanets (Subsequent end_of_nonaligned_first_series CyborgRegion) =<< generatePlanetInfo cyborg_planets
        setPlayerState $ PlayerCreatureTurn creature_ref NormalMode
+
