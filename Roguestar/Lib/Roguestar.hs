@@ -1,16 +1,30 @@
+{-# LANGUAGE Rank2Types #-}
+
 module Roguestar.Lib.Roguestar
     (Game,
      newGame,
      getPlayerState,
-     Roguestar.Lib.Roguestar.getStartingSpecies)
+     rerollStartingSpecies,
+     Creature(..),
+     TerrainPatch(..),
+     Position(..),
+     Facing(..),
+     Roguestar.Lib.Roguestar.beginGame,
+     perceive)
     where
 
 import Roguestar.Lib.DB as DB
 import Control.Concurrent.STM
+import Control.Monad
 import Roguestar.Lib.PlayerState
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Random
 import Roguestar.Lib.Creature
+import Roguestar.Lib.CreatureData
+import Roguestar.Lib.BeginGame as BeginGame
+import Roguestar.Lib.Perception
+import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Facing
 
 data Game = Game {
     game_db :: TVar DB_BaseType }
@@ -41,12 +55,17 @@ poke g f =
 getPlayerState :: Game -> IO (Either DBError PlayerState)
 getPlayerState g = peek g playerState
 
-getStartingSpecies :: Game -> IO (Either DBError (Maybe Species))
-getStartingSpecies g = peek g DB.getStartingSpecies
-
-rerollStartingSpecies :: Game -> Species -> IO (Either DBError Species)
-rerollStartingSpecies g species = poke g $
+rerollStartingSpecies :: Game -> IO (Either DBError Species)
+rerollStartingSpecies g = poke g $
     do species <- pickM all_species
        generateInitialPlayerCreature species
        return species
+
+beginGame :: Game -> IO (Either DBError ())
+beginGame g = poke g $ BeginGame.beginGame
+
+perceive :: Game -> (forall m. DBReadable m => DBPerception m a) -> IO (Either DBError a)
+perceive g f = peek g $
+    do player_creature <- maybe (fail "No player creature selected yet.") return =<< getPlayerCreature
+       runPerception player_creature f
 

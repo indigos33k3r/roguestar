@@ -1,16 +1,15 @@
 {-# LANGUAGE ExistentialQuantification, Rank2Types, FlexibleContexts, ScopedTypeVariables #-}
 
--- |
--- Perception is essentially a catalogue of information that can be
--- observed from a creatures-eye-view, i.e. information that
--- is legal for a human agent or ai agent to have while choosing
--- it's next move.
---
+-- | The Perception monad is a wrapper for roguestar's core
+-- monad that reveals only as much information as a character
+-- legitimately has.  Thus, it is suitable for writing AI
+-- routines as well as an API for the player's client.
 module Roguestar.Lib.Perception
     (DBPerception,
      whoAmI,
      runPerception,
      visibleObjects,
+     visibleTerrain,
      myFaction,
      Roguestar.Lib.Perception.getCreatureFaction,
      whereAmI,
@@ -68,11 +67,15 @@ whoAmI = DBPerception $ ask
 
 -- |
 -- Run a DBPerception from the point-of-view of the given creature.
--- Note that if you pass any 'Reference' or 'Location' into the perception monad,
--- it will be able to cheat.  Therefore, don't.
 --
 runPerception :: (DBReadable db) => CreatureRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
+
+visibleTerrain :: (DBReadable db) => DBPerception db [(TerrainPatch,Position)]
+visibleTerrain =
+    do plane_ref <- whatPlaneAmIOn
+       faction <- myFaction
+       liftDB $ dbGetVisibleTerrainForFaction faction plane_ref
 
 visibleObjects :: (DBReadable db) => (forall m. DBReadable m => Reference () -> DBPerception m Bool) -> DBPerception db [Location]
 visibleObjects filterF =
@@ -107,7 +110,6 @@ localBiome :: (DBReadable db) => DBPerception db Biome
 localBiome =
     do plane_ref <- whatPlaneAmIOn
        liftDB $ liftM plane_biome $ dbGetPlane plane_ref
-
 
 -- Let's look into re-writing this with A*:
 -- http://hackage.haskell.org/packages/archive/astar/0.2.1/doc/html/Data-Graph-AStar.html

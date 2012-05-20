@@ -4,7 +4,7 @@ module Roguestar.Lib.Plane
      planetName,
      randomPlanetName,
      planeDepth,
-     dbGetCurrentPlane,
+     getCurrentPlane,
      Roguestar.Lib.Plane.distanceBetweenSquared,
      pickRandomClearSite_withTimeout,
      pickRandomClearSite,
@@ -120,9 +120,9 @@ distanceBetweenSquared a_ref b_ref =
 -- |
 -- Gets the current plane of interest based on whose turn it is.
 --
-dbGetCurrentPlane :: (DBReadable db) => db (Maybe PlaneRef)
-dbGetCurrentPlane = runMaybeT $
-    do creature_with_current_turn <- MaybeT $ liftM creatureOf playerState
+getCurrentPlane :: (DBReadable db) => db (Maybe PlaneRef)
+getCurrentPlane = runMaybeT $
+    do creature_with_current_turn <- MaybeT $ liftM subjectOf playerState
        (Parent plane_ref) <- liftM detail $ lift $ getPlanarLocation creature_with_current_turn
        return plane_ref
 

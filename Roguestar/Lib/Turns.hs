@@ -37,7 +37,7 @@ dbPerformPlayerTurn beh creature_ref =
 
 dbFinishPendingAITurns :: DB ()
 dbFinishPendingAITurns =
-    do m_current_plane <- dbGetCurrentPlane
+    do m_current_plane <- getCurrentPlane
        case m_current_plane of
            Just p -> dbFinishPlanarAITurns p
            Nothing -> return ()
@@ -62,7 +62,7 @@ dbFinishPlanarAITurns plane_ref =
                   if (faction /= Player)
                       then do dbPerform1CreatureAITurn creature_ref
                               dbFinishPlanarAITurns plane_ref
-                      else setPlayerState (PlayerCreatureTurn creature_ref NormalMode)
+                      else setPlayerState (PlayerCreatureTurn creature_ref)
                   return ()
            _ -> error "dbFinishPlanarAITurns: impossible case"
 

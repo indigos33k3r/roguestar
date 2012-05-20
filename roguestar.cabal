@@ -19,6 +19,7 @@ executable roguestar-server
                   snap-core >=0.8,
                   snap-server >= 0.8,
                   text >=0.11,
+                  xmlhtml,
                   xhtml-combinators == 0.2.2,
                   MonadCatchIO-transformers >= 0.2 && < 0.3,
                   data-lens-template,
@@ -46,7 +47,9 @@ library
                   array >=0.3.0.0,
                   containers >=0.3.0.0,
                   base >=4
-  exposed-modules:Roguestar.Lib.Roguestar
+  exposed-modules:Roguestar.Lib.Roguestar,
+                  Roguestar.Lib.PlayerState,
+                  Roguestar.Lib.DBErrorFlag
   other-modules:  Roguestar.Lib.TravelData,
                   Roguestar.Lib.VisibilityData,
                   Roguestar.Lib.FactionData,
@@ -87,9 +90,7 @@ library
                   Roguestar.Lib.BuildingData,
                   Roguestar.Lib.Town,
                   Roguestar.Lib.Random,
-                  Roguestar.Lib.PlayerState,
                   Roguestar.Lib.MakeData,
-                  Roguestar.Lib.DBErrorFlag,
                   Roguestar.Lib.Behavior.Construction,
                   Roguestar.Lib.Behavior.Make,
                   Roguestar.Lib.Activate,

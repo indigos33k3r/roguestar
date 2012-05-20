@@ -13,8 +13,9 @@ module Roguestar.Lib.DB
      DBReadable(..),
      playerState,
      setPlayerState,
+     getPlayerCreature,
+     setPlayerCreature,
      SnapshotEvent(..),
-     DBError(..),
      initial_db,
      DB_BaseType(db_error_flag),
      dbActionCount,
@@ -37,8 +38,6 @@ module Roguestar.Lib.DB
      whereIs,
      getContents,
      move,
-     setStartingSpecies,
-     getStartingSpecies,
      ro, atomic,
      logDB,
      mapRO, filterRO, sortByRO,
@@ -89,8 +88,8 @@ data DB_History = DB_History {
 
 data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
-                                 db_starting_species :: Maybe Species,
                                  db_creatures :: Map CreatureRef Creature,
+                                 db_player_creature :: Maybe CreatureRef,
                                  db_planes :: Map PlaneRef Plane,
                                  db_tools :: Map ToolRef Tool,
                                  db_buildings :: Map BuildingRef Building,
@@ -100,14 +99,6 @@ data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_prior_snapshot :: Maybe DB_BaseType,
                                  db_action_count :: Integer }
     deriving (Read,Show)
-
-data DBError =
-    DBError String
-  | DBErrorFlag ErrorFlag
-    deriving (Read,Show)
-
-instance Error DBError where
-    strMsg = DBError
 
 type DBResult r = Either DBError (r,DB_History)
 data DB a = DB { cycleDB :: forall r. DB_History -> (a -> DB_History -> DBResult r) -> DBResult r }
@@ -120,7 +111,7 @@ runDB dbAction database =
 instance Monad DB where
     return a = DB $ \h f -> f a h
     k >>= m = DB $ \h f -> cycleDB k h $ \a h' -> cycleDB (m a) h' f
-    fail = error
+    fail = throwError . DBError
 
 instance Functor DB where
     fmap = liftM
@@ -212,10 +203,10 @@ atomic action ro_action =
 --
 initial_db :: DB_BaseType
 initial_db = DB_BaseType {
-    db_player_state = SpeciesSelectionState,
+    db_player_state = SpeciesSelectionState Nothing,
     db_next_object_ref = 0,
-    db_starting_species = Nothing,
     db_creatures = Map.fromList [],
+    db_player_creature = Nothing,
     db_planes = Map.fromList [],
     db_tools = Map.fromList [],
     db_buildings = Map.fromList [],
@@ -232,17 +223,17 @@ setupDBHistory db =
            db_here = db,
            db_random = rng }
 
--- |
--- Returns the DBState of the database.
---
 playerState :: (DBReadable m) => m PlayerState
 playerState = asks db_player_state
 
--- |
--- Sets the DBState of the database.
---
 setPlayerState :: PlayerState -> DB ()
 setPlayerState state = modify (\db -> db { db_player_state = state })
+
+getPlayerCreature :: (DBReadable m) => m (Maybe CreatureRef)
+getPlayerCreature = asks db_player_creature
+
+setPlayerCreature :: CreatureRef -> DB ()
+setPlayerCreature creature_ref = modify (\db -> db { db_player_creature = Just creature_ref })
 
 dbActionCount :: (DBReadable db) => db Integer
 dbActionCount = asks db_action_count
@@ -516,18 +507,6 @@ dbNextTurn refs =
     asks (\db -> fst $ minimumBy (comparing snd) $
                    List.map (\r -> (r,fromMaybe (error "dbNextTurn: missing time coordinate") $
                                       Map.lookup (genericReference r) (db_time_coordinates db))) refs)
-
--- |
--- Answers the starting species.
---
-getStartingSpecies :: DB (Maybe Species)
-getStartingSpecies = do gets db_starting_species
-
--- |
--- Sets the starting species.
---
-setStartingSpecies :: Species -> DB ()
-setStartingSpecies the_species = modify (\db -> db { db_starting_species = Just the_species })
 
 -- |
 -- Takes a snapshot of a SnapshotEvent in progress.

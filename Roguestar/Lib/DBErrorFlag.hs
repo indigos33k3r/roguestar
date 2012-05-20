@@ -1,6 +1,17 @@
 module Roguestar.Lib.DBErrorFlag
-    (ErrorFlag(..))
+    (DBError(..),
+     ErrorFlag(..))
     where
+
+import Control.Monad.Error
+
+data DBError =
+    DBError String
+  | DBErrorFlag ErrorFlag
+    deriving (Read,Show)
+
+instance Error DBError where
+    strMsg = DBError
 
 data ErrorFlag =
     BuildingApproachWrongAngle -- some buildings (like stargates) are sensitive to the angle of approach

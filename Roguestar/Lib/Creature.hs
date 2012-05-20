@@ -42,13 +42,12 @@ generateCreature :: Faction -> Species -> DB Creature
 generateCreature faction species = generateAttributes faction species $ mconcat $ species_starting_attributes $ speciesInfo species
 
 -- |
--- During DBRaceSelectionState, generates a new Creature for the player character and sets it into the 
--- database's DBClassSelectionState.
+-- During DBRaceSelectionState, generates a new Creature for the player character.
 --
 generateInitialPlayerCreature :: Species -> DB ()
 generateInitialPlayerCreature species =
     do newc <- generateCreature Player species
-       setStartingSpecies species
+       setPlayerState $ SpeciesSelectionState $ Just newc
 
 -- |
 -- Generates a new Creature from the specified Species and adds it to the database.
@@ -95,7 +94,7 @@ getTerrainAffinity creature_ref =
 -- | Get the current creature, if it belongs to the specified faction, based on the current playerState.
 getCurrentCreature :: (DBReadable db) => Faction -> db (Maybe CreatureRef)
 getCurrentCreature faction =
-    do m_who <- liftM creatureOf $ playerState
+    do m_who <- liftM subjectOf $ playerState
        is_one_of_us <- maybe (return False) (liftM (== faction) . getCreatureFaction) m_who
        return $ if is_one_of_us then m_who else Nothing
 
