@@ -2,11 +2,11 @@
 <content/>
 
 <form action="/play/reroll" method="post">
-<input type="submit" name="Regenerate"/>
+<button type="submit">Retry</button>
 </form>
 
 <form action="/play/accept" method="post">
-<input type="submit" name="Accept"/>
+<button type="submit">Accept</button>
 </form>
 
 </apply>

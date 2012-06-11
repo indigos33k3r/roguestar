@@ -11,8 +11,6 @@ module Roguestar.Lib.Creature
      injureCreature,
      healCreature,
      getCreatureHealth,
-     getCreatureMaxHealth,
-     getCreatureAbsoluteHealth,
      getDead,
      deleteCreature,
      sweepDead)
@@ -107,23 +105,12 @@ injureCreature x = dbModCreature $ \c -> c { creature_damage = max 0 $ creature_
 healCreature :: Integer -> CreatureRef -> DB ()
 healCreature = injureCreature . negate
 
-getCreatureMaxHealth :: (DBReadable db) => CreatureRef -> db Integer
-getCreatureMaxHealth = liftM (creatureAbilityScore ToughnessTrait) . dbGetCreature
-
--- | Injury difference from maximum health as an integer count of hit points.
-getCreatureInjury :: (DBReadable db) => CreatureRef -> db Integer
-getCreatureInjury = liftM creature_damage . dbGetCreature
-
--- | Health as an integer count of hit points.
-getCreatureAbsoluteHealth :: (DBReadable db) => CreatureRef -> db Integer
-getCreatureAbsoluteHealth creature_ref = liftM (max 0) $ liftM2 (-) (getCreatureMaxHealth creature_ref) (getCreatureInjury creature_ref)
-
 -- | Health as a fraction of 1.
-getCreatureHealth :: (DBReadable db) => CreatureRef -> db Rational
-getCreatureHealth creature_ref = liftM2 (%) (getCreatureAbsoluteHealth creature_ref) (getCreatureMaxHealth creature_ref)
+getCreatureHealth :: (DBReadable db) => CreatureRef -> db CreatureHealth
+getCreatureHealth creature_ref = liftM creatureHealth $ dbGetCreature creature_ref
 
 getDead :: (DBReadable db) => Reference a -> db [CreatureRef]
-getDead parent_ref = filterRO (liftM (<= 0) . getCreatureHealth) =<< liftM asChildren (getContents parent_ref)
+getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getCreatureHealth) =<< liftM asChildren (getContents parent_ref)
 
 deleteCreature :: CreatureRef -> DB ()
 deleteCreature creature_ref =
@@ -133,7 +120,7 @@ deleteCreature creature_ref =
 -- | Delete all dead creatures from the database.
 sweepDead :: Reference a -> DB ()
 sweepDead ref =
-    do worst_to_best_critters <- sortByRO getCreatureHealth =<< getDead ref
+    do worst_to_best_critters <- sortByRO (liftM creature_health . getCreatureHealth) =<< getDead ref
        flip mapM_ worst_to_best_critters $ \creature_ref ->
            do dbPushSnapshot (KilledEvent creature_ref)
               deleteCreature creature_ref

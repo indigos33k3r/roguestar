@@ -24,10 +24,17 @@ import Data.Lens.Template
 import Data.Maybe
 import Data.Ord
 import qualified Data.List as List
+import qualified Data.Map as Map
 import Roguestar.Lib.Roguestar
 import Roguestar.Lib.PlayerState
 import Roguestar.Lib.DBErrorFlag
 import Roguestar.Lib.Perception
+import Roguestar.Lib.SpeciesData
+import Roguestar.Lib.ToolData
+import Roguestar.Lib.Substances as Substances
+import Roguestar.Lib.TerrainData as TerrainData
+import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Facing
 
 data App = App {
     _heist :: Snaplet (Heist App),
@@ -82,7 +89,8 @@ play =
                      [("",method GET . displayCurrentState),
                       ("maptext",method GET . const (createMap >>= writeText)),
                       ("reroll",method POST . reroll),
-                      ("accept",method POST . accept)]
+                      ("accept",method POST . accept),
+                      ("move",method POST . move)]
 
 routeRoguestar :: PlayerState -> [(BS.ByteString,PlayerState -> Handler App App ())] -> Handler App App ()
 routeRoguestar ps xs = route $ map (\(bs,f) -> (bs,f ps)) xs
@@ -95,8 +103,10 @@ displayCurrentState (SpeciesSelectionState (Just creature)) =
     [("content",return $ [X.TextNode $ T.pack $ "You are a " ++ show (creature_species creature) ++ "."])]
 displayCurrentState (PlayerCreatureTurn creature_ref) =
     do map_text <- createMap
+       player_stats <- createStatsBlock
        renderWithSplices "/hidden/play/normal-play"
-           [("map",return $ [X.Element "pre" [] [X.TextNode map_text]])]
+           [("map",return $ [X.Element "pre" [] [X.TextNode map_text]]),
+            ("statsblock",return $ [X.Element "pre" [] [X.TextNode player_stats]])]
 displayCurrentState _ = pass
 
 reroll :: PlayerState -> Handler App App ()
@@ -113,6 +123,29 @@ accept (SpeciesSelectionState (Just _)) =
        replay
 accept _ = pass
 
+move :: PlayerState -> Handler App App ()
+move (PlayerCreatureTurn {}) =
+    do g <- getGame
+       behavior <- moveBehavior
+       result <- liftIO $ behave g behavior
+       case result of
+           Right () -> return ()
+       redirect "/play"
+
+moveBehavior :: Handler App App Behavior
+moveBehavior =
+    do direction <- liftM (fromMaybe $ error "No direction identifier.") $ getPostParam "direction"
+       mode <- liftM (fromMaybe $ error "No mode identifier.") $ getPostParam "mode"
+       let facing = fromMaybe (error "Not a valid direction identifier.") $ stringToFacing direction
+       let action = case mode of
+                        _ | direction == "wait" -> const Wait
+                        "step" -> Step
+                        "attack" -> Attack
+                        "fire" -> Fire
+                        "jump" -> Jump
+                        "turn" -> TurnInPlace
+       return $ action facing
+
 replay :: Handler App App ()
 replay = redirect "/play"
 
@@ -124,6 +157,7 @@ getGame = gets _app_game
 
 data MapData = MapData {
     md_visible_terrain :: [(TerrainPatch,Position)],
+    md_visible_objects :: Map.Map Position [VisibleObject],
     md_position_info :: (Facing,Position) }
 
 createMap :: Handler App App T.Text
@@ -132,15 +166,15 @@ createMap =
        g <- getGame
        map_data <- liftIO $ perceive g $
            do visible_terrain <- visibleTerrain
-              visible_objects <- visibleObjects
+              visible_objects <- liftM stackVisibleObjects $ visibleObjects (const $ return True)
               my_position <- whereAmI
-              return $ MapData visible_terrain my_position
+              return $ MapData visible_terrain visible_objects my_position
        case map_data of
            Right map_data_ -> return $ constructMapText (x,y) map_data_
 
 constructMapText :: (Integer,Integer) -> MapData -> T.Text
 constructMapText (width,height) _ | width `mod` 2 == 0 || height `mod` 2 == 0 = error "Map widths and heights must be odd numbers"
-constructMapText (width,height) (MapData visible_terrain (_,Position (center_x,center_y))) = T.unfoldr f (False,0)
+constructMapText (width,height) (MapData visible_terrain visible_objects (_,Position (center_x,center_y))) = T.unfoldr f (False,0)
     where f :: (Bool,Int) -> Maybe (Char, (Bool,Int))
           f (False,i) = if i > snd (bounds char_array)
                             then Nothing
@@ -153,17 +187,60 @@ constructMapText (width,height) (MapData visible_terrain (_,Position (center_x,c
           char_array = runSTUArray $
               do ax <- newArray (0,array_length-1) ' '
                  forM_ visible_terrain $ \(tp,Position (x,y)) ->
-                     do let i = fromInteger $ (x-x_adjust) + (y-y_adjust)*width
+                     do let i = fromInteger $ (x-x_adjust) + (height-(y-y_adjust)-1)*width
                         when (i >= 0 && i < array_length-1) $
-                            writeArray ax (fromInteger $ (x - x_adjust)+(y - y_adjust)*width) $ charcodeOf tp
+                            writeArray ax i $ charcodeOf tp
+                 forM_ (Map.assocs visible_objects) $ \(Position (x,y), vobs) ->
+                     do let i = fromInteger $ (x-x_adjust) + (height-(y-y_adjust)-1) * width
+                        when (i >= 0 && i < array_length-1) $
+                            writeArray ax i $ charcodeOf vobs 
                  return ax
+
+createStatsBlock :: Handler App App T.Text
+createStatsBlock =
+    do g <- getGame
+       health <- liftIO $ perceive g myHealth
+       case health of
+           Right health_ ->
+               return $ T.concat [
+                   "Health: ",
+                   T.pack $ show $ creature_absolute_health health_,
+                   "/",
+                   T.pack $ show $ creature_max_health health_]
 
 class Charcoded a where
     charcodeOf :: a -> Char
 
+instance Charcoded a => Charcoded [a] where
+    charcodeOf (a:as) = charcodeOf a
+    charcodeOf [] = ' '
+
+instance Charcoded VisibleObject where
+    charcodeOf (VisibleTool { visible_tool = t }) = charcodeOf t
+    charcodeOf (VisibleCreature { visible_creature_species = s }) = charcodeOf s
+    charcodeOf (VisibleBuilding{}) = '#'
+    
+instance Charcoded Tool where
+    charcodeOf (Sphere {}) = '%'
+    charcodeOf (DeviceTool Gun _) = ')'
+    charcodeOf (DeviceTool Sword _) = ')'
+
+instance Charcoded Species where
+    charcodeOf Anachronid = 'A'
+    charcodeOf Androsynth = 'Y'
+    charcodeOf Ascendant = 'V'
+    charcodeOf Caduceator = 'C'
+    charcodeOf DustVortex = 'v'
+    charcodeOf Encephalon = 'E'    
+    charcodeOf Goliath = 'G'
+    charcodeOf Hellion = 'H'
+    charcodeOf Kraken = 'K'
+    charcodeOf Myrmidon = 'M'
+    charcodeOf Perennial = 'f'
+    charcodeOf Recreant = 'r'
+    charcodeOf Reptilian = 'R'
+
 instance Charcoded TerrainPatch where
-    -- eventually I'd want this to look like:
-    -- charcodeOf Grass = ('.', Green, "grass")
     charcodeOf RockFace          = '#'
     charcodeOf Rubble            = '~'
     charcodeOf Ore               = '~'
@@ -174,7 +251,7 @@ instance Charcoded TerrainPatch where
     charcodeOf Desert            = '~'
     charcodeOf Forest            = 'f'
     charcodeOf DeepForest        = 'f'
-    charcodeOf Water             = '~'
+    charcodeOf TerrainData.Water = '~'
     charcodeOf DeepWater         = '~'
     charcodeOf Ice               = '.'
     charcodeOf Lava              = '~'

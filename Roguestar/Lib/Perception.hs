@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, Rank2Types, FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification, Rank2Types, FlexibleContexts, ScopedTypeVariables, PatternGuards #-}
 
 -- | The Perception monad is a wrapper for roguestar's core
 -- monad that reveals only as much information as a character
@@ -8,6 +8,8 @@ module Roguestar.Lib.Perception
     (DBPerception,
      whoAmI,
      runPerception,
+     VisibleObject(..),
+     stackVisibleObjects,
      visibleObjects,
      visibleTerrain,
      myFaction,
@@ -16,7 +18,8 @@ module Roguestar.Lib.Perception
      Roguestar.Lib.Perception.whereIs,
      localBiome,
      compass,
-     depth)
+     depth,
+     myHealth)
     where
 
 import Control.Monad.Reader
@@ -29,7 +32,9 @@ import Roguestar.Lib.Creature as Creature
 import Roguestar.Lib.PlaneVisibility
 import Roguestar.Lib.PlaneData
 import Data.Maybe
-import Data.List
+import Data.List as List
+import Data.Map as Map
+import Control.Applicative
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.TerrainData
@@ -38,6 +43,15 @@ import Roguestar.Lib.Building
 import Roguestar.Lib.Plane
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.Building
+import Roguestar.Lib.SpeciesData
+import qualified Data.ByteString.Char8 as B
+import Roguestar.Lib.CreatureData
+import Roguestar.Lib.CharacterData
+import qualified Data.Set as Set
+import qualified Data.Map as Map
+import Roguestar.Lib.Tool
+import Roguestar.Lib.ToolData
+import qualified Roguestar.Lib.DetailedTravel as DT
 
 newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT CreatureRef db a) }
 
@@ -77,7 +91,64 @@ visibleTerrain =
        faction <- myFaction
        liftDB $ dbGetVisibleTerrainForFaction faction plane_ref
 
-visibleObjects :: (DBReadable db) => (forall m. DBReadable m => Reference () -> DBPerception m Bool) -> DBPerception db [Location]
+data VisibleObject =
+    VisibleTool {
+       visible_tool :: Tool,
+       visible_object_position :: Position }
+  | VisibleCreature {
+       visible_creature_species :: Species,
+       visible_creature_character_classes :: [CharacterClass],
+       visible_creature_wielding :: Maybe Tool,
+       visible_object_position :: Position,
+       visible_creature_faction :: Faction }
+  | VisibleBuilding {
+       visible_building_shape :: BuildingShape,
+       visible_building_occupies :: MultiPosition,
+       visible_object_position :: Position }
+
+convertToVisibleObjectRecord :: (DBReadable db) => Reference () -> db VisibleObject
+convertToVisibleObjectRecord ref | (Just creature_ref) <- coerceReference ref =
+    do species <- liftM creature_species $ dbGetCreature creature_ref
+       classes <- liftM (Map.keys . creature_levels) $ dbGetCreature creature_ref
+       faction <- Creature.getCreatureFaction creature_ref
+       m_tool_ref <- getWielded creature_ref
+       m_wielded <- case m_tool_ref of
+           Just tool_ref -> liftM Just $ dbGetTool tool_ref
+           Nothing -> return Nothing
+       position <- liftM detail $ DT.whereIs creature_ref
+       return $ VisibleCreature species classes m_wielded position faction
+convertToVisibleObjectRecord ref | (Just tool_ref) <- coerceReference ref =
+    do tool <- dbGetTool tool_ref
+       position <- liftM detail $ getPlanarLocation tool_ref
+       return $ VisibleTool tool position
+convertToVisibleObjectRecord ref | (Just building_ref :: Maybe BuildingRef) <- coerceReference ref =
+    do location <- DT.whereIs building_ref
+       return $ VisibleBuilding (detail location) (detail location) (detail location)
+
+stackVisibleObjects :: [VisibleObject] -> Map Position [VisibleObject]
+stackVisibleObjects = foldr insertVob Map.empty
+    where insertVob :: VisibleObject -> Map Position [VisibleObject] -> Map Position [VisibleObject]
+          insertVob vob = foldr (\k f -> Map.alter (insertVob_ vob) k . f)
+                                id
+                                (fromMultiPosition $ visibleObjectPosition vob)
+          insertVob_ :: VisibleObject -> Maybe [VisibleObject] -> Maybe [VisibleObject]
+          insertVob_ vob m_vobs =
+              (do vobs <- m_vobs
+                  return $ sortBy (comparing $ negate . visibleObjectSize) $ vob:vobs)
+            <|>
+                  return [vob]
+
+visibleObjectPosition :: VisibleObject -> MultiPosition
+visibleObjectPosition (VisibleBuilding { visible_building_occupies = multi_position }) = multi_position
+visibleObjectPosition vob = toMultiPosition $ visible_object_position vob
+
+visibleObjectSize :: VisibleObject -> Integer
+visibleObjectSize (VisibleTool { visible_tool = t } ) = 0
+visibleObjectSize _ = 1000000
+
+visibleObjects :: (DBReadable db) =>
+                  (forall m. DBReadable m => Reference () -> DBPerception m Bool) ->
+                  DBPerception db [VisibleObject]
 visibleObjects filterF =
     do me <- whoAmI
        faction <- myFaction
@@ -88,7 +159,7 @@ visibleObjects filterF =
                                             faction
                                             plane_ref
            Nothing -> return []
-       liftDB $ mapRO DB.whereIs visible_objects
+       liftDB $ mapRO convertToVisibleObjectRecord visible_objects
 
 myFaction :: (DBReadable db) => DBPerception db Faction
 myFaction = Roguestar.Lib.Perception.getCreatureFaction =<< whoAmI
@@ -129,4 +200,9 @@ depth :: (DBReadable db) => DBPerception db Integer
 depth =
     do plane <- whatPlaneAmIOn
        liftDB $ planeDepth plane
+       
+myHealth :: (DBReadable db) => DBPerception db CreatureHealth
+myHealth =
+    do creature_ref <- whoAmI
+       liftDB $ getCreatureHealth creature_ref
 

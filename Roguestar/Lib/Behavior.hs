@@ -202,7 +202,7 @@ overweightPenalty = liftM (max 1.0) . inventoryBurden
 -- | Multiplier penalty if a creature is injured.
 healthPenalty :: (DBReadable db) => CreatureRef -> db Rational
 healthPenalty creature_ref =
-    do current_health <- getCreatureHealth creature_ref
+    do current_health <- liftM creature_health $ getCreatureHealth creature_ref
        raw_speed <- liftM (rawScore Speed) $ dbGetCreature creature_ref
        return $ (max 1.0 $ recip $ max (1%raw_speed) current_health) -- maximum health penalty determined by speed
 

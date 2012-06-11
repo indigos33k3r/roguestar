@@ -103,19 +103,19 @@ dbPerform1CreatureAITurn :: CreatureRef -> DB ()
 dbPerform1CreatureAITurn creature_ref =
     do logDB log_turns INFO $ "Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
        liftM (const ()) $ atomic (flip dbBehave creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
-        do let isPlayer :: (DBReadable db) => Reference () -> P.DBPerception db Bool
-               isPlayer ref | Just (creature_ref :: CreatureRef) <- coerceReference ref =
-                   do faction <- P.getCreatureFaction creature_ref
-                      return $ faction == Player
+        do let isPlayer :: forall db. (DBReadable db) => Reference () -> P.DBPerception db Bool
+               isPlayer ref | (Just creature_ref) <- coerceReference ref =
+                   do f <- P.getCreatureFaction creature_ref
+                      return $ f == Player
                isPlayer _ | otherwise = return False
-           (visible_player_locations :: [DetailedLocation (Child Creature)]) <- lift $ liftM mapLocations $ P.visibleObjects isPlayer
+           (visible_player_locations :: [Position]) <- lift $ liftM (map P.visible_object_position) $ P.visibleObjects isPlayer
            -- FIXME: what if there is more than one player
-           player_location <- MaybeT $ return $ listToMaybe visible_player_locations
+           player_position <- MaybeT $ return $ listToMaybe visible_player_locations
            (rand_x :: Integer) <- lift $ getRandomR (1,100)
            rand_face <- lift $ pickM [minBound..maxBound]
            (_,my_position) <- lift P.whereAmI
-           let face_to_player = faceAt my_position $ (detail player_location :: Position)
-           return $ case distanceBetweenChessboard my_position (detail player_location :: Position) of
+           let face_to_player = faceAt my_position player_position
+           return $ case distanceBetweenChessboard my_position player_position of
                _ | rand_x < 5 -> Wait -- if AI gets stuck, this will make sure they waste time so the game doesn't hang
                _ | rand_x < 20 -> Step rand_face
                1 -> Attack face_to_player

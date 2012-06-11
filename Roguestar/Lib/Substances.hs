@@ -35,7 +35,7 @@ data Substance =
 substances :: [Substance]
 substances = map GasSubstance [minBound..maxBound] ++
              map MaterialSubstance [minBound..maxBound] ++
-	     map ChromaliteSubstance [minBound..maxBound]
+             map ChromaliteSubstance [minBound..maxBound]
 
 prettySubstance :: Substance -> B.ByteString
 prettySubstance (GasSubstance x) = B.pack $ show x
@@ -65,7 +65,7 @@ data Gas =
   | Ammonia
   | Iodine
   | Chlorine deriving (Eq,Enum,Ord,Show,Read,Bounded)
-	
+        
 data Material = 
     Aluminum
   | Titanium

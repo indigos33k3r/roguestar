@@ -1,6 +1,6 @@
 module Roguestar.Lib.Position
     (Position(..),
-     MultiPosition,
+     MultiPosition(..),
      multiPosition,
      PositionType(..),
      distanceBetweenSquared,
@@ -59,7 +59,7 @@ distanceBetweenChessboard as bs = minimum $
 
 -- | List all pairs of positions between two MutiPositions.
 positionPairs :: (PositionType a,PositionType b) => a -> b -> [(Position,Position)]
-positionPairs as bs = 
+positionPairs as bs =
     do a <- fromMultiPosition $ toMultiPosition as
        b <- fromMultiPosition $ toMultiPosition bs
        return (a,b)

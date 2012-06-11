@@ -3,7 +3,8 @@ body {
     padding: 0px;
     margin: 0px;
     font-family: "Gill Sans", "Nimbus Sans L", "Century Gothic", sans-serif;
-    background: #FFF;
+    background: #111;
+    color: #EEE;
 }
 
 div.main {
@@ -13,27 +14,20 @@ div.main {
 }
 
 div.menu {
-    margin-top: 0.25in;
-    margin-bottom: 0.25in;
-    padding-left: 1in;
-    padding-right: 1in;
-    background-color: #DDD;
+    background: #115;
     border-bottom: solid;
-    border-top: solid;
     border-bottom-width: 1mm;
-    border-top-width: 1mm;
-    border-bottom-color: #005;
-    border-top-color: #005;
-}
-
-div.stale {
-    font-size: 60%;
-    font-color: #444;
+    border-bottom-color: #113;
 }
 
 code {
     font-family: monospace;
     font-weight: normal;
+}
+
+.gameplaybox {
+    letter-spacing: 6.5pt;
+    font-size: 14pt;
 }
 
 img {
@@ -48,32 +42,32 @@ img.screenshot {
 }
 
 h1 {
-	color: #006;
+	color: #DDF;
 }
 
 h2 {
-	color: #006;
+	color: #DDF;
 }
 
 h3 {
-	color: #006;
+	color: #DDF;
 }
 
 h4 {
-	color: #006;
+	color: #DDF;
 }
 
 h5 {
-	color: #006;
+	color: #DDF;
 }
 
 a {
-	color: #005;
-	text-decoration: none;
+	color: #DDF;
+	text-decoration: underline;
 }
 
 a:visited {
-	color: #005;
+	color: #DDF;
 }
 
 a:hover {

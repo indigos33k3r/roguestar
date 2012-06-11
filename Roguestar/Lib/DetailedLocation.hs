@@ -108,6 +108,7 @@ type instance LocationAssignmentTable (Child Creature) (Position,Facing)        
 type instance LocationAssignmentTable (Child Building) (Parent Plane)                = Supported
 type instance LocationAssignmentTable (Child Building) Position                      = Supported
 type instance LocationAssignmentTable (Child Building) MultiPosition                 = Supported
+type instance LocationAssignmentTable (Child Building) BuildingShape                 = Supported
 type instance LocationAssignmentTable Beneath          (Child Plane)                 = Supported
 type instance LocationAssignmentTable Subsequent       (Child Plane)                 = Supported
 type instance LocationAssignmentTable Standing         Planar                        = Supported

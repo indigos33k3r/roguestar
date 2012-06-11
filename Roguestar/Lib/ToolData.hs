@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Roguestar.Lib.ToolData 
+module Roguestar.Lib.ToolData
     (Tool(..),
+     toolName,
      fromSphere,
      sphere,
      Device,
@@ -32,6 +33,10 @@ data Tool = DeviceTool DeviceFunction Device
           | Sphere Substance
     deriving (Read,Show,Eq)
 
+toolName :: Tool -> B.ByteString
+toolName (DeviceTool _ d) = deviceName d
+toolName (Sphere s) = prettySubstance s
+
 -- | Get the substance type of a material sphere, if it is one.
 fromSphere :: Tool -> Maybe Substance
 fromSphere (Sphere s) = Just s
@@ -56,7 +61,7 @@ kindToFunction Pistol = (Gun,1)
 kindToFunction Carbine = (Gun,3)
 kindToFunction Rifle = (Gun,5)
 kindToFunction Fleuret = (Sword,2)
-kindToFunction Sabre = (Sword,4) 
+kindToFunction Sabre = (Sword,4)
 
 -- | Any kind of device that is constructed from a power cell, materal, and gas medium,
 -- using the various device rules to determine it's power.

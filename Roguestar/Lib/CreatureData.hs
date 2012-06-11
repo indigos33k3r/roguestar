@@ -8,7 +8,9 @@ module Roguestar.Lib.CreatureData
      CreatureEndo(..),
      CreatureScore(..),
      FavoredClass(..),
+     CreatureHealth(..),
      creatureGender,
+     creatureHealth,
      creatureAbilityScore,
      isFavoredClass,
      empty_creature)
@@ -16,6 +18,7 @@ module Roguestar.Lib.CreatureData
 
 import Roguestar.Lib.CharacterData
 import Roguestar.Lib.Alignment
+import Data.Ratio
 import Data.Maybe
 import Roguestar.Lib.FactionData
 import Data.Monoid
@@ -73,6 +76,12 @@ instance (CreatureEndo a) => CreatureEndo [a] where
 
 instance CreatureEndo CreatureGender where
     applyToCreature g c = c { creature_gender = g }
+
+data CreatureHealth = CreatureHealth {
+    creature_absolute_health :: Integer,
+    creature_absolute_damage :: Integer,
+    creature_health :: Rational,
+    creature_max_health :: Integer }
 
 -- | The seven aptitudes.
 data CreatureAptitude =
@@ -181,3 +190,12 @@ creatureGender = creature_gender
 isFavoredClass :: CharacterClass -> Creature -> Bool
 isFavoredClass character_class creature = character_class `Set.member` (creature_favored_classes creature)
 
+-- |
+-- Answers the health/injury/maximum health of this creature.
+creatureHealth :: Creature -> CreatureHealth
+creatureHealth c = result
+    where result = CreatureHealth {
+        creature_health = creature_absolute_health result % creature_max_health result,
+        creature_absolute_health = creature_max_health result - creature_absolute_damage result,
+        creature_absolute_damage = creature_damage c,
+        creature_max_health = creatureAbilityScore ToughnessTrait c }
