@@ -205,7 +205,7 @@ substanceValue a = case toSubstance a of
     ChromaliteSubstance x -> 1000 + 2 * chromalitePotency x ^ 2
 
 instance SubstanceType Gas where
-    toSubstance x = GasSubstance x
+    toSubstance = GasSubstance
     fromSubstance (GasSubstance x) = Just x
     fromSubstance _ = Nothing
     

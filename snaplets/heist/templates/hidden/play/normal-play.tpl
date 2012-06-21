@@ -5,7 +5,8 @@
   </div>
 <form action="/play/move" method="post">
 <div>
-<input type="radio" name="mode" value="step" checked="checked"/> Walk |
+<input type="radio" name="mode" value="normal" checked="checked"/> Normal |
+<input type="radio" name="mode" value="step"/> Walk |
 <input type="radio" name="mode" value="attack"/> Attack |
 <input type="radio" name="mode" value="fire"/> Fire |
 <input type="radio" name="mode" value="jump"/> Jump |

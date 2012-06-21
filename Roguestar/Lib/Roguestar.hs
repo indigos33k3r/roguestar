@@ -12,6 +12,7 @@ module Roguestar.Lib.Roguestar
      Roguestar.Lib.Roguestar.beginGame,
      perceive,
      behave,
+     Roguestar.Lib.Roguestar.facingBehavior,
      Behavior(..))
     where
 
@@ -27,7 +28,7 @@ import Roguestar.Lib.BeginGame as BeginGame
 import Roguestar.Lib.Perception
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Facing
-import Roguestar.Lib.Behavior
+import Roguestar.Lib.Behavior as Behavior
 
 data Game = Game {
     game_db :: TVar DB_BaseType }
@@ -71,6 +72,11 @@ perceive :: Game -> (forall m. DBReadable m => DBPerception m a) -> IO (Either D
 perceive g f = peek g $
     do player_creature <- maybe (fail "No player creature selected yet.") return =<< getPlayerCreature
        runPerception player_creature f
+
+facingBehavior :: Game -> Facing -> IO (Either DBError Behavior)
+facingBehavior g facing = peek g $
+    do player_creature <- maybe (fail "No player creature selected yet.") return =<< getPlayerCreature
+       Behavior.facingBehavior player_creature facing
 
 behave :: Game -> Behavior -> IO (Either DBError ())
 behave g b = poke g $

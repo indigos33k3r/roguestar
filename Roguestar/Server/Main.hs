@@ -134,16 +134,21 @@ move (PlayerCreatureTurn {}) =
 
 moveBehavior :: Handler App App Behavior
 moveBehavior =
-    do direction <- liftM (fromMaybe $ error "No direction identifier.") $ getPostParam "direction"
+    do g <- getGame
+       direction <- liftM (fromMaybe $ error "No direction identifier.") $ getPostParam "direction"
        mode <- liftM (fromMaybe $ error "No mode identifier.") $ getPostParam "mode"
        let facing = fromMaybe (error "Not a valid direction identifier.") $ stringToFacing direction
-       let action = case mode of
-                        _ | direction == "wait" -> const Wait
-                        "step" -> Step
-                        "attack" -> Attack
-                        "fire" -> Fire
-                        "jump" -> Jump
-                        "turn" -> TurnInPlace
+       action <- case mode of
+                      _ | direction == "wait" -> return $ const Wait
+                      "normal" ->
+                          do result <- liftIO $ facingBehavior g facing
+                             case result of
+                                 Right x -> return $ const x
+                      "step" -> return Step
+                      "attack" -> return Attack
+                      "fire" -> return Fire
+                      "jump" -> return Jump
+                      "turn" -> return TurnInPlace
        return $ action facing
 
 replay :: Handler App App ()
@@ -196,17 +201,29 @@ constructMapText (width,height) (MapData visible_terrain visible_objects (_,Posi
                             writeArray ax i $ charcodeOf vobs 
                  return ax
 
+data StatsData = StatsData {
+    stats_health :: CreatureHealth,
+    stats_compass :: Facing }
+
 createStatsBlock :: Handler App App T.Text
 createStatsBlock =
     do g <- getGame
-       health <- liftIO $ perceive g myHealth
-       case health of
-           Right health_ ->
+       stats <- liftIO $ perceive g $
+           do health <- myHealth
+              facing <- compass
+              return $ StatsData {
+                  stats_health = health,
+                  stats_compass = facing }
+       case stats of
+           Right stats_ ->
                return $ T.concat [
                    "Health: ",
-                   T.pack $ show $ creature_absolute_health health_,
+                   T.pack $ show $ creature_absolute_health $ stats_health stats_,
                    "/",
-                   T.pack $ show $ creature_max_health health_]
+                   T.pack $ show $ creature_max_health $ stats_health stats_,
+                   "\n",
+                   "Compass: ",
+                   T.pack $ show $ stats_compass stats_]
 
 class Charcoded a where
     charcodeOf :: a -> Char
