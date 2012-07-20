@@ -1,28 +1,58 @@
 <apply template="/hidden/context">
-<h1>How to Contribute</h1>
+<div id="documenttext" class="roguebox">
+  <h1>How to Contribute</h1>
 
-<apply template="/hidden/ui/faq">
+  <div class="faq">
 
-<apply template="/hidden/ui/faqbox">
-  <bind tag="question">Artwork</bind>
-  <bind tag="answer"><apply template="/hidden/contribute/artwork"/></bind>
-</apply>
+    <div class="faqitem">
+      <h6 class="question">Artwork</h6>
+      <div class="answer">
+        <p>Roguestar needs artwork.  I am particularly interested in:</p>
 
-<apply template="/hidden/ui/faqbox">
-  <bind tag="question">HTML/CSS/Javascript Talent</bind>
-  <bind tag="answer"><apply template="/hidden/contribute/webtalent"/></bind>
-</apply>
+        <ul>
+          <li>Logos, headers, footers, and other decorative elements appropriate for a web site.</li>
+          <li>High-resolution pictures of alien monsters, characters, equipment and landscapes/skyscapes.  No humans.</li>
+          <li>Pictures of creatures performing specific tasks, such as picking up and object or firing a weapon.</li>
+          <li>Pictures of anything else you encounter in the game that seems appropriate for illustration.</li>
+        </ul>
+      </div>
+    </div>
 
-<apply template="/hiddenui/faqbox">
-  <bind tag="question">Haskell Programmers</bind>
-  <bind tag="answer"><apply template="/hidden/contribute/haskell"/></bind>
-</apply>
+    <div class="faqitem">
+      <h6 class="question">HTML/CSS/Javascript Talent</h6>
+      <div class="answer">
+        <p>
+          If you can improve the styling, layout, presentation, or general awesomeness of the website, please do so! All
+          of the materials are available on github.
+        </p>
+        <p><apply template="/hidden/links/github" /></p>
+      </div>
+    </div>
 
-<apply template="/hidden/ui/faqbox">
-  <bind tag="question">Other</bind>
-  <bind tag="answer"><apply template="/hidden/contribute/other"/></bind>
-</apply>
+    <div class="faqitem">
+      <h6 class="question">Haskell Programmers</h6>
+      <div class="answer">
+        <p>
+          Everything is on github.  Have fun.
+        </p>
+        <p><apply template="/hidden/links/github"/></p>
+      </div>
+    </div>
 
-</apply>
+    <div class="faqitem">
+      <h6 class="question">Other</h6>
+      <div class="answer">
+        <p>There are two things you can do that would be a huge help to me:</p>
+        <ul>
+          <li>Spend five minutes to give me <a href="/feedback">feedback</a>. It really is the most valuable
+            contribution you can make. Roguestar is, kindof, my baby. So try to be nice. But if you can't be nice, go
+            ahead and be mean. I need to know what people think.
+          </li>
+          <li>If you like roguestar, post about it on your blog or twitter.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 </apply>
 

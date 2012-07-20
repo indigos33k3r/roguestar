@@ -6,7 +6,6 @@ module Roguestar.Lib.Species
 
 import Data.Char
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.CharacterData
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.CreatureAttribute
 import Data.Monoid
@@ -32,47 +31,35 @@ speciesInfo Anachronid = SpeciesData (Speed & Mindfulness & SpotSkill) [
     gender 0.0,
     aptitudeBlock 10 25 [Speed,Mindfulness],
     attributeStatic 15 SpotSkill,
-    surpriseAptitudes,
-    attributeStatic 1 $ FavoredClass Barbarian,
-    attributeStatic 1 $ FavoredClass Pirate]
+    surpriseAptitudes]
 
 speciesInfo Androsynth = SpeciesData (Strength & Intellect) [
-    aptitudeBlock 12 17 [Strength,Intellect],
-    attributeStatic 1 $ FavoredClass Engineer]
+    aptitudeBlock 12 17 [Strength,Intellect]]
 
 speciesInfo Ascendant = SpeciesData (Strength & Mindfulness) [
     gender 0.5,
     aptitudeBlock 5 15 [Strength,Mindfulness],
     surpriseAptitudes,
-    attributeStatic 10 JumpSkill,
-    attributeStatic 1 $ FavoredClass Shepherd,
-    attributeStatic 1 $ FavoredClass ForceAdept]
+    attributeStatic 10 JumpSkill]
 
 speciesInfo Caduceator = SpeciesData (Strength & Charisma) [
     gender 0.5,
     aptitudeBlock 5 15 [Strength,Charisma],
-    surpriseAptitudes,
-    attributeStatic 1 $ FavoredClass Consular]
+    surpriseAptitudes]
 
 speciesInfo DustVortex = SpeciesData (Speed & Mindfulness) [
     aptitudeBlock 3 5 [Speed,Mindfulness],
-    attributeStatic 10 JumpSkill,
-    attributeStatic 1 $ FavoredClass Barbarian]
+    attributeStatic 10 JumpSkill]
 
 speciesInfo Encephalon = SpeciesData (Constitution & Intellect) [
     gender 0.5,
-    aptitudeBlock 3 20 [Constitution,Intellect],
-    attributeStatic 1 $ FavoredClass Engineer]
+    aptitudeBlock 3 20 [Constitution,Intellect]]
 
 speciesInfo Hellion = SpeciesData (Strength & Perception) [
     gender 0.5,
     aptitudeBlock 5 15 [Strength,Perception],
     surpriseAptitudes,
-    attributeStatic 5 $ HideSkill,
-    attributeStatic 1 $ FavoredClass Scout,
-    attributeStatic 1 $ FavoredClass Marine,
-    attributeStatic 1 $ FavoredClass Thief,
-    attributeStatic 1 $ FavoredClass Pirate]
+    attributeStatic 5 $ HideSkill]
 
 speciesInfo Goliath = SpeciesData (Constitution & Perception) [
     gender 0.5,
@@ -80,25 +67,18 @@ speciesInfo Goliath = SpeciesData (Constitution & Perception) [
     surpriseAptitudes,
     attributeStatic 4 $ DamageReductionTrait Melee,
     attributeStatic 4 $ DamageReductionTrait Ranged,
-    attributeStatic 4 $ DamageReductionTrait Unarmed,
-    attributeStatic 1 $ FavoredClass Barbarian,
-    attributeStatic 1 $ FavoredClass Warrior,
-    attributeStatic 1 $ FavoredClass Scout]
+    attributeStatic 4 $ DamageReductionTrait Unarmed]
 
 speciesInfo Kraken = SpeciesData (Constitution & Charisma) [
     gender 0.5,
     aptitudeBlock 3 20 [Constitution,Charisma],
     attributeStatic 1 $ TerrainAffinity Water,
-    surpriseAptitudes,
-    attributeStatic 1 $ FavoredClass Consular]
+    surpriseAptitudes]
 
 speciesInfo Myrmidon = SpeciesData (Speed & Intellect) [
     gender 0.0,
     aptitudeBlock 5 15 [Speed,Intellect],
     surpriseAptitudes,
-    attributeStatic 1 $ FavoredClass Barbarian,
-    attributeStatic 1 $ FavoredClass Engineer,
-    attributeStatic 1 $ FavoredClass Warrior,
     attributeStatic 5 $ AttackSkill Melee,
     attributeStatic 5 $ DefenseSkill Melee]
 
@@ -106,26 +86,18 @@ speciesInfo Perennial = SpeciesData (Constitution & Mindfulness) [
     aptitudeBlock 1 25 [Constitution, Mindfulness],
     attributeStatic 1 $ TerrainAffinity Forest,
     attributeStatic 1 $ TerrainAffinity DeepForest,
-    surpriseAptitudes,
-    attributeStatic 1 $ FavoredClass Barbarian,
-    attributeStatic 1 $ FavoredClass Engineer,
-    attributeStatic 1 $ FavoredClass Consular,
-    attributeStatic 1 $ FavoredClass Shepherd]
+    surpriseAptitudes]
 
 speciesInfo Recreant = SpeciesData (Speed & Perception) [
     aptitudeBlock 2 5 [Speed,Perception],
     surpriseAptitudes, surpriseAptitudes,
     attributeStatic 5 $ AttackSkill Ranged,
-    attributeStatic 5 $ DamageSkill Ranged,
-    attributeStatic 1 $ FavoredClass Marine,
-    attributeStatic 1 $ FavoredClass Scout]
+    attributeStatic 5 $ DamageSkill Ranged]
 
 speciesInfo Reptilian = SpeciesData (Speed & Charisma) [
     gender 0.5,
     aptitudeBlock 5 15 [Speed,Charisma],
     surpriseAptitudes,
     attributeStatic 5 $ AttackSkill Unarmed,
-    attributeStatic 5 $ DefenseSkill Unarmed,
-    attributeStatic 1 $ FavoredClass Warrior,
-    attributeStatic 1 $ FavoredClass Consular]
+    attributeStatic 5 $ DefenseSkill Unarmed]
 

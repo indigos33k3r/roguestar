@@ -6,7 +6,6 @@ module Roguestar.Lib.BeginGame
 import Roguestar.Lib.Plane
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.Character
-import Roguestar.Lib.CharacterData
 import Roguestar.Lib.BuildingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Facing

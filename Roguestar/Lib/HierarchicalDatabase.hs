@@ -100,8 +100,8 @@ lookupParent x the_map = fst $ lookup x the_map
 --
 childrenOf :: (HierarchicalRelation a) => Integer -> HierarchicalDatabase a -> [Integer]
 childrenOf x the_map = maybe [] id $ Map.lookup x (hd_children the_map)
-	
-	
+        
+        
 -- |
 -- Converts a HierarchicalDatabase into a list of relations.
 --
@@ -123,46 +123,46 @@ instance HierarchicalRelation ExampleRelation where
 example1 :: HierarchicalDatabase ExampleRelation
 example1 = fromList $ List.map ExampleRelation 
                                                [(1,13,True),
-						(1,(-5),True),
-						(1,1,True),
-						(1,7,True),
-						(1,15,True),
-						(2,0,False),
-						(3,12,True),
-						(3,9,False),
-						(3,(-3),True),
-						(4,100,False),
-						(4,(-6),False),
-						(4,14,False)]
+                                                (1,(-5),True),
+                                                (1,1,True),
+                                                (1,7,True),
+                                                (1,15,True),
+                                                (2,0,False),
+                                                (3,12,True),
+                                                (3,9,False),
+                                                (3,(-3),True),
+                                                (4,100,False),
+                                                (4,(-6),False),
+                                                (4,14,False)]
 
 testParent :: TestCase
 testParent = if (parentOf 0 example1) == (Just 2)
-	     then return (Passed "testParent")
-	     else return (Failed "testParent")
+             then return (Passed "testParent")
+             else return (Failed "testParent")
 
 testChildren :: TestCase
 testChildren = if (length $ childrenOf 1 example1) == 5
-	       then return (Passed "testChildren")
-	       else return (Failed "testChildren")
+               then return (Passed "testChildren")
+               else return (Failed "testChildren")
 
 testUserData :: TestCase
 testUserData = let child_records = lookupChildren 1 example1
-		   in if (all (\(ExampleRelation (_,_,b)) -> b) child_records)
-		      then return (Passed "testUserDatas")
-		      else return (Failed "testUserDatas")
+                   in if (all (\(ExampleRelation (_,_,b)) -> b) child_records)
+                      then return (Passed "testUserDatas")
+                      else return (Failed "testUserDatas")
 
 testChildrenCorrect :: TestCase
 testChildrenCorrect = let the_children = childrenOf 4 example1
-			  in if (all even the_children)
-			     then return (Passed "testChildrenCorrect")
-			     else return (Failed "testChildrenCorrect")
+                          in if (all even the_children)
+                             then return (Passed "testChildrenCorrect")
+                             else return (Failed "testChildrenCorrect")
 
 testDelete :: TestCase
 testDelete = let deleted = delete 0 $ delete (-6) $ example1
-		 in if ((length $ childrenOf 4 deleted) == 2 &&
-			(isNothing $ parentOf 0 deleted))
-		 then return (Passed "testDelete")
-		 else return (Failed "testDelete")
+                 in if ((length $ childrenOf 4 deleted) == 2 &&
+                        (isNothing $ parentOf 0 deleted))
+                 then return (Passed "testDelete")
+                 else return (Failed "testDelete")
 
 insidenessTests :: [TestCase]
 insidenessTests = [testParent,testChildren,testUserData,testChildrenCorrect,testDelete]

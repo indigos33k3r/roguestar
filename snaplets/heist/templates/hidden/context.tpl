@@ -3,17 +3,19 @@
 <html>
   <head>
     <title>Roguestar</title>
-    <link rel="stylesheet" type="text/css" href="/static/roguestar.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/roguebasic.css"/>
   </head>
   <body>
-    <div class="menu">
-        <a class="menuitem" id="menu-home" href="/">Home</a> |
-        <a class="menuitem" id="menu-blog" href="http://blog.downstairspeople.org/">Blog</a> |
-        <a class="menuitem" id="menu-play" href="/play">Play</a> |
-        <a class="menuitem" id="menu-contribute" href="/contribute">Contribute</a> |
-        <a class="menuitem" id="menu-help" href="/help">Help</a>
+    <div id="main">
+    <div id="menu">
+        <ul>
+             <li><a id="menu-home" href="/">Home</a></li>
+             <li><a id="menu-play" href="/play">Play</a></li>
+             <li><a id="menu-contribute" href="/contribute">Contribute</a></li>
+             <li><a id="menu-blog" href="http://blog.downstairspeople.org/">Blog</a></li>
+             <li class="right"><a id="menu-help" href="/help">Help</a></li>
+        </ul>
     </div>
-    <div class="main">
     <content/>
     </div>
   </body>

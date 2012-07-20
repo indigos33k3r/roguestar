@@ -13,7 +13,6 @@ module Roguestar.Lib.BuildingData
     where
 
 import Roguestar.Lib.PowerUpData
-import Roguestar.Lib.CharacterData
 import Roguestar.Lib.PersistantData
 
 basic_stargate :: BuildingPrototype

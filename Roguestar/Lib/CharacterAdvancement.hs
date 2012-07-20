@@ -9,8 +9,8 @@ module Roguestar.Lib.CharacterAdvancement
 
 import qualified Data.Map as Map
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.CharacterData
 import Roguestar.Lib.PowerUpData
+import Roguestar.Lib.PersistantData
 
 data CharacterBumpResult =
     CharacterAwarded  { character_points_awarded :: Integer,

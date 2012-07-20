@@ -1,3 +1,0 @@
-<p>If you can improve the styling, layout, presentation, or general awesomeness of the website, please do so.  You can get the source for roguestar, including all templates, css, javascript, etc, from <apply template="/hidden/links/github"/>.</p>
-
-<p>Most of the content for this site is written using Heist templates, which will be easy to figure out for anyone who speaks HTML.  Everything else is regular CSS+javascript.  Although you need git to work on roguestar, you don't need a working Haskell build environment, just the server binary.  Ask me and I'll build one for your environment. <apply template="/hidden/links/contact-me"/></p>

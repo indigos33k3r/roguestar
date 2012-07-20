@@ -7,16 +7,14 @@ module Roguestar.Lib.CreatureData
      CreatureAbility(..),
      CreatureEndo(..),
      CreatureScore(..),
-     FavoredClass(..),
      CreatureHealth(..),
      creatureGender,
      creatureHealth,
      creatureAbilityScore,
-     isFavoredClass,
      empty_creature)
     where
 
-import Roguestar.Lib.CharacterData
+import Roguestar.Lib.PersistantData
 import Roguestar.Lib.Alignment
 import Data.Ratio
 import Data.Maybe
@@ -31,7 +29,6 @@ data Creature = Creature { creature_aptitude :: Map.Map CreatureAptitude Integer
                            creature_ability :: Map.Map CreatureAbility Integer,
                            creature_ethical :: Map.Map EthicalAlignment Integer,
                            creature_levels :: Map.Map CharacterClass Integer,
-                           creature_favored_classes :: Set.Set CharacterClass,
                            creature_gender :: CreatureGender,
                            creature_species :: Species,
                            creature_random_id :: Integer, -- random number attached to the creature, not unique
@@ -48,7 +45,6 @@ empty_creature = Creature {
     creature_ability = Map.empty,
     creature_ethical = Map.empty,
     creature_levels = Map.empty,
-    creature_favored_classes = Set.empty,
     creature_gender = Neuter,
     creature_species = error "empty_creature: undefined creature_species",
     creature_random_id = error "empty_creature: undefined creature_random_id",
@@ -140,11 +136,6 @@ instance CreatureEndo CharacterClass where
 instance CreatureScore CharacterClass where
     rawScore character_class c = fromMaybe 0 $ Map.lookup character_class $ creature_levels c
 
-newtype FavoredClass = FavoredClass CharacterClass
-
-instance CreatureEndo FavoredClass where
-    applyToCreature (FavoredClass favored_class) c = c { creature_favored_classes = Set.insert favored_class $ creature_favored_classes c }
-
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
 figureAbility :: [CreatureAptitude] -> (CreatureAbility,Integer) -> Creature -> Integer
@@ -183,12 +174,6 @@ creatureAbilityScore InventorySkill = figureAbility [Strength,Speed,Constitution
 --
 creatureGender :: Creature -> CreatureGender
 creatureGender = creature_gender
-
--- |
--- Answers true if the specified class is a favored class for this creature.
---
-isFavoredClass :: CharacterClass -> Creature -> Bool
-isFavoredClass character_class creature = character_class `Set.member` (creature_favored_classes creature)
 
 -- |
 -- Answers the health/injury/maximum health of this creature.

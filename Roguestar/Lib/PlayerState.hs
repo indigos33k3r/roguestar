@@ -6,9 +6,9 @@ module Roguestar.Lib.PlayerState
 
 import Roguestar.Lib.DBData
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.CharacterData
 import Roguestar.Lib.MakeData
 import Roguestar.Lib.TravelData
+import Roguestar.Lib.PersistantData
 
 data PlayerState =
     SpeciesSelectionState (Maybe Creature)

@@ -45,9 +45,9 @@ module Roguestar.Lib.DB
      dbAdvanceTime,
      dbNextTurn,
      dbPushSnapshot,
-     dbPeepOldestSnapshot,
-     dbPopOldestSnapshot,
-     dbHasSnapshot,
+     peepOldestSnapshot,
+     popOldestSnapshot,
+     hasSnapshot,
      module Roguestar.Lib.DBData,
      module Roguestar.Lib.DBErrorFlag,
      module Roguestar.Lib.Random)
@@ -229,8 +229,8 @@ playerState = asks db_player_state
 setPlayerState :: PlayerState -> DB ()
 setPlayerState state = modify (\db -> db { db_player_state = state })
 
-getPlayerCreature :: (DBReadable m) => m (Maybe CreatureRef)
-getPlayerCreature = asks db_player_creature
+getPlayerCreature :: (DBReadable m) => m CreatureRef
+getPlayerCreature = liftM (fromMaybe $ error "No player creature selected yet.") $ asks db_player_creature
 
 setPlayerCreature :: CreatureRef -> DB ()
 setPlayerCreature creature_ref = modify (\db -> db { db_player_creature = Just creature_ref })
@@ -515,20 +515,20 @@ dbPushSnapshot :: SnapshotEvent -> DB ()
 dbPushSnapshot e = modify $ \db -> db {
     db_prior_snapshot = Just $ db { db_player_state = SnapshotEvent e } }
 
-dbPeepOldestSnapshot :: (DBReadable db) => (forall m. DBReadable m => m a) -> db a
-dbPeepOldestSnapshot actionM =
-    do m_a <- dbPeepSnapshot $ dbPeepOldestSnapshot actionM
+peepOldestSnapshot :: (DBReadable db) => (forall m. DBReadable m => m a) -> db a
+peepOldestSnapshot actionM =
+    do m_a <- dbPeepSnapshot $ peepOldestSnapshot actionM
        maybe actionM return m_a
 
-dbPopOldestSnapshot :: DB ()
-dbPopOldestSnapshot = modify popOldestSnapshot
+popOldestSnapshot :: DB ()
+popOldestSnapshot = modify popOldestSnapshot_
 
-dbHasSnapshot :: (DBReadable db) => db Bool
-dbHasSnapshot = liftM isJust $ dbPeepSnapshot (return ())
+hasSnapshot :: (DBReadable db) => db Bool
+hasSnapshot = liftM isJust $ dbPeepSnapshot (return ())
 
-popOldestSnapshot :: DB_BaseType -> DB_BaseType
-popOldestSnapshot db =
+popOldestSnapshot_ :: DB_BaseType -> DB_BaseType
+popOldestSnapshot_ db =
     case isJust $ db_prior_snapshot =<< db_prior_snapshot db of
         False -> db { db_prior_snapshot = Nothing }
-        True  -> db { db_prior_snapshot = fmap popOldestSnapshot $ db_prior_snapshot db }
+        True  -> db { db_prior_snapshot = fmap popOldestSnapshot_ $ db_prior_snapshot db }
 

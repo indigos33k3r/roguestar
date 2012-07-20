@@ -11,18 +11,7 @@ module Roguestar.Lib.PersistantData
 
 {----- CHARACTER -----}
 
-data CharacterClass = Barbarian
-                    | Consular
-                    | Engineer
-                    | ForceAdept
-                    | Marine
-                    | Ninja
-                    | Pirate
-                    | Scout
-                    | Shepherd
-                    | StarChild
-                    | Thief
-                    | Warrior
+data CharacterClass = StarChild
                     deriving (Eq,Enum,Bounded,Read,Show,Ord)
 
 {----- POWER UPS -----}

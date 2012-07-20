@@ -20,5 +20,5 @@ data Species =
        deriving (Eq,Ord,Bounded,Enum,Read,Show)
 
 all_species :: [Species]
-all_species = [minBound..maxBound]
+all_species = [Recreant] -- [minBound..maxBound]
 

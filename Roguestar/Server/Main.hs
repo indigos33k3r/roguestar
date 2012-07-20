@@ -5,6 +5,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as T
 import qualified Text.XHtmlCombinators.Escape as XH
 import qualified Text.XmlHtml as X
+import Text.Templating.Heist
 import Control.Exception (SomeException)
 import qualified Control.Monad.CatchIO as CatchIO
 import Control.Monad.Trans
@@ -35,6 +36,8 @@ import Roguestar.Lib.Substances as Substances
 import Roguestar.Lib.TerrainData as TerrainData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.Facing
+import Roguestar.Lib.DBData (Reference,ToolRef,toUID)
+import qualified Data.UUID.V4 as V4
 
 data App = App {
     _heist :: Snaplet (Heist App),
@@ -45,12 +48,13 @@ makeLenses [''App]
 instance HasHeist App where heistLens = subSnaplet heist
 
 appInit :: SnapletInit App App
-appInit = makeSnaplet "taskflask" "Task Flask" Nothing $
+appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
     do hs <- nestSnaplet "heist" heist $ heistInit "templates"
        addRoutes [("/play", play),
                   ("/static", static),
                   ("/hidden", handle404),
                   ("/fail", handle500 (do error "my brain exploded")),
+                  ("/feedback", feedback),
                   ("", heistServe)]
        game <- liftIO newGame
        wrapHandlers (<|> handle404)
@@ -79,18 +83,40 @@ handle404 =
 static :: Handler App App ()
 static = serveDirectory "./static/"
 
+feedback :: Handler App App ()
+feedback = method POST $
+    do feedback <- liftM (fromMaybe $ error "No feedback.") $ getPostParam "feedback"
+       liftIO $
+           do uuid <- V4.nextRandom
+              BS.writeFile ("./feedback/" ++ show uuid) feedback
+       redirect "/feedback-thanks/"
+
 play :: Handler App App ()
 play =
+    do resolveSnapshots
+       g <- getGame
+       player_state <- oops $ liftIO $ getPlayerState g
+       route [("",method GET $ displayCurrentState player_state),
+              ("maptext",method GET $ createMap >>= writeText),
+              ("reroll",method POST $ reroll player_state),
+              ("accept",method POST $ accept player_state),
+              ("move",method POST $ move),
+              ("inventory",method GET $ displayInventory),
+              ("pickup",method POST $ pickup),
+              ("drop",method POST $ Main.drop),
+              ("wield",method POST $ wield),
+              ("unwield",method POST $ unwield)]
+
+resolveSnapshots :: Handler App App ()
+resolveSnapshots =
     do g <- getGame
-       player_state <- liftIO $ getPlayerState g
-       case player_state of
-           Right something ->
-               routeRoguestar something
-                     [("",method GET . displayCurrentState),
-                      ("maptext",method GET . const (createMap >>= writeText)),
-                      ("reroll",method POST . reroll),
-                      ("accept",method POST . accept),
-                      ("move",method POST . move)]
+       b <- oops $ liftIO $ hasSnapshot g
+       case b of
+           True ->
+               do oops $ liftIO $ popSnapshot g
+                  resolveSnapshots
+           False ->
+               do return ()
 
 routeRoguestar :: PlayerState -> [(BS.ByteString,PlayerState -> Handler App App ())] -> Handler App App ()
 routeRoguestar ps xs = route $ map (\(bs,f) -> (bs,f ps)) xs
@@ -104,10 +130,54 @@ displayCurrentState (SpeciesSelectionState (Just creature)) =
 displayCurrentState (PlayerCreatureTurn creature_ref) =
     do map_text <- createMap
        player_stats <- createStatsBlock
-       renderWithSplices "/hidden/play/normal-play"
+       messages <- liftIO . getMessages =<< getGame
+       renderWithSplices "/hidden/play/normal"
            [("map",return $ [X.Element "pre" [] [X.TextNode map_text]]),
-            ("statsblock",return $ [X.Element "pre" [] [X.TextNode player_stats]])]
+            ("statsblock",return $ [X.Element "pre" [] [X.TextNode player_stats]]),
+            ("messages",return $ map (\x -> X.Element "p" [] [X.TextNode x]) messages)]
+displayCurrentState GameOver =
+    do render "/hidden/play/game-over"
 displayCurrentState _ = pass
+
+data Inventory = Inventory {
+    inventory_wielded :: Maybe VisibleObject,
+    inventory_carried :: [VisibleObject],
+    inventory_ground :: [VisibleObject] }
+
+collectInventory :: Game -> Handler App App (Either DBError Inventory)
+collectInventory g = liftIO $ perceive g $
+    do visible_objects <- liftM stackVisibleObjects $ visibleObjects (const $ return True)
+       (_,my_position) <- whereAmI
+       let vobs_at_my_position = Map.lookup my_position visible_objects
+       my_inventory <- myInventory
+       return $ Inventory {
+           inventory_wielded =
+               do me <- List.find isVisibleCreature $ fromMaybe [] vobs_at_my_position
+                  visible_creature_wielding me,
+           inventory_ground = filter isVisibleTool $ fromMaybe [] vobs_at_my_position,
+           inventory_carried = my_inventory }
+
+displayInventory :: Handler App App ()
+displayInventory =
+    do g <- getGame
+       inventory_result <- collectInventory g
+       inventory <- case inventory_result of
+           Right inventory -> return inventory
+       renderWithSplices "/hidden/play/inventory"
+           [("wielded", return $ inventoryList [("Unwield","carried","/play/unwield"),("Drop","ground","/play/drop")] $ maybeToList $ inventory_wielded inventory),
+            ("carried", return $ inventoryList [("Wield","wielded","/play/wield"),("Drop","ground","/play/drop")] $ inventory_carried inventory),
+            ("ground",  return $ inventoryList [("Wield","wielded","/play/wield"),("Pickup","carried","/play/pickup")] $ inventory_ground inventory)]
+
+inventoryList :: [(T.Text,T.Text,T.Text)] -> [VisibleObject] -> Template
+inventoryList inventory_actions = map inventoryItem
+    where inventoryItem (VisibleTool { visible_tool_ref = tool_ref, visible_tool = tool }) = 
+                X.Element "div" [("class","inventoryitem")] $ [X.Element "p" [] [X.TextNode (toolName tool)]] ++ concatMap (inventoryAction tool_ref) inventory_actions
+
+inventoryAction :: ToolRef -> (T.Text,T.Text,T.Text) -> Template
+inventoryAction tool_ref (action_name,css_class,action_path) =
+    [X.Element "form" [("action",action_path),("method","post")]
+        [X.Element "button" [("type","submit"),("class",css_class)] [X.TextNode action_name],
+         X.Element "input" [("type","hidden"),("name","uid"),("value",T.pack $ show $ toUID tool_ref)] []]]
 
 reroll :: PlayerState -> Handler App App ()
 reroll (SpeciesSelectionState _) =
@@ -123,14 +193,8 @@ accept (SpeciesSelectionState (Just _)) =
        replay
 accept _ = pass
 
-move :: PlayerState -> Handler App App ()
-move (PlayerCreatureTurn {}) =
-    do g <- getGame
-       behavior <- moveBehavior
-       result <- liftIO $ behave g behavior
-       case result of
-           Right () -> return ()
-       redirect "/play"
+move :: Handler App App ()
+move = commitBehavior =<< moveBehavior
 
 moveBehavior :: Handler App App Behavior
 moveBehavior =
@@ -150,12 +214,56 @@ moveBehavior =
                       "jump" -> return Jump
                       "turn" -> return TurnInPlace
        return $ action facing
+     
+pickup :: Handler App App ()
+pickup = commitBehavior =<< inventoryBehavior Pickup
+
+drop :: Handler App App ()
+drop = commitBehavior =<< inventoryBehavior Drop
+
+wield :: Handler App App ()
+wield = commitBehavior =<< inventoryBehavior Wield
+
+unwield :: Handler App App ()
+unwield = commitBehavior Unwield
+
+inventoryBehavior :: (ToolRef -> Behavior) -> Handler App App Behavior
+inventoryBehavior f =
+    do g <- getGame
+       uid <- liftM (read . BS.unpack . fromMaybe (error "No UID")) $ getPostParam "uid"
+       inventory <- oops $ collectInventory g
+       let all_items = map visible_tool_ref $ concat [maybeToList $ inventory_wielded inventory, inventory_carried inventory, inventory_ground inventory]
+           my_item = fromMaybe (error "No match in inventory.") $ List.find ((uid ==) . toUID) all_items
+       return $ f my_item
+
+commitBehavior :: Behavior -> Handler App App ()
+commitBehavior behavior =
+    do g <- getGame
+       result <- liftIO $ behave g behavior
+       case result of
+           Right () -> return ()
+       replay
 
 replay :: Handler App App ()
 replay = redirect "/play"
 
-oops :: DBError -> Handler App App ()
-oops db_error = writeBS $ "FIXME: this error message is useless."
+oops :: Handler App App (Either DBError a) -> Handler App App a
+oops action =
+    do result <- action
+       case result of
+           Right good -> return good
+           Left bad -> 
+               do putResponse r
+                  writeText "<html><head><title>Gameplay Error</title></head>"
+                  writeText "<body><h1>Gameplay Error</h1>"
+                  writeText "<p>Roguestar returned an error condition. Details:</p>"
+                  writeText "<pre>\n"
+                  writeText $ XH.escape $ T.pack $ show bad
+                  writeText "\n</pre></body></html>"
+                  finishWith =<< getResponse
+  where
+    r = setContentType "text/html" $
+        setResponseStatus 500 "Internal Server Error" emptyResponse
 
 getGame :: Handler App App Game
 getGame = gets _app_game
@@ -235,8 +343,8 @@ instance Charcoded a => Charcoded [a] where
 instance Charcoded VisibleObject where
     charcodeOf (VisibleTool { visible_tool = t }) = charcodeOf t
     charcodeOf (VisibleCreature { visible_creature_species = s }) = charcodeOf s
-    charcodeOf (VisibleBuilding{}) = '#'
-    
+    charcodeOf (VisibleBuilding{}) = 'X'
+
 instance Charcoded Tool where
     charcodeOf (Sphere {}) = '%'
     charcodeOf (DeviceTool Gun _) = ')'
@@ -248,7 +356,7 @@ instance Charcoded Species where
     charcodeOf Ascendant = 'V'
     charcodeOf Caduceator = 'C'
     charcodeOf DustVortex = 'v'
-    charcodeOf Encephalon = 'E'    
+    charcodeOf Encephalon = 'E'
     charcodeOf Goliath = 'G'
     charcodeOf Hellion = 'H'
     charcodeOf Kraken = 'K'
@@ -259,13 +367,13 @@ instance Charcoded Species where
 
 instance Charcoded TerrainPatch where
     charcodeOf RockFace          = '#'
-    charcodeOf Rubble            = '~'
-    charcodeOf Ore               = '~'
+    charcodeOf Rubble            = '.'
+    charcodeOf Ore               = '.'
     charcodeOf RockyGround       = '.'
     charcodeOf Dirt              = '.'
     charcodeOf Grass             = '.'
-    charcodeOf Sand              = '~'
-    charcodeOf Desert            = '~'
+    charcodeOf Sand              = '.'
+    charcodeOf Desert            = '.'
     charcodeOf Forest            = 'f'
     charcodeOf DeepForest        = 'f'
     charcodeOf TerrainData.Water = '~'
@@ -274,8 +382,8 @@ instance Charcoded TerrainPatch where
     charcodeOf Lava              = '~'
     charcodeOf Glass             = '.'
     charcodeOf RecreantFactory   = '_'
-    charcodeOf Upstairs          = '>'
-    charcodeOf Downstairs        = '<'
+    charcodeOf Upstairs          = '<'
+    charcodeOf Downstairs        = '>'
 
 main :: IO ()
 main = serveSnaplet defaultConfig appInit
