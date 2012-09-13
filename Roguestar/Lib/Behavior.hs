@@ -94,16 +94,16 @@ dbBehave_ (Step face) creature_ref =
 dbBehave_ StepDown creature_ref =
     do _ <- atomic executeClimb $ resolveClimb creature_ref ClimbDown
        -- FIXME: should be conditional
-       dbAdvanceTime creature_ref =<< fullActionTime creature_ref
+       dbAdvanceTime creature_ref =<< move2ActionTime creature_ref
 
 dbBehave_ StepUp creature_ref =
     do _ <- atomic executeClimb $ resolveClimb creature_ref ClimbUp
        -- FIXME: should be conditional
-       dbAdvanceTime creature_ref =<< fullActionTime creature_ref
+       dbAdvanceTime creature_ref =<< move2ActionTime creature_ref
 
 dbBehave_ (Jump face) creature_ref =
     do _ <- atomic executeTeleportJump $ resolveTeleportJump creature_ref face
-       dbAdvanceTime creature_ref =<< fullActionTime creature_ref
+       dbAdvanceTime creature_ref =<< move2ActionTime creature_ref
 
 dbBehave_ (TurnInPlace face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
@@ -146,7 +146,7 @@ dbBehave_ (Attack face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        melee_attack_model <- meleeAttackModel creature_ref
        _ <- atomic executeAttack $ resolveAttack melee_attack_model face
-       dbAdvanceTime creature_ref =<< move1ActionTime creature_ref
+       dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        return ()
 
 dbBehave_ Wait creature_ref = dbAdvanceTime creature_ref =<< quickActionTime creature_ref
@@ -168,60 +168,45 @@ dbBehave_ Activate creature_ref =
 
 dbBehave_ (Make make_prep) creature_ref =
     do _ <- atomic executeMake $ resolveMake creature_ref make_prep
-       dbAdvanceTime creature_ref =<< fullActionTime creature_ref
+       dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        return ()
 
 dbBehave_ (ClearTerrain face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        ok <- modifyFacingTerrain clearTerrain face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
-       dbAdvanceTime creature_ref =<< fullActionTime creature_ref
+       dbAdvanceTime creature_ref =<< quickActionTime creature_ref
        return ()
 
 dbBehave_ (ActivateBuilding face) creature_ref =
     do _ <- move creature_ref =<< turnCreature face creature_ref
        ok <- activateFacingBuilding face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
-       dbAdvanceTime creature_ref =<< fullActionTime creature_ref
+       dbAdvanceTime creature_ref =<< quickActionTime creature_ref
 
 {---------------------------------------------------------------------------------------------------
 -- These are functions related to determing how long it takes for a creature to execute an action.
 ----------------------------------------------------------------------------------------------------}
 
--- | A value indicating the degree of difficulty a creature suffers on account of the inventory it is carrying.
-inventoryBurden :: (DBReadable db) => CreatureRef -> db Rational
-inventoryBurden creature_ref =
-    do inventory_size <- liftM (genericLength . filterLocations (\(Child tool_ref :: Child Tool) -> True)) $ getContents creature_ref
-       inventory_skill <- liftM roll_ideal $ rollCreatureAbilityScore InventorySkill 0 creature_ref
-       return $ (inventory_size ^ 2) % inventory_skill
-
--- | Multiplier penalty if a creature is overweighted.
-overweightPenalty :: (DBReadable db) => CreatureRef -> db Rational
-overweightPenalty = liftM (max 1.0) . inventoryBurden
-
--- | Multiplier penalty if a creature is injured.
-healthPenalty :: (DBReadable db) => CreatureRef -> db Rational
-healthPenalty creature_ref =
-    do current_health <- liftM creature_health $ getCreatureHealth creature_ref
-       raw_speed <- liftM (rawScore Speed) $ dbGetCreature creature_ref
-       return $ (max 1.0 $ recip $ max (1%raw_speed) current_health) -- maximum health penalty determined by speed
-
--- | Multiplier penalties for doing anything that requires physical movement, e.g. walking.
-physicalActionPenalties :: (DBReadable db) => CreatureRef -> db Rational
-physicalActionPenalties creature_ref =  liftM2 (*) (overweightPenalty creature_ref) (healthPenalty creature_ref)
+getBaseSpeed :: (DBReadable db) => CreatureRef -> db Integer
+getBaseSpeed creature_ref =
+    do c <- dbGetCreature creature_ref
+       let raw_speed = rawScore Speed c
+       when (raw_speed <= 0) $ error $ "getBaseSpeed: Non-positive raw speed (" ++ show c ++ ")"
+       return raw_speed
 
 -- | Time required to do a simple physical task.
 quickActionTime :: (DBReadable db) => CreatureRef -> db Rational
-quickActionTime creature_ref = liftM2 (*) (physicalActionPenalties creature_ref) (liftM ((3%) . rawScore Speed) $ dbGetCreature creature_ref)
+quickActionTime creature_ref =
+    do raw_speed <- getBaseSpeed creature_ref
+       return $ 50 % (100 + raw_speed `div` 2)
 
 -- | Time required to move one step.
 move1ActionTime :: (DBReadable db) => CreatureRef -> db Rational
-move1ActionTime creature_ref = liftM2 (*) (physicalActionPenalties creature_ref) (liftM ((5%) . rawScore Speed) $ dbGetCreature creature_ref)
+move1ActionTime creature_ref =
+    do raw_speed <- getBaseSpeed creature_ref
+       return $ 100 % (100+raw_speed)
 
 -- | Time required to move diagonally one step.
 move2ActionTime :: (DBReadable db) => CreatureRef -> db Rational
 move2ActionTime = liftM (*1.4142) . move1ActionTime
-
--- | Time required to complete a complex physical action.
-fullActionTime :: (DBReadable db) => CreatureRef -> db Rational
-fullActionTime = liftM (*2) . move1ActionTime

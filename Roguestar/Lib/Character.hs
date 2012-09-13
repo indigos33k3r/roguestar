@@ -4,15 +4,14 @@ module Roguestar.Lib.Character
     where
 
 import Roguestar.Lib.Alignment
-import Roguestar.Lib.CreatureAttribute
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.PersistantData
 
 applyCharacterClass :: CharacterClass -> Creature -> Creature
-applyCharacterClass character_class creature = applyToCreature (character_class & classInfo character_class) creature
+applyCharacterClass character_class creature = applyToCreature (CharacterClass character_class : classInfo character_class) creature
 
-classInfo :: CharacterClass -> CreatureAttribute
+classInfo :: CharacterClass -> [CreatureTrait]
 
 -------------------------------------------------------------------------------
 --
@@ -22,5 +21,5 @@ classInfo :: CharacterClass -> CreatureAttribute
 --
 -------------------------------------------------------------------------------
 
-classInfo StarChild = Mindfulness & Intellect & Perception
+classInfo StarChild = [Aggression,Perception]
 

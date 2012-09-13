@@ -24,6 +24,7 @@ import Control.Monad.Error
 import Roguestar.Lib.PowerUpData
 import Roguestar.Lib.CharacterAdvancement
 import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.PlayerState
 
 -- | The total occupied surface area of a building.
 buildingSize :: (DBReadable db) => BuildingRef -> db Integer
@@ -60,18 +61,11 @@ activateBuilding (PowerUp pud) creature_ref building_ref =
     do captureNode pud creature_ref building_ref
        return True
 activateBuilding (TwoWayStargate region) creature_ref building_ref =
-    do (Parent plane_ref :: Parent Plane,Position (bx,by))
-            <- liftM detail $ getPlanarLocation building_ref
-       (Position (cx,cy)) <- liftM detail $ getPlanarLocation creature_ref
+    do (Parent plane_ref :: Parent Plane,building_position :: Position) <- liftM detail $ getPlanarLocation building_ref
+       (creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
        case () of
-           () | cy - by == (-1) ->
-               do subsequent_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) return
-                      =<< getSubsequent region plane_ref
-                  portalCreatureTo (Just $ TwoWayStargate region) 1 creature_ref subsequent_plane
-           () | cy - by == 1 ->
-               do previous_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) (return . asParent)
-                      =<< liftM fromLocation (whereIs plane_ref)
-                  portalCreatureTo (Just $ TwoWayStargate region) (-1) creature_ref previous_plane
+           () | distanceBetweenChessboard creature_position building_position == 1 ->
+               do setPlayerState $ GameOver PlayerIsVictorious
            () | otherwise ->
                do throwError $ DBErrorFlag BuildingApproachWrongAngle
        return True

@@ -46,7 +46,7 @@ walkCreature face (x',y') creature_ref =
                                         (standing_position standing)
        case () of
            () | not is_passable ->
-               do logDB log_travel WARNING $ "Terrain not passable."
+               do logDB log_travel INFO $ "Terrain not passable."
                   return $ detail l
            () | otherwise ->
                return $ standing

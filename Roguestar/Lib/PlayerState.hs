@@ -1,7 +1,8 @@
 module Roguestar.Lib.PlayerState
     (PlayerState(..),
      SnapshotEvent(..),
-     HasSubject(..))
+     HasSubject(..),
+     GameOverReason(..))
     where
 
 import Roguestar.Lib.DBData
@@ -14,7 +15,10 @@ data PlayerState =
     SpeciesSelectionState (Maybe Creature)
   | PlayerCreatureTurn CreatureRef
   | SnapshotEvent SnapshotEvent
-  | GameOver
+  | GameOver GameOverReason
+     deriving (Read,Show)
+
+data GameOverReason = PlayerIsDead | PlayerIsVictorious
      deriving (Read,Show)
 
 data SnapshotEvent =
@@ -64,7 +68,7 @@ instance HasSubject PlayerState where
     subjectOf (SpeciesSelectionState {}) = Nothing
     subjectOf (PlayerCreatureTurn x) = Just x
     subjectOf (SnapshotEvent x) = subjectOf x
-    subjectOf GameOver = Nothing
+    subjectOf (GameOver {}) = Nothing
 
 instance HasSubject SnapshotEvent where
     subjectOf event = case event of

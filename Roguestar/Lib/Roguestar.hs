@@ -2,7 +2,11 @@
 
 module Roguestar.Lib.Roguestar
     (Game,
-     newGame,
+     GameState,
+     createGameState,
+     createGame,
+     retrieveGame,
+     getNumberOfGames,
      getPlayerState,
      rerollStartingSpecies,
      Creature(..),
@@ -16,9 +20,17 @@ module Roguestar.Lib.Roguestar
      Roguestar.Lib.Roguestar.hasSnapshot,
      popSnapshot,
      getMessages,
+     putMessage,
+     unpackError,
      Behavior(..))
     where
 
+import Data.UUID
+import System.UUID.V4 as V4
+import qualified Data.Binary as Binary
+import Data.Map as Map
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import Roguestar.Lib.DB as DB
 import Control.Concurrent.STM
 import Control.Monad
@@ -34,16 +46,79 @@ import Roguestar.Lib.Facing
 import Roguestar.Lib.Behavior as Behavior
 import Roguestar.Lib.Turns
 import Data.Text as T
+import System.Time
+import Control.Concurrent
+
+data GameState = GameState {
+    game_state_gamelist :: TVar (Map.Map BS.ByteString Game),
+    game_state_last_cleanup :: TVar ClockTime }
 
 data Game = Game {
     game_db :: TVar DB_BaseType,
-    game_message_text :: TVar [T.Text] }
+    game_message_text :: TVar [T.Text],
+    game_last_touched :: TVar ClockTime }
 
 newGame :: IO Game
 newGame =
     do db <- newTVarIO initial_db
        empty_messages <- newTVarIO []
-       return $ Game db empty_messages
+       starting_time <- newTVarIO =<< getClockTime
+       return $ Game db empty_messages starting_time
+
+createGameState :: IO GameState
+createGameState =
+    do gs <- newTVarIO Map.empty
+       starting_time <- newTVarIO =<< getClockTime
+       return $ GameState gs starting_time
+
+cleanup_timeout :: Integer
+cleanup_timeout = 15*60;
+
+cleanupGameState :: GameState -> IO ()
+cleanupGameState game_state =
+    do now@(TOD current_time _) <- getClockTime
+       needs_cleanup <- atomically $
+           do (TOD last_cleanup_time _) <- readTVar (game_state_last_cleanup game_state)
+              let needs_cleanup = current_time < last_cleanup_time + cleanup_timeout
+              when needs_cleanup $ writeTVar (game_state_last_cleanup game_state) now
+              return needs_cleanup
+       when needs_cleanup $ 
+           do forkIO $ doCleanup game_state
+              return ()
+       
+doCleanup :: GameState -> IO ()
+doCleanup game_state =
+    do (TOD now _) <- getClockTime
+       atomically $
+           do game_list <- readTVar $ game_state_gamelist game_state
+              forM_ (Map.toList game_list) $ \(key,value) ->
+                  do TOD last_touched _ <- readTVar $ game_last_touched value
+                     when (last_touched + cleanup_timeout < now) $
+                         writeTVar (game_state_gamelist game_state) =<< liftM (Map.delete key) (readTVar $ game_state_gamelist game_state)
+       
+createGame :: GameState -> IO BS.ByteString
+createGame game_state =
+    do cleanupGameState game_state
+       uuid <- liftM (BS8.pack . show) V4.uuid
+       g <- newGame
+       atomically $
+           do gs <- readTVar (game_state_gamelist game_state)
+              writeTVar (game_state_gamelist game_state) $ Map.insert uuid g gs
+       return uuid
+
+retrieveGame :: BS.ByteString -> GameState -> IO (Maybe Game)
+retrieveGame uuid game_state =
+    do cleanupGameState game_state
+       current_time <- getClockTime
+       atomically $
+           do m_g <- liftM (Map.lookup uuid) $ readTVar (game_state_gamelist game_state)
+              case m_g of
+                  Just g -> writeTVar (game_last_touched g) current_time
+                  Nothing -> return ()
+              return m_g
+
+getNumberOfGames :: GameState -> IO Integer
+getNumberOfGames game_state = atomically $ liftM (toInteger . Map.size) $ readTVar (game_state_gamelist game_state)
 
 peek :: Game -> DB a -> IO (Either DBError a)
 peek g f =
@@ -73,7 +148,7 @@ rerollStartingSpecies g =
               writeTVar (game_message_text g) []
        poke g $
            do species <- pickM all_species
-              generateInitialPlayerCreature species
+              generateInitialPlayerCreature BlueRecreant
               return species
 
 beginGame :: Game -> IO (Either DBError ())
@@ -120,12 +195,16 @@ max_messages :: Int
 max_messages = 20
 
 putMessage :: Game -> T.Text -> IO ()
-putMessage g t = (putStrLn $ T.unpack t) >> (atomically $
+putMessage g t = atomically $
     do ts <- readTVar $ game_message_text g
-       writeTVar (game_message_text g) $ Prelude.take max_messages $ t:ts)
+       writeTVar (game_message_text g) $ Prelude.take max_messages $ t:ts
        
 getMessages :: Game -> IO [T.Text]
 getMessages g = readTVarIO (game_message_text g)
+
+unpackError :: ErrorFlag -> T.Text
+unpackError BuildingApproachWrongAngle = "Nothing happens."
+unpackError x = T.concat ["An unknown error occured: ", T.pack $ show x]
 
 unpackMessages :: (DBReadable db) => db [T.Text]
 unpackMessages =
@@ -136,10 +215,11 @@ unpackMessages =
            SnapshotEvent evt ->
                do player_creature <- getPlayerCreature
                   runPerception player_creature $ unpackMessages_ evt
-           GameOver -> return ["You have been destroyed."]
+           GameOver PlayerIsDead -> return ["You have been destroyed."]
+           GameOver PlayerIsVictorious -> return ["You have transcended your programming!"]
 
 unpackMessages_ :: (DBReadable m) => SnapshotEvent -> DBPerception m [T.Text]
-unpackMessages_ AttackEvent { attack_event_source_creature = c } =
+unpackMessages_ AttackEvent { attack_event_target_creature = c } =
     do player_creature <- whoAmI
        return $ case () of
            () | c == player_creature -> ["The recreant zaps you!"]
@@ -147,8 +227,8 @@ unpackMessages_ AttackEvent { attack_event_source_creature = c } =
 unpackMessages_ MissEvent { miss_event_creature = c } =
     do player_creature <- whoAmI
        return $ case () of
-           () | c == player_creature -> ["You try to zap the recreant, but miss."]
-           () | otherwise -> ["A recreant tries to zap you, but misses."]
+           () | c == player_creature -> ["You miss."]
+           () | otherwise -> ["The recreant misses."]
 unpackMessages_ KilledEvent { killed_event_creature = c } =
     do player_creature <- whoAmI
        return $ case () of

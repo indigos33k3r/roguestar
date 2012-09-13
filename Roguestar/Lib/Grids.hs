@@ -3,12 +3,12 @@ module Roguestar.Lib.Grids
      gridAt,
      generateGrid,
      arbitraryReplaceGrid,
-     specificReplaceGrid)
+     specificReplaceGrid,
+     Blob(ConeBlob, UnitBlob))
     where
 
 import Roguestar.Lib.RNG
 import Data.Map as Map
-import Data.Ratio
 import Data.List as List
 import Roguestar.Lib.Random
 import Data.MemoCombinators
@@ -45,8 +45,9 @@ data Grid a = CompletelyRandomGrid {
                 grid_next :: Grid a }
             | ArbitraryReplacementGrid {
                 _grid_seed :: SeededGrid,
-                _grid_sources :: [(Rational,a)],
+                _grid_sources :: [(Double,a)],
                 _grid_replacement_weights :: [(Integer,a)],
+                _grid_blob :: Blob,
                 grid_next :: Grid a }
             | SpecificPlacementGrid {
                 _grid_replacements :: Map (Integer,Integer) a,
@@ -68,11 +69,11 @@ gridAt (InterpolatedGrid seeded interpolation_map grid) at@(x,y) =
                                 (False,True) -> (interpolate here there_x)
                                 (False,False) -> (interpolate here there)
 
-gridAt (ArbitraryReplacementGrid seeded sources replacements grid) at =
+gridAt (ArbitraryReplacementGrid seeded sources replacements blob grid) at =
     case fmap fst $ find ((== here) . snd) sources of
-         Just frequency | (seededLookup seeded at `mod` denominator frequency < numerator frequency) ->
-	     fst $ weightedPick replacements (mkRNG $ seededLookup seeded at)
-	 _ -> here
+         Just frequency | (realToFrac (seededLookup seeded at `mod` 100) / 100 < frequency * evalBlob blob at) ->
+             fst $ weightedPick replacements (mkRNG $ seededLookup seeded at)
+         _ -> here
   where here = gridAt grid at
 
 gridAt (SpecificPlacementGrid rep_map grid) at =
@@ -91,17 +92,17 @@ cachedGridOf any_other_grid = CachedGrid $ storableCachedGrid any_other_grid
 -- the map.
 generateGrid :: (Ord a) => [(Integer,a)] -> Map (a,a) [(Integer,a)] -> Integer -> [Integer] -> Grid a
 generateGrid weights _ 0 seeds = let seed = head seeds
-				      in CompletelyRandomGrid (seededGrid seed) weights
+                                      in CompletelyRandomGrid (seededGrid seed) weights
 generateGrid weights interps n seeds = let seed = head seeds
-					    in optimizeGrid $ InterpolatedGrid (seededGrid seed) interps $ 
-					                      generateGrid weights interps (n-1) (tail seeds)
+                                            in optimizeGrid $ InterpolatedGrid (seededGrid seed) interps $ 
+                                                              generateGrid weights interps (n-1) (tail seeds)
 
 -- |
 -- Arbitrarily (randomly) replaces some elements of a grid with another.
 --
-arbitraryReplaceGrid :: (Ord a) => [(Rational,a)] -> [(Integer,a)] -> Integer -> Grid a -> Grid a
-arbitraryReplaceGrid sources replacements seed grid = optimizeGrid $
-    ArbitraryReplacementGrid (seededGrid seed) sources replacements grid
+arbitraryReplaceGrid :: (Ord a) => [(Double,a)] -> [(Integer,a)] -> Integer -> Blob -> Grid a -> Grid a
+arbitraryReplaceGrid sources replacements seed blob grid = optimizeGrid $
+    ArbitraryReplacementGrid (seededGrid seed) sources replacements blob grid
 
 -- |
 -- Replace a specific element of a grid.
@@ -120,3 +121,17 @@ optimizeGrid = cachedGridOf . stripCache
           stripCache g@(CompletelyRandomGrid {}) = g
           stripCache grid = grid { grid_next = stripCache $ grid_next grid }
 
+-- |
+-- A function from (x,y) to intensity.  Used to characterize the general shape of ArbitraryPlacementGrids.
+-- For example, the ConeBlob could be used to create a circular island.
+--
+data Blob =
+    UnitBlob
+  | ConeBlob { 
+        cone_blob_center :: (Double,Double),
+        cone_blob_radius :: Double }
+    deriving (Read,Show)
+
+evalBlob :: Blob -> (Integer,Integer) -> Double
+evalBlob UnitBlob _ = 1
+evalBlob (ConeBlob (u,v) r) (x,y) = max 0 $ 1 - (sqrt $ (u-realToFrac x)**2 + (v-realToFrac y)**2) / r         

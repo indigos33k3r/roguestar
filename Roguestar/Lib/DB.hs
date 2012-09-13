@@ -504,7 +504,8 @@ dbAdvanceTime ref t = dbSetTimeCoordinate ref =<< (return . (advanceTime t)) =<<
 dbNextTurn :: (DBReadable db,ReferenceType a) => [Reference a] -> db (Reference a)
 dbNextTurn [] = error "dbNextTurn: empty list"
 dbNextTurn refs =
-    asks (\db -> fst $ minimumBy (comparing snd) $
+    do logDB log_database INFO $ "Determining whose turn is next among: " ++ (show $ List.map toUID refs) 
+       asks (\db -> fst $ minimumBy (comparing snd) $
                    List.map (\r -> (r,fromMaybe (error "dbNextTurn: missing time coordinate") $
                                       Map.lookup (genericReference r) (db_time_coordinates db))) refs)
 

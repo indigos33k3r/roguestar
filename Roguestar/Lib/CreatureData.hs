@@ -1,14 +1,12 @@
 
 module Roguestar.Lib.CreatureData
     (Creature(..),
-     CreatureGender(..),
-     CreatureAptitude(..),
+     CreatureTrait(..),
      CreatureInteractionMode(..),
      CreatureAbility(..),
      CreatureEndo(..),
      CreatureScore(..),
      CreatureHealth(..),
-     creatureGender,
      creatureHealth,
      creatureAbilityScore,
      empty_creature)
@@ -25,11 +23,7 @@ import qualified Data.Set as Set
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.TerrainData
 
-data Creature = Creature { creature_aptitude :: Map.Map CreatureAptitude Integer,
-                           creature_ability :: Map.Map CreatureAbility Integer,
-                           creature_ethical :: Map.Map EthicalAlignment Integer,
-                           creature_levels :: Map.Map CharacterClass Integer,
-                           creature_gender :: CreatureGender,
+data Creature = Creature { creature_traits :: Map.Map CreatureTrait Integer,
                            creature_species :: Species,
                            creature_random_id :: Integer, -- random number attached to the creature, not unique
                            creature_damage :: Integer,
@@ -41,18 +35,12 @@ data Creature = Creature { creature_aptitude :: Map.Map CreatureAptitude Integer
 --
 empty_creature :: Creature
 empty_creature = Creature {
-    creature_aptitude = Map.empty,
-    creature_ability = Map.empty,
-    creature_ethical = Map.empty,
-    creature_levels = Map.empty,
-    creature_gender = Neuter,
+    creature_traits = Map.empty,
     creature_species = error "empty_creature: undefined creature_species",
     creature_random_id = error "empty_creature: undefined creature_random_id",
     creature_damage = 0,
     creature_faction = error "empty_creature: undefined creature_faction",
     creature_points = 0 }
-
-data CreatureGender = Male | Female | Neuter deriving (Eq,Read,Show)
 
 -- | Endomorphisms over a 'Creature'.  These are types that contribute some feature to a 'Creature',
 -- so that 'Creature's can be defined concisely by those properties.
@@ -70,9 +58,6 @@ instance (CreatureEndo a,Integral i) => CreatureEndo (a,i) where
 instance (CreatureEndo a) => CreatureEndo [a] where
     applyToCreature = appEndo . mconcat . map (Endo . applyToCreature)
 
-instance CreatureEndo CreatureGender where
-    applyToCreature g c = c { creature_gender = g }
-
 data CreatureHealth = CreatureHealth {
     creature_absolute_health :: Integer,
     creature_absolute_damage :: Integer,
@@ -80,21 +65,22 @@ data CreatureHealth = CreatureHealth {
     creature_max_health :: Integer }
 
 -- | The seven aptitudes.
-data CreatureAptitude =
-     Strength
-   | Speed
-   | Constitution
-   | Intellect
+data CreatureTrait =
+     Aggression
+   | Bulk
+   | Caution
+   | Dexterity
+   | Fortitude
    | Perception
-   | Charisma
-   | Mindfulness
-         deriving (Eq,Read,Show,Ord,Enum,Bounded)
+   | Speed
+   | CharacterClass CharacterClass
+         deriving (Eq,Read,Show,Ord)
 
-instance CreatureEndo CreatureAptitude where
-    applyToCreature aptitude c = c { creature_aptitude = Map.insertWith (+) aptitude 1 $ creature_aptitude c }
+instance CreatureEndo CreatureTrait where
+    applyToCreature trait c = c { creature_traits = Map.insertWith (+) trait 1 $ creature_traits c }
 
-instance CreatureScore CreatureAptitude where
-    rawScore aptitude c = fromMaybe 0 $ Map.lookup aptitude (creature_aptitude c)
+instance CreatureScore CreatureTrait where
+    rawScore trait c = fromMaybe 0 $ Map.lookup trait (creature_traits c)
 
 -- | Combat modes:
 -- Melee is armed close-quarters combat with bladed or blunt weapons
@@ -118,67 +104,37 @@ data CreatureAbility =
    | InventorySkill
          deriving (Eq,Read,Show,Ord)
 
-instance CreatureEndo CreatureAbility where
-    applyToCreature ability c = c { creature_ability = Map.insertWith (+) ability 1 $ creature_ability c }
-
-instance CreatureScore CreatureAbility where
-    rawScore ability c = fromMaybe 0 $ Map.lookup ability $ creature_ability c
-
-instance CreatureEndo EthicalAlignment where
-    applyToCreature ethical c = c { creature_ethical = Map.insertWith (+) ethical 1 $ creature_ethical c }
-
-instance CreatureScore EthicalAlignment where
-    rawScore ethical c = fromMaybe 0 $ Map.lookup ethical $ creature_ethical c
-
 instance CreatureEndo CharacterClass where
-    applyToCreature character_class c = c { creature_levels = Map.insertWith (+) character_class 1 $ creature_levels c }
+    applyToCreature character_class = applyToCreature (CharacterClass character_class)
 
 instance CreatureScore CharacterClass where
-    rawScore character_class c = fromMaybe 0 $ Map.lookup character_class $ creature_levels c
+    rawScore character_class = rawScore (CharacterClass character_class)
 
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
-figureAbility :: [CreatureAptitude] -> (CreatureAbility,Integer) -> Creature -> Integer
-figureAbility aptitude (ability,n) c = sum (map (flip rawScore c) aptitude) + rawScore ability c * n
+figureAbility :: [CreatureTrait] -> Creature -> Integer
+figureAbility traits c = round $ realToFrac x ** (1.0 / realToFrac (length traits))
+    where x = product (map ((+1) . flip rawScore c) traits)
 
 creatureAbilityScore :: CreatureAbility -> Creature -> Integer
-creatureAbilityScore ToughnessTrait = figureAbility [Strength,Speed,Constitution,Mindfulness] (ToughnessTrait,3)
-creatureAbilityScore (AttackSkill Melee) = figureAbility [Strength] (AttackSkill Melee,2)
-creatureAbilityScore (DefenseSkill Melee) = figureAbility [Strength] (DefenseSkill Melee,2)
-creatureAbilityScore (DamageSkill Melee) = figureAbility [Strength] (DamageSkill Melee,2)
-creatureAbilityScore (DamageReductionTrait Melee) = figureAbility [Constitution] (DamageReductionTrait Melee,1)
-creatureAbilityScore (ReloadSkill Melee) = figureAbility [Speed] (ReloadSkill Melee,1)
-creatureAbilityScore (AttackSkill Ranged) = figureAbility [Perception] (AttackSkill Ranged,2)
-creatureAbilityScore (DefenseSkill Ranged) = figureAbility [Perception] (DefenseSkill Ranged,2)
-creatureAbilityScore (DamageSkill Ranged) = figureAbility [Perception] (DamageSkill Ranged,2)
-creatureAbilityScore (DamageReductionTrait Ranged) = figureAbility [Constitution] (DamageReductionTrait Ranged,1)
-creatureAbilityScore (ReloadSkill Ranged) = figureAbility [Speed] (ReloadSkill Ranged,1)
-creatureAbilityScore (AttackSkill Unarmed) = figureAbility [Speed] (AttackSkill Unarmed,2)
-creatureAbilityScore (DefenseSkill Unarmed) = figureAbility [Speed] (DefenseSkill Unarmed,2)
-creatureAbilityScore (DamageSkill Unarmed) = figureAbility [Speed] (DamageSkill Unarmed,2)
-creatureAbilityScore (DamageReductionTrait Unarmed) = figureAbility [Constitution] (DamageReductionTrait Unarmed,1)
-creatureAbilityScore (ReloadSkill Unarmed) = figureAbility [Speed] (ReloadSkill Unarmed,1)
-creatureAbilityScore (AttackSkill Splash) = figureAbility [Intellect] (AttackSkill Splash,2)
-creatureAbilityScore (DefenseSkill Splash) = figureAbility [Intellect] (DefenseSkill Splash,2)
-creatureAbilityScore (DamageSkill Splash) = figureAbility [Intellect] (DamageSkill Splash,2)
-creatureAbilityScore (DamageReductionTrait Splash) = figureAbility [Constitution] (DamageReductionTrait Splash,1)
-creatureAbilityScore (ReloadSkill Splash) = figureAbility [Speed] (ReloadSkill Splash,1)
-creatureAbilityScore (TerrainAffinity terrain_type) = figureAbility [] (TerrainAffinity terrain_type,1)
-creatureAbilityScore HideSkill = figureAbility [Perception] (HideSkill,2)
-creatureAbilityScore SpotSkill = figureAbility [Perception] (SpotSkill,2)
-creatureAbilityScore JumpSkill = figureAbility [Strength] (JumpSkill,2)
-creatureAbilityScore InventorySkill = figureAbility [Strength,Speed,Constitution] (InventorySkill,2)
-
--- |
--- Answers the gender of this creature.
---
-creatureGender :: Creature -> CreatureGender
-creatureGender = creature_gender
+creatureAbilityScore ToughnessTrait = figureAbility [Caution,Fortitude]
+creatureAbilityScore (AttackSkill x) = figureAbility [Aggression,Dexterity]
+creatureAbilityScore (DefenseSkill x) = figureAbility [Caution,Dexterity]
+creatureAbilityScore (DamageSkill x) = figureAbility [Aggression,Bulk]
+creatureAbilityScore (DamageReductionTrait x) = figureAbility [Caution,Bulk]
+creatureAbilityScore (ReloadSkill x) = figureAbility [Aggression,Speed]
+creatureAbilityScore (TerrainAffinity terrain_type) = figureAbility []
+creatureAbilityScore HideSkill = figureAbility [Aggression,Perception]
+creatureAbilityScore SpotSkill = figureAbility [Caution,Perception]
+creatureAbilityScore JumpSkill = figureAbility [Speed]
+creatureAbilityScore InventorySkill = figureAbility [Fortitude]
 
 -- |
 -- Answers the health/injury/maximum health of this creature.
 creatureHealth :: Creature -> CreatureHealth
-creatureHealth c = result
+creatureHealth c = case () of
+                       () | creature_max_health result <= 0 -> error "creatureHealth: creature_max_health <= 0"
+                       () | otherwise -> result
     where result = CreatureHealth {
         creature_health = creature_absolute_health result % creature_max_health result,
         creature_absolute_health = creature_max_health result - creature_absolute_damage result,

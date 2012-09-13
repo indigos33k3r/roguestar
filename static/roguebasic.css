@@ -51,7 +51,7 @@ body {
 }
 
 #menu ul li:hover {
-    background: #444444;
+    background: #6D2E03;
 }
 
 #menu ul li a:hover {
@@ -72,6 +72,10 @@ body {
     top: 0;
     margin: 0;
     padding: 0;
+}
+
+.help {
+    font-size: 20px;
 }
 
 .inventorytitle, .inventoryitem {
@@ -178,7 +182,7 @@ button {
 }
 
 button:hover {
-    background: #444444;
+    background: #6D2E03;
     color: #EEEEEE;
 }
 
@@ -192,7 +196,7 @@ select {
 }
 
 select:hover {
-    background: #444444;
+    background: #6D2E03;
     color: #EEEEEE;
 }
 
@@ -224,6 +228,7 @@ h1, h2, h3, h4, h5, h6 {
     border-bottom-color: #888888;
     margin: 0;
     margin-top: 1cm;
+    margin-bottom: 1cm;
     padding: 0;
 }
 
@@ -273,6 +278,12 @@ a:hover {
     text-align: center;
 }
 
+#gameplaybox .help {
+    position: absolute;
+    left: 476px;
+    top: 10px;
+}
+
 #messagebox {
     overflow: auto;
     position: absolute;
@@ -291,6 +302,12 @@ a:hover {
     width: 520px;
 }
 
+#controls .help {
+    position: absolute;
+    left: 496px;
+    top: 10px;
+}
+
 #controls > div {
     margin: 1cm;
 }
@@ -305,6 +322,13 @@ a:hover {
 
 #controls select {
     width: 90%;
+}
+
+#messagebox p {
+    padding: 0;
+    margin: 0;
+    margin-left: 0.2em;
+    line-height: 120%;
 }
 
 .faqitem:hover .question {

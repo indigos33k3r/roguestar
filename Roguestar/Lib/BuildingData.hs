@@ -37,8 +37,15 @@ buildingOccupies :: BuildingShape -> [(Integer,Integer)]
 -- Monolith/Node:  X
 buildingOccupies Monolith = [(0,0)]
 buildingOccupies Anchor   = [(0,0)]
--- Portal:   XXX
-buildingOccupies Portal = [(0,0),(-1,0),(1,0)]
+-- Portal:
+--
+--    XXX
+--  X     X
+--  X  X  X
+--  X     X
+--    XXX
+--
+buildingOccupies Portal = [(0,0),(3,0),(3,1),(3,-1),(-3,0),(-3,1),(-3,-1),(0,3),(-1,3),(1,3),(0,-3),(-1,-3),(1,-3)]
 -- Cybergate: XXX
 --           XX XX
 --          XX   XX

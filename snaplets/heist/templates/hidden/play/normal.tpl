@@ -3,8 +3,8 @@
 <div id="magicbox">
 
 <div id="gameplaybox" class="roguebox">
-  <statsblock/>
   <map/>
+  <a href="/help-map" class="help">?</a>
 </div>
 
 <div id="messagebox" class="roguebox">
@@ -12,6 +12,7 @@
 </div>
 
 <div id="controls" class="roguebox">
+  <statsblock/>
 <form action="/play/move" method="post">
 
 <div>
@@ -44,6 +45,8 @@
 <button type="submit" name="direction" value="se">SouthEast</button>
 </div>
 </div>
+
+<a href="/help-actions" class="help">?</a>
 
 </form>
 

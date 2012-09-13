@@ -15,5 +15,4 @@ factionPrefix :: Faction -> B.ByteString
 factionPrefix Player = "Z"
 factionPrefix Monsters = "M"
 factionPrefix Nonaligned = "P"
---factionPrefix Pirates = "R"
 factionPrefix Cyborgs = "Y"

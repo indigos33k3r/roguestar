@@ -4,21 +4,10 @@ module Roguestar.Lib.SpeciesData
     where
 
 data Species =
-     Anachronid
-   | Androsynth
-   | Ascendant
-   | Caduceator
-   | DustVortex
-   | Encephalon
-   | Goliath
-   | Hellion
-   | Kraken
-   | Myrmidon
-   | Perennial
-   | Recreant
-   | Reptilian
+     BlueRecreant
+   | RedRecreant
        deriving (Eq,Ord,Bounded,Enum,Read,Show)
 
 all_species :: [Species]
-all_species = [Recreant] -- [minBound..maxBound]
+all_species = [BlueRecreant,RedRecreant] -- [minBound..maxBound]
 

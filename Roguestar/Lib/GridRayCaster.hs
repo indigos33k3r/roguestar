@@ -17,7 +17,7 @@ import Roguestar.Lib.Tests
 castRays :: (Integer,Integer) -> [((Integer,Integer),Integer)] -> ((Integer,Integer) -> Integer) -> [(Integer,Integer)]
 castRays src@(src_x,src_y) dests opacityFn =
     toList $
-    foldr (\ l m -> Set.union m $ fromList $ castRays_ Nothing m l) empty $ -- cast the rays, acumulating the already cast rays into a map and passing it into the next castRay_ where it will be used to cheat
+    List.foldr (\ l m -> Set.union m $ fromList $ castRays_ Nothing m l) empty $ -- cast the rays, acumulating the already cast rays into a map and passing it into the next castRay_ where it will be used to cheat
     sortBy (\ a b -> lengthThenDistance a b) $  -- sort the groups so that the largest groups are on the right, in case of equal lengths, move groups with the most distant member to the right (to exploit more cases where we can cheat)
     List.map (sortBy compareDistance) $ -- sort each group by distance, so the most distant ones come first (then we'll skip the nearer ones if the more distant passes and the nearer is brighter)
     groupBy (\ a b -> compareDirection a b == EQ) $ -- order and group the all destinations that lie along the same ray

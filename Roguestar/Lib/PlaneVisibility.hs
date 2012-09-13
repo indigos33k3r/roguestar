@@ -94,7 +94,7 @@ dbGetOpposedSpotCheck creature_ref object_ref =
        return $ round $ (spot%1) * opposedLinearPowerRatio spot hide
 
 planarLightingBonus :: (DBReadable db) => PlaneRef -> db Integer
-planarLightingBonus = liftM (\x -> max 0 $ 17 - x*5) . planeDepth
+planarLightingBonus = liftM (\x -> max 0 $ 25 - x*5) . planeDepth
 
 dbGetSpotCheck :: (DBReadable db) => CreatureRef -> db Integer
 dbGetSpotCheck creature_ref =
@@ -115,13 +115,13 @@ dbGetHideCheck _   | otherwise = return 1
 visibleTerrain :: Position -> Integer -> TerrainGrid -> [(TerrainPatch,Position)]
 visibleTerrain (Position (creature_at@(creature_x,creature_y))) spot_check terrain =
     let max_range = maximumRangeForSpotCheck spot_check
-	in map (\(x,y) -> (gridAt terrain (x,y),Position (x,y))) $
-	   castRays creature_at
-			[terrainPatchBrightnessForm creature_at spot_check (creature_x+x,creature_y+y)
-			 | x <- [-max_range..max_range],
-			 y <- [-max_range..max_range],
-			 x^2+y^2 <= max_range^2]
-			(terrainOpacity . gridAt terrain)
+        in map (\(x,y) -> (gridAt terrain (x,y),Position (x,y))) $
+           castRays creature_at
+                        [terrainPatchBrightnessForm creature_at spot_check (creature_x+x,creature_y+y)
+                         | x <- [-max_range..max_range],
+                         y <- [-max_range..max_range],
+                         x^2+y^2 <= max_range^2]
+                        (terrainOpacity . gridAt terrain)
 
 -- |
 -- terrainPatchBrightnessForm (creature's location) (spot check) (terrain patch's location)
@@ -130,7 +130,7 @@ visibleTerrain (Position (creature_at@(creature_x,creature_y))) spot_check terra
 terrainPatchBrightnessForm :: (Integer,Integer) -> Integer -> (Integer,Integer) -> ((Integer,Integer),Integer)
 terrainPatchBrightnessForm creature_at spot_check patch_at =
     let delta_at = (fst creature_at - fst patch_at,snd creature_at - snd patch_at)
-	in (patch_at,spot_check - distanceCostForSight Here delta_at)
+        in (patch_at,spot_check - distanceCostForSight Here delta_at)
 
 -- |
 -- Returns true if the specified CreatureRef belongs to the specified Faction.

@@ -45,8 +45,8 @@
         <p>There are two things you can do that would be a huge help to me:</p>
         <ul>
           <li>Spend five minutes to give me <a href="/feedback">feedback</a>. It really is the most valuable
-            contribution you can make. Roguestar is, kindof, my baby. So try to be nice. But if you can't be nice, go
-            ahead and be mean. I need to know what people think.
+            contribution you can make. Try to be nice.
+            But if you can't be nice, what the hell, this is the internet, go ahead and be mean.
           </li>
           <li>If you like roguestar, post about it on your blog or twitter.</li>
         </ul>

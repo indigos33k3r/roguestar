@@ -103,7 +103,7 @@ data VisibleObject =
   | VisibleCreature {
        visible_creature_ref :: CreatureRef,
        visible_creature_species :: Species,
-       visible_creature_character_classes :: [CharacterClass],
+       visible_creature_traits :: Map.Map CreatureTrait Integer,
        visible_creature_wielding :: Maybe VisibleObject,
        visible_object_position :: Position,
        visible_creature_faction :: Faction }
@@ -128,7 +128,7 @@ isVisibleBuilding _ = False
 convertToVisibleObjectRecord :: (DBReadable db) => Reference a -> db VisibleObject
 convertToVisibleObjectRecord ref | (Just creature_ref) <- coerceReference ref =
     do species <- liftM creature_species $ dbGetCreature creature_ref
-       classes <- liftM (Map.keys . creature_levels) $ dbGetCreature creature_ref
+       traits <- liftM creature_traits $ dbGetCreature creature_ref
        faction <- Creature.getCreatureFaction creature_ref
        m_tool_ref <- getWielded creature_ref
        position <- liftM detail $ DT.whereIs creature_ref
@@ -137,7 +137,7 @@ convertToVisibleObjectRecord ref | (Just creature_ref) <- coerceReference ref =
                do tool <- dbGetTool tool_ref
                   return $ Just $ VisibleTool tool_ref tool position
            Nothing -> return Nothing
-       return $ VisibleCreature creature_ref species classes m_wielded position faction
+       return $ VisibleCreature creature_ref species traits m_wielded position faction
 convertToVisibleObjectRecord ref | (Just tool_ref) <- coerceReference ref =
     do tool <- dbGetTool tool_ref
        position <- liftM detail $ getPlanarLocation tool_ref
@@ -147,11 +147,11 @@ convertToVisibleObjectRecord ref | (Just building_ref :: Maybe BuildingRef) <- c
        return $ VisibleBuilding building_ref (detail location) (detail location) (detail location)
 
 stackVisibleObjects :: [VisibleObject] -> Map Position [VisibleObject]
-stackVisibleObjects = foldr insertVob Map.empty
+stackVisibleObjects = List.foldr insertVob Map.empty
     where insertVob :: VisibleObject -> Map Position [VisibleObject] -> Map Position [VisibleObject]
-          insertVob vob = foldr (\k f -> Map.alter (insertVob_ vob) k . f)
-                                id
-                                (fromMultiPosition $ visibleObjectPosition vob)
+          insertVob vob = List.foldr (\k f -> Map.alter (insertVob_ vob) k . f)
+                                     id
+                                     (fromMultiPosition $ visibleObjectPosition vob)
           insertVob_ :: VisibleObject -> Maybe [VisibleObject] -> Maybe [VisibleObject]
           insertVob_ vob m_vobs =
               (do vobs <- m_vobs

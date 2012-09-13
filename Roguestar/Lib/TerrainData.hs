@@ -9,8 +9,6 @@ module Roguestar.Lib.TerrainData
      stairsUp,
      stairsDown,
      generateTerrain,
-     generateExampleTerrain,
-     prettyPrintTerrain,
      difficult_terrains,
      impassable_terrains)
     where
@@ -20,7 +18,7 @@ import Data.List as List
 import Data.Map as Map
 --import Substances hiding (Water)
 import Roguestar.Lib.RNG
-import Data.Ratio
+
 
 -- |
 -- Most automatically generated surface maps belong to a Biome, representing the kind of terrain
@@ -77,9 +75,10 @@ data TerrainGenerationData = TerrainGenerationData
                            deriving (Read,Show)
 
 data TerrainPlacement = TerrainPlacement {
-    placement_sources :: [(Rational,TerrainPatch)],
+    placement_sources :: [(Double,TerrainPatch)],
     placement_replacements :: [(Integer,TerrainPatch)],
-    placement_seed :: Integer }
+    placement_seed :: Integer,
+    placement_blob :: Blob }
         deriving (Read,Show)
 
 placeTerrain :: TerrainPlacement -> TerrainGrid -> TerrainGrid
@@ -87,44 +86,48 @@ placeTerrain terrain_placement =
     arbitraryReplaceGrid (placement_sources terrain_placement)
                          (placement_replacements terrain_placement)
                          (placement_seed terrain_placement)
+                         (placement_blob terrain_placement)
 
 recreantFactories :: Integer -> TerrainPlacement
 recreantFactories seed = TerrainPlacement {
     placement_sources =
-        [(1%25,Ice),
-         (1%100,Sand),
-         (1%25,Desert),
-         (1%50,Dirt),
-         (1%10,Glass),
-         (1%200,Grass),
-         (1%1000,Forest),
-         (1%25,RockyGround)],
+        [(1/2,Ice),
+         (1/10,Sand),
+         (1/2,Desert),
+         (1/5,Dirt),
+         (1/1,Glass),
+         (1/20,Grass),
+         (1/100,Forest),
+         (1/2,RockyGround)],
     placement_replacements =
         [(1,RecreantFactory)],
-    placement_seed = seed }
+    placement_seed = seed,
+    placement_blob = ConeBlob (0,0) 100 }
 
 stairsUp :: Integer -> Integer -> TerrainPlacement
 stairsUp seed depth = TerrainPlacement {
     placement_sources =
-        [(1%(15+3*depth),RockyGround),
-         (1%(25+5*depth),Ice),
-         (1%(50+10*depth),Water),
-         (1%(75+15*depth),RockFace)],
+        [(1/(15+3*realToFrac depth),RockyGround),
+         (1/(25+5*realToFrac depth),Ice),
+         (1/(50+10*realToFrac depth),Water),
+         (1/(75+15*realToFrac depth),RockFace)],
     placement_replacements =
         [(1,Upstairs)],
-    placement_seed = seed }
+    placement_seed = seed,
+    placement_blob = UnitBlob }
 
 stairsDown :: Integer -> Integer -> TerrainPlacement
 stairsDown seed depth = TerrainPlacement {
     placement_sources =
-        [(1%(15+3*depth),RockyGround),
-         (1%(25+5*depth),Ice),
-         (1%(75+15*depth),RockFace),
-         (1%(40+10*depth),Dirt),
-         (1%60,Grass)],
+        [(1/(15+4*realToFrac depth),RockyGround),
+         (1/(25+5*realToFrac depth),Ice),
+         (1/(75+3*realToFrac depth),RockFace),
+         (1/(40+10*realToFrac depth),Dirt),
+         (1/60,Grass)],
     placement_replacements =
         [(1,Downstairs)],
-    placement_seed = seed }
+    placement_seed = seed,
+    placement_blob = UnitBlob }
 
 -- |
 -- A list of TerrainPatches that are considered "difficult", either for traveling
@@ -132,7 +135,7 @@ stairsDown seed depth = TerrainPlacement {
 --
 difficult_terrains :: [TerrainPatch]
 difficult_terrains = impassable_terrains ++
-                     [Water,DeepWater,Ice,Lava,RecreantFactory]
+                     [Water,DeepWater,Ice,Lava]
 
 -- |
 -- A list of TerrainPatches that are considered "impassable" for traveling.
@@ -201,43 +204,9 @@ type TerrainGrid = Grid TerrainPatch
 -- to generate the terrain.
 --
 generateTerrain :: TerrainGenerationData -> [Integer] -> TerrainGrid
-generateTerrain tg rands = flip (foldr placeTerrain) (tg_placements tg) $
+generateTerrain tg rands = flip (List.foldr placeTerrain) (tg_placements tg) $
     generateGrid (terrainFrequencies (tg_biome tg))
-		 terrainInterpMap
-		 (tg_smootheness tg)
-		 rands
+                 terrainInterpMap
+                 (tg_smootheness tg)
+                 rands
 
-terrainPatchToASCII :: TerrainPatch -> Char
-terrainPatchToASCII RockFace = '#'
-terrainPatchToASCII Rubble = '*'
-terrainPatchToASCII Ore = '$'
-terrainPatchToASCII RockyGround = ':'
-terrainPatchToASCII Dirt = '.'
-terrainPatchToASCII Grass = ','
-terrainPatchToASCII Sand = '_'
-terrainPatchToASCII Desert = '_'
-terrainPatchToASCII Forest = 'f'
-terrainPatchToASCII DeepForest = 'F'
-terrainPatchToASCII Water = '~'
-terrainPatchToASCII DeepWater = '~'
-terrainPatchToASCII Ice = '^'
-terrainPatchToASCII Glass = '_'
-terrainPatchToASCII Lava = '^'
-terrainPatchToASCII RecreantFactory = 'o'
-terrainPatchToASCII Upstairs = '<'
-terrainPatchToASCII Downstairs = '>'
-
-exampleTerrainGenerator :: TerrainGenerationData
-exampleTerrainGenerator = TerrainGenerationData
-			  { tg_smootheness = 5,
-			    tg_biome = ForestBiome,
-			    tg_placements = [] }
-
-generateExampleTerrain :: Integer -> TerrainGrid
-generateExampleTerrain seed = generateTerrain exampleTerrainGenerator (randoms $ mkRNG seed)
-
-prettyPrintTerrain :: ((Integer,Integer),(Integer,Integer)) -> TerrainGrid -> [String]
-prettyPrintTerrain ((left_bound,right_bound),(top_bound,bottom_bound)) terrain_map =
-    [[terrainPatchToASCII $ gridAt terrain_map (x,y) 
-      | x <- [left_bound..right_bound]]
-     | y <- [top_bound..bottom_bound]]

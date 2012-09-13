@@ -23,8 +23,8 @@ import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Species
 import Roguestar.Lib.FactionData
 import Control.Monad.Error
+import Control.Monad.Random
 import Roguestar.Lib.Tool
-import Roguestar.Lib.CreatureAttribute
 import Data.Monoid
 import Data.Ratio
 import Roguestar.Lib.Facing
@@ -32,12 +32,18 @@ import Roguestar.Lib.Position
 import Roguestar.Lib.Plane
 import Roguestar.Lib.PlayerState
 import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Logging
 
 -- |
 -- Generates a new Creature from the specified species.
 --
 generateCreature :: Faction -> Species -> DB Creature
-generateCreature faction species = generateAttributes faction species $ mconcat $ species_starting_attributes $ speciesInfo species
+generateCreature faction species =
+    do r <- getRandomR (1,1000000)
+       return $ applyToCreature (species_traits $ speciesInfo species) $  empty_creature {
+           creature_species = species,
+           creature_faction = faction,
+           creature_random_id = r }
 
 -- |
 -- During DBRaceSelectionState, generates a new Creature for the player character.
@@ -59,13 +65,14 @@ data RollComponents = RollComponents {
     component_base :: Integer,
     component_other_situation_bonus :: Integer,
     component_terrain_affinity_bonus :: Integer }
-
+        deriving (Show)
 data Roll = Roll {
     roll_ideal :: Integer,
     roll_actual :: Integer,
     roll_ideal_components :: RollComponents,
     roll_actual_components :: RollComponents,
     roll_log :: Integer }
+        deriving (Show)
 
 rollCreatureAbilityScore :: (DBReadable db) => CreatureAbility -> Integer -> CreatureRef -> db Roll
 rollCreatureAbilityScore score other_ideal creature_ref =
@@ -75,10 +82,11 @@ rollCreatureAbilityScore score other_ideal creature_ref =
        actual <- linearRoll ideal
        [raw_actual, other_actual, terrain_actual] <- fixedSumLinearRoll [raw_ideal, other_ideal, terrain_ideal] actual
        logarithmic <- logRoll ideal
-       --trace (show $ (score,raw_ideal,other_ideal,terrain_ideal,raw_actual,other_actual,terrain_actual)) $ return ()
-       return $ Roll ideal (if raw_actual == 0 then 0 else actual)
-                (RollComponents raw_ideal other_ideal terrain_ideal)
-                (RollComponents raw_actual other_actual terrain_actual) logarithmic
+       let result = Roll ideal (if raw_actual == 0 then 0 else actual)
+                        (RollComponents raw_ideal other_ideal terrain_ideal)
+                        (RollComponents raw_actual other_actual terrain_actual) logarithmic
+       logDB log_creature DEBUG $ "rollCreatureAbilityScore; result=" ++ show result
+       return result
 
 -- | Ability bonus based on being good at working on specific types of terrain.
 getTerrainAffinity :: (DBReadable db) => CreatureRef -> db Integer
@@ -114,13 +122,15 @@ getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getCreatureHea
 
 deleteCreature :: CreatureRef -> DB ()
 deleteCreature creature_ref =
-    do planar <- liftM identityDetail $ getPlanarLocation creature_ref
+    do logDB log_creature INFO $ "deleteCreature; creature=" ++ show (toUID creature_ref)
+       planar <- liftM identityDetail $ getPlanarLocation creature_ref
        dbUnsafeDeleteObject creature_ref $ const $ return planar
 
 -- | Delete all dead creatures from the database.
 sweepDead :: Reference a -> DB ()
 sweepDead ref =
-    do worst_to_best_critters <- sortByRO (liftM creature_health . getCreatureHealth) =<< getDead ref
+    do logDB log_creature INFO "sweepDead; sweeping dead creatures"
+       worst_to_best_critters <- sortByRO (liftM creature_health . getCreatureHealth) =<< getDead ref
        flip mapM_ worst_to_best_critters $ \creature_ref ->
            do dbPushSnapshot (KilledEvent creature_ref)
               deleteCreature creature_ref

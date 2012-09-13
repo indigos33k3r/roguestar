@@ -27,7 +27,7 @@ data CharacterBumpResult =
 --
 bumpCharacter :: PowerUpData -> Creature -> CharacterBumpResult
 bumpCharacter (ForceCharacter character_class) c =
-        if character_class `elem` Map.keys (creature_levels c)
+        if CharacterClass character_class `elem` Map.keys (creature_traits c)
             then bumpCharacter (AwardCharacter $ characterFitness new_character - characterFitness c) c
             else CharacterForced {
                 character_new_character_class = character_class,
@@ -43,7 +43,7 @@ bumpCharacter (AwardCharacter n) c =
                 character_new = c { creature_points = bumped_score } }
     where bumped_score = creature_points c + n
           fitness_gain = characterFitness new_character - characterFitness c
-          new_character = applyToCreature (Map.keys $ creature_levels c) c
+          new_character = applyToCreature (Map.keys $ creature_traits c) c
 
 newCharacterClass :: CharacterBumpResult -> Maybe CharacterClass
 newCharacterClass (CharacterForced character_class _) = Just character_class
@@ -60,11 +60,11 @@ newCharacterLevel _ = Nothing
 -- measure of Character power.
 --
 characterLevel :: Creature -> Integer
-characterLevel = maximum . Map.elems . creature_levels
+characterLevel = maximum . Map.elems . creature_traits
 
 -- |
 -- Answers the estimated fitness (powerfulness) of the Character.
 --
 characterFitness :: Creature -> Integer
-characterFitness c = sum $ (Map.elems $ creature_aptitude c) ++ (Map.elems $ creature_ability c)
+characterFitness c = sum $ (Map.elems $ creature_traits c)
 
