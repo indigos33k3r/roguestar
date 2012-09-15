@@ -10,9 +10,12 @@ module Roguestar.Lib.Logging
     where
 
 import System.Log.Logger
+import System.Log.Handler.Simple
 
 initLogging :: Priority -> IO ()
-initLogging prio = updateGlobalLogger rootLoggerName (setLevel prio)
+initLogging prio = 
+    do logger <- fileHandler "log/roguestar.log" prio
+       updateGlobalLogger rootLoggerName $ setHandlers [logger]
 
 log_creature :: String
 log_creature = "lib.Creature"

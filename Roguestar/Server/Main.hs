@@ -66,8 +66,8 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
                   ("/options", options),
                   ("", heistServe)]
        game <- liftIO createGameState
-       wrapHandlers (<|> handle404)
-       wrapHandlers handle500
+       wrapSite (<|> handle404)
+       wrapSite handle500
        return $ App hs game
 
 handle500 :: MonadSnap m => m a -> m ()
@@ -415,5 +415,6 @@ instance Charcoded TerrainPatch where
 main :: IO ()
 main =
     do initLogging WARNING
-       serveSnaplet defaultConfig appInit
+       config <- commandLineConfig emptyConfig
+       serveSnaplet config appInit
 
