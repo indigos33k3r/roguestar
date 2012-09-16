@@ -1,5 +1,5 @@
 name:          roguestar
-version:       0.7.1.0
+version:       0.8.0.0
 cabal-version: >=1.2
 build-type:    Simple
 license:       OtherLicense
@@ -10,7 +10,7 @@ synopsis:      Sci-fi roguelike game.
 description:   A sci-fi roguelike game.
 category:      Game
 author:        Christopher Lane Hinson
-tested-with:   GHC ==7.0.4
+tested-with:   GHC ==7.4.1
 
 executable roguestar-server
   Main-is:        Roguestar/Server/Main.hs
