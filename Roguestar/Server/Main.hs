@@ -41,6 +41,7 @@ import Roguestar.Lib.TerrainData as TerrainData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Logging
+import Roguestar.Lib.UnitTests
 import Roguestar.Lib.DBData (Reference,ToolRef,toUID)
 import Data.UUID
 import qualified System.UUID.V4 as V4
@@ -57,6 +58,7 @@ instance HasHeist App where heistLens = subSnaplet heist
 appInit :: SnapletInit App App
 appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
     do hs <- nestSnaplet "heist" heist $ heistInit "templates"
+       (unit_test_result,unit_tests_passed) <- liftIO runTests
        addRoutes [("/start", start),
                   ("/play", play),
                   ("/static", static),
@@ -64,8 +66,10 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
                   ("/fail", handle500 (do error "my brain exploded")),
                   ("/feedback", feedback),
                   ("/options", options),
+                  ("/unit", writeText unit_test_result),
                   ("", heistServe)]
-       game <- liftIO createGameState
+       config <- liftIO $ getConfiguration default_timeout
+       game <- liftIO $ createGameState config
        wrapSite (<|> handle404)
        wrapSite handle500
        return $ App hs game
@@ -253,7 +257,8 @@ start = on_get <|> on_post
     where on_get = method GET $ render "/hidden/start"
           on_post = method POST $ 
               do game_state <- gets _app_game_state
-                 cookie <- liftIO $ createGame game_state
+                 config <- liftIO $ getConfiguration default_timeout
+                 cookie <- liftIO $ createGame config game_state
                  modifyResponse $ addResponseCookie (Cookie "game-uuid" cookie Nothing Nothing Nothing False False)
                  replay
 
@@ -298,13 +303,18 @@ oops action =
     r = setContentType "text/html" $
         setResponseStatus 500 "Internal Server Error" emptyResponse
 
+-- Session timeout in seconds (should be 15 minutes)
+default_timeout :: Integer
+default_timeout = 60*15
+
 getGame :: Handler App App Game
 getGame = 
     do game_session_cookie <- getsRequest $ List.find ((== "game-uuid") . cookieName) . rqCookies
        game_state <- gets _app_game_state
+       config <- liftIO $ getConfiguration default_timeout
        case game_session_cookie of
            Just cookie ->
-                   do result <- liftIO $ retrieveGame (cookieValue cookie) game_state
+                   do result <- liftIO $ retrieveGame (cookieValue cookie) config game_state
                       case result of
                           Just g -> return g
                           Nothing -> redirect "/start"

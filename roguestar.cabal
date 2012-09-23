@@ -106,4 +106,5 @@ library
     ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
   else
     ghc-options: -threaded -fno-warn-type-defaults
+  exposed-modules: Roguestar.Lib.UnitTests
 

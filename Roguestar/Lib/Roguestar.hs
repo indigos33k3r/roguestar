@@ -1,7 +1,9 @@
 {-# LANGUAGE Rank2Types, OverloadedStrings #-}
 
 module Roguestar.Lib.Roguestar
-    (Game,
+    (GameConfiguration(..),
+     getConfiguration,
+     Game,
      GameState,
      createGameState,
      createGame,
@@ -49,71 +51,78 @@ import Data.Text as T
 import System.Time
 import Control.Concurrent
 
+-- Session timeout information.
+data GameConfiguration = GameConfiguration {
+    game_config_timeout_seconds :: Integer,
+    game_config_current_clock_time_seconds :: Integer }
+
+-- Constructs a GameConfiguration using the current time and the desired session timeout in seconds.
+getConfiguration :: Integer -> IO GameConfiguration
+getConfiguration timeout_seconds =
+    do TOD now _ <- getClockTime
+       return $ GameConfiguration timeout_seconds now
+
+-- A collection of games, i.e. all games on the server
 data GameState = GameState {
     game_state_gamelist :: TVar (Map.Map BS.ByteString Game),
-    game_state_last_cleanup :: TVar ClockTime }
+    game_state_last_cleanup :: TVar Integer }
 
+-- The state information for a specific game.
 data Game = Game {
     game_db :: TVar DB_BaseType,
     game_message_text :: TVar [T.Text],
-    game_last_touched :: TVar ClockTime }
+    game_last_touched :: TVar Integer }
 
-newGame :: IO Game
-newGame =
+newGame :: GameConfiguration -> IO Game
+newGame config =
     do db <- newTVarIO initial_db
        empty_messages <- newTVarIO []
-       starting_time <- newTVarIO =<< getClockTime
+       starting_time <- newTVarIO (game_config_current_clock_time_seconds config)
        return $ Game db empty_messages starting_time
 
-createGameState :: IO GameState
-createGameState =
+createGameState :: GameConfiguration -> IO GameState
+createGameState config =
     do gs <- newTVarIO Map.empty
-       starting_time <- newTVarIO =<< getClockTime
+       starting_time <- newTVarIO (game_config_current_clock_time_seconds config)
        return $ GameState gs starting_time
 
-cleanup_timeout :: Integer
-cleanup_timeout = 15*60;
-
-cleanupGameState :: GameState -> IO ()
-cleanupGameState game_state =
-    do now@(TOD current_time _) <- getClockTime
-       needs_cleanup <- atomically $
-           do (TOD last_cleanup_time _) <- readTVar (game_state_last_cleanup game_state)
-              let needs_cleanup = current_time < last_cleanup_time + cleanup_timeout
-              when needs_cleanup $ writeTVar (game_state_last_cleanup game_state) now
+cleanupGameState :: GameConfiguration -> GameState -> IO ()
+cleanupGameState config game_state =
+    do needs_cleanup <- atomically $
+           do last_cleanup_time <- readTVar (game_state_last_cleanup game_state)
+              let needs_cleanup = (game_config_current_clock_time_seconds config) > last_cleanup_time + game_config_timeout_seconds config
+              when needs_cleanup $ writeTVar (game_state_last_cleanup game_state) (game_config_current_clock_time_seconds config)
               return needs_cleanup
        when needs_cleanup $ 
-           do forkIO $ doCleanup game_state
+           do forkIO $ doCleanup config game_state
               return ()
-       
-doCleanup :: GameState -> IO ()
-doCleanup game_state =
-    do (TOD now _) <- getClockTime
-       atomically $
+
+doCleanup :: GameConfiguration -> GameState -> IO ()
+doCleanup config game_state =
+    do atomically $
            do game_list <- readTVar $ game_state_gamelist game_state
               forM_ (Map.toList game_list) $ \(key,value) ->
-                  do TOD last_touched _ <- readTVar $ game_last_touched value
-                     when (last_touched + cleanup_timeout < now) $
+                  do last_touched <- readTVar $ game_last_touched value
+                     when (game_config_current_clock_time_seconds config > last_touched + game_config_timeout_seconds config) $
                          writeTVar (game_state_gamelist game_state) =<< liftM (Map.delete key) (readTVar $ game_state_gamelist game_state)
        
-createGame :: GameState -> IO BS.ByteString
-createGame game_state =
-    do cleanupGameState game_state
+createGame :: GameConfiguration -> GameState -> IO BS.ByteString
+createGame config game_state =
+    do cleanupGameState config game_state
        uuid <- liftM (BS8.pack . show) V4.uuid
-       g <- newGame
+       g <- newGame config
        atomically $
            do gs <- readTVar (game_state_gamelist game_state)
               writeTVar (game_state_gamelist game_state) $ Map.insert uuid g gs
        return uuid
 
-retrieveGame :: BS.ByteString -> GameState -> IO (Maybe Game)
-retrieveGame uuid game_state =
-    do cleanupGameState game_state
-       current_time <- getClockTime
+retrieveGame :: BS.ByteString -> GameConfiguration -> GameState -> IO (Maybe Game)
+retrieveGame uuid config game_state =
+    do cleanupGameState config game_state
        atomically $
            do m_g <- liftM (Map.lookup uuid) $ readTVar (game_state_gamelist game_state)
               case m_g of
-                  Just g -> writeTVar (game_last_touched g) current_time
+                  Just g -> writeTVar (game_last_touched g) (game_config_current_clock_time_seconds config)
                   Nothing -> return ()
               return m_g
 
