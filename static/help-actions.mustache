@@ -1,17 +1,28 @@
-<apply template="/hidden/context">
+{{> header}}
+
 <div id="documenttext" class="roguebox">
 <h1>Actions</h1>
 
-<h3>Health</h3>
+<div class="faqitem">
+<h3 class="question">Health</h3>
 
+<div class="answer">
 <p>This is how much life you have remaining.  An enemy attack can cost several points of health.</p>
+</div>
+</div>
 
-<h3>Compass</h3>
+<div class="faqitem">
+<h3 class="question">Compass</h3>
 
+<div class="answer">
 <p>Indicates the direction to your goal.</p>
+</div>
+</div>
 
-<h3>Movement Mode</h3>
+<div class="faqitem">
+<h3 class="question">Movement Mode</h3>
 
+<div class="answer">
 <p>You can use normal movement or teleportation.</p>
 
 <p>Normal movement will take an appropriate action depending on what tile you move into.
@@ -23,4 +34,6 @@ There is a small chance you will fail to teleport at all.
 It is a good way to travel rapidly or escape enemies.</p>
 
 </div>
-</apply>
+</div>
+
+{{> footer}}
