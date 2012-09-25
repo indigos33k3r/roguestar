@@ -4,6 +4,7 @@ import Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import Data.Text.Read
 import Data.Text.Encoding
 import qualified Text.XHtmlCombinators.Escape as XH
@@ -43,13 +44,16 @@ import Roguestar.Lib.Facing
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests
 import Roguestar.Lib.DBData (Reference,ToolRef,toUID)
+import Roguestar.Lib.HTML.Mustache
 import Data.UUID
 import qualified System.UUID.V4 as V4
 import GHC.Stats
+import Data.Aeson as Aeson
 
 data App = App {
     _heist :: Snaplet (Heist App),
-    _app_game_state :: GameState }
+    _app_game_state :: GameState,
+    _globals :: Aeson.Value }
 
 makeLenses [''App]
 
@@ -58,21 +62,29 @@ instance HasHeist App where heistLens = subSnaplet heist
 appInit :: SnapletInit App App
 appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
     do hs <- nestSnaplet "heist" heist $ heistInit "templates"
-       (unit_test_result,unit_tests_passed) <- liftIO runTests
+       globals <- liftIO makeGlobals
        addRoutes [("/start", start),
                   ("/play", play),
                   ("/static", static),
                   ("/hidden", handle404),
                   ("/fail", handle500 (do error "my brain exploded")),
-                  ("/feedback", feedback),
+                  ("/feedback", postFeedback <|> staticTemplate "static/feedback.mustache"),
+                  ("/feedback-thanks", staticTemplate "static/feedback-thanks.mustache"),
                   ("/options", options),
-                  ("/unit", writeText unit_test_result),
+                  ("", staticTemplate "static/index.mustache"),
                   ("", heistServe)]
        config <- liftIO $ getConfiguration default_timeout
        game <- liftIO $ createGameState config
        wrapSite (<|> handle404)
        wrapSite handle500
-       return $ App hs game
+       return $ App hs game globals
+
+makeGlobals :: IO Aeson.Value
+makeGlobals =
+    do (unit_test_result,unit_tests_passed) <- liftIO runTests
+       return $ object $ concat $ [
+           (if not unit_tests_passed then ["failed_unit_tests" .= object ["text_content" .= String unit_test_result]] else [])
+           ]
 
 handle500 :: MonadSnap m => m a -> m ()
 handle500 m = (m >> return ()) `CatchIO.catch` \(e::SomeException) -> do
@@ -91,13 +103,20 @@ handle500 m = (m >> return ()) `CatchIO.catch` \(e::SomeException) -> do
 handle404 :: Handler App App ()
 handle404 =
     do modifyResponse $ setResponseCode 404
-       render "404"
+       globals <- gets _globals
+       writeLazyText =<< liftIO (renderPage "static/404.mustache" globals)
 
 static :: Handler App App ()
 static = serveDirectory "./static/"
 
-feedback :: Handler App App ()
-feedback = method POST $
+staticTemplate :: FilePath -> Handler App App ()
+staticTemplate filepath = method GET $ ifTop $
+    do globals <- gets _globals
+       t <- liftIO $ renderPage filepath globals
+       writeLazyText t
+
+postFeedback :: Handler App App ()
+postFeedback = method POST $ ifTop $
     do feedback <- liftM (fromMaybe $ error "No feedback.") $ getPostParam "feedback"
        liftIO $
            do uuid <- V4.uuid

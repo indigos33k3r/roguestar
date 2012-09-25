@@ -15,7 +15,7 @@ tested-with:   GHC ==7.4.1
 executable roguestar-server
   Main-is:        Roguestar/Server/Main.hs
   hs-source-dirs: .
-  build-depends:
+  build-depends:  aeson >= 0.6.0.2,
                   snap >=0.8,
                   snap-core >=0.8,
                   snap-server >= 0.8,
@@ -35,10 +35,16 @@ executable roguestar-server
     ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
   else
     ghc-options: -threaded -fno-warn-type-defaults
+  other-modules:  Roguestar.Lib.HTML.Mustache
 
 library
   hs-source-dirs: .
-  build-depends:  hslogger >=1.1.0,
+  build-depends:  aeson >= 0.6.0.2,
+                  attoparsec >= 0.10.2.0,
+                  vector >= 0.9.1,
+                  unordered-containers >= 0.2.2.0,
+                  hastache >= 0.4.2,
+                  hslogger >=1.1.0,
                   bytestring >=0.9.1.5,
                   parallel >=2.2.0.1,
                   stm >=2.1.1.2,
@@ -99,12 +105,14 @@ library
                   Roguestar.Lib.Logging,
                   Roguestar.Lib.CharacterAdvancement,
                   Roguestar.Lib.PersistantData,
-                  Roguestar.Lib.PowerUpData
+                  Roguestar.Lib.PowerUpData,
+                  Roguestar.Lib.HTML.Mustache
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
     ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
   else
     ghc-options: -threaded -fno-warn-type-defaults
-  exposed-modules: Roguestar.Lib.UnitTests
+  exposed-modules: Roguestar.Lib.UnitTests,
+                   Roguestar.Lib.Roguestar
 
