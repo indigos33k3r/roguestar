@@ -51,18 +51,14 @@ import GHC.Stats
 import Data.Aeson as Aeson
 
 data App = App {
-    _heist :: Snaplet (Heist App),
     _app_game_state :: GameState,
     _globals :: Aeson.Value }
 
 makeLenses [''App]
 
-instance HasHeist App where heistLens = subSnaplet heist
-
 appInit :: SnapletInit App App
 appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
-    do hs <- nestSnaplet "heist" heist $ heistInit "templates"
-       globals <- liftIO makeGlobals
+    do globals <- liftIO makeGlobals
        addRoutes [("/start", start),
                   ("/play", play),
                   ("/static", static),
@@ -75,13 +71,13 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
                   ("/feedback", postFeedback <|> staticTemplate "static/feedback.mustache"),
                   ("/feedback-thanks", staticTemplate "static/feedback-thanks.mustache"),
                   ("/options", options),
-                  ("", staticTemplate "static/index.mustache"),
-                  ("", heistServe)]
+                  ("/start", start),
+                  ("", staticTemplate "static/index.mustache")]
        config <- liftIO $ getConfiguration default_timeout
        game <- liftIO $ createGameState config
        wrapSite (<|> handle404)
        wrapSite handle500
-       return $ App hs game globals
+       return $ App game globals
 
 makeGlobals :: IO Aeson.Value
 makeGlobals =
@@ -104,10 +100,13 @@ handle500 m = (m >> return ()) `CatchIO.catch` \(e::SomeException) -> do
     r = setContentType "text/html" $
         setResponseStatus 500 "Internal Server Error" emptyResponse
 
+getBasicState :: Handler App App Aeson.Value
+getBasicState = gets _globals
+
 handle404 :: Handler App App ()
 handle404 =
     do modifyResponse $ setResponseCode 404
-       globals <- gets _globals
+       globals <- getBasicState
        writeLazyText =<< liftIO (renderPage "static/404.mustache" globals)
 
 static :: Handler App App ()
@@ -115,7 +114,7 @@ static = serveDirectory "./static/"
 
 staticTemplate :: FilePath -> Handler App App ()
 staticTemplate filepath = method GET $ ifTop $
-    do globals <- gets _globals
+    do globals <- getBasicState
        t <- liftIO $ renderPage filepath globals
        writeLazyText t
 
@@ -131,27 +130,27 @@ options :: Handler App App ()
 options =
     do stats <- liftIO $ getGCStats
        game_state <- gets _app_game_state
-       number_of_games <- liftIO $ getNumberOfGames game_state 
-       renderWithSplices "/hidden/options"
-           [("serverstats",
-            return $ [X.Element "p" [] [X.TextNode $ T.pack $ show stats],
-                      X.Element "p" [] [X.TextNode "# of games ", X.TextNode $ T.pack $ show number_of_games]])]
+       number_of_games <- liftIO $ getNumberOfGames game_state
+       let server_statistics = object [
+               "server-statistics" .= show stats,
+               "number-of-games"   .= number_of_games ]
+       writeLazyText =<< liftIO (renderPage "static/options.mustache" server_statistics)
 
 play :: Handler App App ()
 play =
     do resolveSnapshots
        g <- getGame
        player_state <- oops $ liftIO $ getPlayerState g
-       route [("",ifTop $ method GET $ displayCurrentState player_state),
+       route [("",ifTop $ method GET $ displayGameState player_state),
               ("maptext",method GET $ createMap >>= writeText),
               ("reroll",method POST $ reroll player_state),
               ("accept",method POST $ accept player_state),
-              ("move",method POST $ move),
-              ("inventory",method GET $ displayInventory),
-              ("pickup",method POST $ pickup),
-              ("drop",method POST $ Main.drop),
-              ("wield",method POST $ wield),
-              ("unwield",method POST $ unwield)]
+              ("move",method POST $ move)]
+              --("inventory",method GET $ displayInventory),
+              --("pickup",method POST $ pickup),
+              --("drop",method POST $ Main.drop),
+              --("wield",method POST $ wield),
+              --("unwield",method POST $ unwield)]
 
 resolveSnapshots :: Handler App App ()
 resolveSnapshots =
@@ -167,31 +166,42 @@ resolveSnapshots =
 routeRoguestar :: PlayerState -> [(BS.ByteString,PlayerState -> Handler App App ())] -> Handler App App ()
 routeRoguestar ps xs = route $ map (\(bs,f) -> (bs,f ps)) xs
 
-displayCurrentState :: PlayerState -> Handler App App ()
-displayCurrentState (SpeciesSelectionState Nothing) =
-    render "/hidden/play/empty-game"
-displayCurrentState (SpeciesSelectionState (Just creature)) =
-    renderWithSplices "/hidden/play/character-creation"
-    [("content",return $ [X.TextNode $ T.pack $ "You are a " ++ show (creature_species creature) ++ "."])]
-displayCurrentState (PlayerCreatureTurn creature_ref) =
+getGameState :: PlayerState -> Handler App App Aeson.Value
+getGameState (SpeciesSelectionState Nothing) =
+    do return $ object [
+          "empty-game" .= True ]
+getGameState (SpeciesSelectionState (Just creature)) =
+    do return $ object [
+          "rolled-creature" .= object [
+              "species" .= show (creature_species creature)
+              ]
+           ]
+getGameState (PlayerCreatureTurn creature_ref) =
     do map_text <- createMap
        player_stats <- createStatsBlock
        messages <- liftM (reverse . take 5) $ liftIO . getMessages =<< getGame
-       renderWithSplices "/hidden/play/normal"
-           [("map",return $ [X.Element "pre" [] [X.TextNode map_text]]),
-            ("statsblock",return $ map (\x -> X.Element "p" [] [X.TextNode x]) player_stats),
-            ("messages",return $ map (\x -> X.Element "p" [] [X.TextNode x]) messages)]
-displayCurrentState (GameOver PlayerIsDead) =
-    do render "/hidden/play/failure"
-displayCurrentState (GameOver PlayerIsVictorious) =
-    do render "/hidden/play/success"
-displayCurrentState _ = pass
+       return $ object [ "play" .= object [
+           "map" .= map_text,
+           "statsblock" .= player_stats,
+           "messages" .= messages ]]
+getGameState (GameOver PlayerIsDead) =
+    do return $ object [
+           "player-death" .= True ]
+getGameState (GameOver PlayerIsVictorious) =
+    do return $ object [
+           "player-victory" .= True ]
+
+displayGameState :: PlayerState -> Handler App App ()
+displayGameState player_state =
+    do game_state <- getGameState player_state
+       writeLazyText =<< liftIO (renderPage "static/play.mustache" game_state)
 
 data Inventory = Inventory {
     inventory_wielded :: Maybe VisibleObject,
     inventory_carried :: [VisibleObject],
     inventory_ground :: [VisibleObject] }
 
+{-
 collectInventory :: Game -> Handler App App (Either DBError Inventory)
 collectInventory g = liftIO $ perceive g $
     do visible_objects <- liftM stackVisibleObjects $ visibleObjects (const $ return True)
@@ -204,7 +214,8 @@ collectInventory g = liftIO $ perceive g $
                   visible_creature_wielding me,
            inventory_ground = filter isVisibleTool $ fromMaybe [] vobs_at_my_position,
            inventory_carried = my_inventory }
-
+-}
+{-
 displayInventory :: Handler App App ()
 displayInventory =
     do g <- getGame
@@ -226,6 +237,7 @@ inventoryAction tool_ref (action_name,css_class,action_path) =
     [X.Element "form" [("action",action_path),("method","post")]
         [X.Element "button" [("type","submit"),("class",css_class)] [X.TextNode action_name],
          X.Element "input" [("type","hidden"),("name","uid"),("value",T.pack $ show $ toUID tool_ref)] []]]
+-}
 
 reroll :: PlayerState -> Handler App App ()
 reroll (SpeciesSelectionState _) =
@@ -262,7 +274,8 @@ moveBehavior =
                       "jump" -> return Jump
                       "turn" -> return TurnInPlace
        return $ action facing
-     
+
+{-
 pickup :: Handler App App ()
 pickup = commitBehavior =<< inventoryBehavior Pickup
 
@@ -274,17 +287,19 @@ wield = commitBehavior =<< inventoryBehavior Wield
 
 unwield :: Handler App App ()
 unwield = commitBehavior Unwield
+-}
 
 start :: Handler App App ()
 start = on_get <|> on_post
-    where on_get = method GET $ render "/hidden/start"
-          on_post = method POST $ 
+    where on_get = method GET $ writeLazyText =<< liftIO (renderPage "static/start.mustache" (object []))
+          on_post = method POST $
               do game_state <- gets _app_game_state
                  config <- liftIO $ getConfiguration default_timeout
                  cookie <- liftIO $ createGame config game_state
                  modifyResponse $ addResponseCookie (Cookie "game-uuid" cookie Nothing Nothing Nothing False False)
                  replay
 
+{-
 inventoryBehavior :: (ToolRef -> Behavior) -> Handler App App Behavior
 inventoryBehavior f =
     do g <- getGame
@@ -293,6 +308,7 @@ inventoryBehavior f =
        let all_items = map visible_tool_ref $ concat [maybeToList $ inventory_wielded inventory, inventory_carried inventory, inventory_ground inventory]
            my_item = fromMaybe (error "No match in inventory.") $ List.find ((uid ==) . toUID) all_items
        return $ f my_item
+-}
 
 commitBehavior :: Behavior -> Handler App App ()
 commitBehavior behavior =

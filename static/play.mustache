@@ -1,22 +1,23 @@
 {{> header}}
 
+{{#play}}
 <div id="magicbox">
 
 <div id="gameplaybox" class="roguebox">
-  {{{map}}}
+  <pre>{{{map}}}</pre>
   <a href="/help-map" class="help">?</a>
 </div>
 
 <div id="messagebox" class="roguebox">
   {{#messages}}
-    <p>{{{text}}}
+    <p>{{{text}}}</p>
   {{/messages}}
 </div>
 
 <div id="controls" class="roguebox">
-  {{#stats}}
-    {{{text}}}
-  {{/stats}}
+  {{#statsblock}}
+    <pre>{{{text}}}</pre>
+  {{/statsblock}}
 <form action="/play/move" method="post">
 
 <div>
@@ -62,5 +63,22 @@
 </div>
 
 </div>
+{{/play}}
+
+{{#empty-game}}
+{{> empty-game}}
+{{/empty-game}}
+
+{{#rolled-creature}}
+{{> rolled-creature}}
+{{/rolled-creature}}
+
+{{#player-death}}
+{{> player-death}}
+{{/player-death}}
+
+{{#player-victory}}
+{{> player-victory}}
+{{/player-victory}}
 
 {{> footer}}

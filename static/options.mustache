@@ -1,4 +1,4 @@
-<apply template="/hidden/context">
+{{> header}}
 <div id="documenttext" class="roguebox">
 
 <h1>Options</h1>
@@ -7,7 +7,9 @@
 <button type="submit">Restart Game</button>
 </form>
 
-<serverstats/>
+<pre>{{server-statistics}}</pre>
+
+<p>Current number of game sessions: {{{number-of-games}}}</p>
 
 </div>
-</apply>
+{{> footer}}
