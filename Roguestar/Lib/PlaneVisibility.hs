@@ -34,7 +34,7 @@ dbGetSeersForFaction faction plane_ref =
 -- to the specified faction on the specified plane.
 --
 dbGetVisibleTerrainForFaction :: (DBReadable db) => Faction -> PlaneRef ->
-                                                    db [(TerrainPatch,Position)]
+                                                    db [(Position,TerrainPatch)]
 dbGetVisibleTerrainForFaction faction plane_ref =
     do critters <- dbGetSeersForFaction faction plane_ref
        liftM (nub . concat) $ mapRO dbGetVisibleTerrainForCreature critters
@@ -42,7 +42,7 @@ dbGetVisibleTerrainForFaction faction plane_ref =
 -- |
 -- Returns a list of all terrain patches that are visible to the specified creature.
 --
-dbGetVisibleTerrainForCreature :: (DBReadable db) => CreatureRef -> db [(TerrainPatch,Position)]
+dbGetVisibleTerrainForCreature :: (DBReadable db) => CreatureRef -> db [(Position,TerrainPatch)]
 dbGetVisibleTerrainForCreature creature_ref =
     do loc <- liftM identityDetail $ getPlanarLocation creature_ref
        spot_check <- dbGetSpotCheck creature_ref
@@ -112,10 +112,10 @@ dbGetHideCheck _   | otherwise = return 1
 -- visibleTerrain (creature's location) (spot check) (the terrain map) gives
 -- a list of visible terrain patches from that location with that spot check.
 --
-visibleTerrain :: Position -> Integer -> TerrainGrid -> [(TerrainPatch,Position)]
+visibleTerrain :: Position -> Integer -> TerrainGrid -> [(Position,TerrainPatch)]
 visibleTerrain (Position (creature_at@(creature_x,creature_y))) spot_check terrain =
     let max_range = maximumRangeForSpotCheck spot_check
-        in map (\(x,y) -> (gridAt terrain (x,y),Position (x,y))) $
+        in map (\(x,y) -> (Position (x,y),gridAt terrain (x,y))) $
            castRays creature_at
                         [terrainPatchBrightnessForm creature_at spot_check (creature_x+x,creature_y+y)
                          | x <- [-max_range..max_range],

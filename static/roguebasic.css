@@ -274,8 +274,14 @@ a:hover {
     top: 0px;
     width: 500px;
     height: 500px;
-    letter-spacing: 6.5pt;
-    text-align: center;
+    background: #000000;
+}
+
+.mapcontent {
+  font-size: 12pt;
+  letter-spacing: 6.5pt;
+  text-align: center;
+  white-space: pre;
 }
 
 #gameplaybox .help {
@@ -342,4 +348,54 @@ a:hover {
 .feedback button {
 	margin-top: 1cm;
     clear: both;
+}
+
+/* Strong */
+.B {
+    font-weight: bold;
+}
+
+/* Sandy */
+.s {
+    color: #FFFF00;
+}
+
+/* Dusty */
+.d {
+    color: #888800;
+}
+
+/* Icy */
+.i {
+    color: #00FFFF;
+}
+
+/* Plants */
+.p {
+    color: #00FF00;
+}
+
+/* FaintMagic */
+.a {
+    color: #AA55AA;
+}
+
+/* StrongMagic */
+.A {
+    color: #FF00FF;
+}
+
+/* Wet */
+.w {
+    color: #4488FF;
+}
+
+/* Molten */
+.m {
+    color: #FF0000;
+}
+
+/* Gloomy */
+.g {
+    color: #0000FF;
 }

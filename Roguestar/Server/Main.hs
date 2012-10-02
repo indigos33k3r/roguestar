@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings, ScopedTypeVariables, PatternGuards #-}
 
 import Prelude
 import qualified Data.ByteString as BS
@@ -49,6 +49,7 @@ import Data.UUID
 import qualified System.UUID.V4 as V4
 import GHC.Stats
 import Data.Aeson as Aeson
+import qualified Data.HashMap.Strict as HashMap
 
 data App = App {
     _app_game_state :: GameState,
@@ -106,8 +107,7 @@ getBasicState = gets _globals
 handle404 :: Handler App App ()
 handle404 =
     do modifyResponse $ setResponseCode 404
-       globals <- getBasicState
-       writeLazyText =<< liftIO (renderPage "static/404.mustache" globals)
+       staticTemplate "static/404.mustache"
 
 static :: Handler App App ()
 static = serveDirectory "./static/"
@@ -115,8 +115,17 @@ static = serveDirectory "./static/"
 staticTemplate :: FilePath -> Handler App App ()
 staticTemplate filepath = method GET $ ifTop $
     do globals <- getBasicState
-       t <- liftIO $ renderPage filepath globals
-       writeLazyText t
+       renderThemedPage filepath $ object [
+           "static"          .= True,
+           "server-globals"  .= globals,
+           "path"            .= filepath ]
+
+renderThemedPage :: FilePath -> Aeson.Value -> Handler App App ()
+renderThemedPage filepath value =
+    do theme <- liftM (fromMaybe "default") $ getQueryParam "theme"
+       case theme of
+           "default" -> writeLazyText =<< liftIO (renderPage filepath value)
+           "json"    -> writeLBS $ Aeson.encode value
 
 postFeedback :: Handler App App ()
 postFeedback = method POST $ ifTop $
@@ -134,7 +143,7 @@ options =
        let server_statistics = object [
                "server-statistics" .= show stats,
                "number-of-games"   .= number_of_games ]
-       writeLazyText =<< liftIO (renderPage "static/options.mustache" server_statistics)
+       renderThemedPage "static/options.mustache" server_statistics
 
 play :: Handler App App ()
 play =
@@ -142,7 +151,6 @@ play =
        g <- getGame
        player_state <- oops $ liftIO $ getPlayerState g
        route [("",ifTop $ method GET $ displayGameState player_state),
-              ("maptext",method GET $ createMap >>= writeText),
               ("reroll",method POST $ reroll player_state),
               ("accept",method POST $ accept player_state),
               ("move",method POST $ move)]
@@ -177,11 +185,11 @@ getGameState (SpeciesSelectionState (Just creature)) =
               ]
            ]
 getGameState (PlayerCreatureTurn creature_ref) =
-    do map_text <- createMap
+    do map_content <- generateMapContent
        player_stats <- createStatsBlock
        messages <- liftM (reverse . take 5) $ liftIO . getMessages =<< getGame
        return $ object [ "play" .= object [
-           "map" .= map_text,
+           "map" .= map_content,
            "statsblock" .= player_stats,
            "messages" .= messages ]]
 getGameState (GameOver PlayerIsDead) =
@@ -194,7 +202,7 @@ getGameState (GameOver PlayerIsVictorious) =
 displayGameState :: PlayerState -> Handler App App ()
 displayGameState player_state =
     do game_state <- getGameState player_state
-       writeLazyText =<< liftIO (renderPage "static/play.mustache" game_state)
+       renderThemedPage "static/play.mustache" game_state
 
 data Inventory = Inventory {
     inventory_wielded :: Maybe VisibleObject,
@@ -291,7 +299,7 @@ unwield = commitBehavior Unwield
 
 start :: Handler App App ()
 start = on_get <|> on_post
-    where on_get = method GET $ writeLazyText =<< liftIO (renderPage "static/start.mustache" (object []))
+    where on_get = method GET $ renderThemedPage "static/start.mustache" (object [])
           on_post = method POST $
               do game_state <- gets _app_game_state
                  config <- liftIO $ getConfiguration default_timeout
@@ -360,44 +368,42 @@ getGame =
            Nothing -> redirect "/start"
 
 data MapData = MapData {
-    md_visible_terrain :: [(TerrainPatch,Position)],
+    md_visible_terrain :: Map.Map Position TerrainPatch,
     md_visible_objects :: Map.Map Position [VisibleObject],
     md_position_info :: (Facing,Position) }
 
-createMap :: Handler App App T.Text
-createMap =
+generateMapContent :: Handler App App Aeson.Value
+generateMapContent =
     do let (x,y) = (21,21) --we'll probably want to let the player customize this later
        g <- getGame
        map_data <- oops $ liftIO $ perceive g $
-           do visible_terrain <- visibleTerrain
+           do visible_terrain <- liftM Map.fromList visibleTerrain
               visible_objects <- liftM stackVisibleObjects $ visibleObjects (const $ return True)
               my_position <- whereAmI
               return $ MapData visible_terrain visible_objects my_position
-       return $ constructMapText (x,y) map_data
+       return $ generateMapContent_ (x,y) map_data
 
-constructMapText :: (Integer,Integer) -> MapData -> T.Text
-constructMapText (width,height) _ | width `mod` 2 == 0 || height `mod` 2 == 0 = error "Map widths and heights must be odd numbers"
-constructMapText (width,height) (MapData visible_terrain visible_objects (_,Position (center_x,center_y))) = T.unfoldr f (False,0)
-    where f :: (Bool,Int) -> Maybe (Char, (Bool,Int))
-          f (False,i) = if i > snd (bounds char_array)
-                            then Nothing
-                            else Just (char_array ! i,(succ i `mod` fromInteger width == 0,succ i))
-          f (True,i)  = Just ('\n',(False,i))
-          x_adjust = center_x - (width-1) `div` 2
-          y_adjust = center_y - (height-1) `div` 2
-          array_length = fromInteger $ width*height
-          char_array :: UArray Int Char
-          char_array = runSTUArray $
-              do ax <- newArray (0,array_length-1) ' '
-                 forM_ visible_terrain $ \(tp,Position (x,y)) ->
-                     do let i = fromInteger $ (x-x_adjust) + (height-(y-y_adjust)-1)*width
-                        when (i >= 0 && i < array_length-1) $
-                            writeArray ax i $ charcodeOf tp
-                 forM_ (Map.assocs visible_objects) $ \(Position (x,y), vobs) ->
-                     do let i = fromInteger $ (x-x_adjust) + (height-(y-y_adjust)-1) * width
-                        when (i >= 0 && i < array_length-1) $
-                            writeArray ax i $ charcodeOf vobs 
-                 return ax
+generateMapContent_ :: (Integer,Integer) -> MapData -> Aeson.Value
+generateMapContent_ (width,height) _ | width `mod` 2 == 0 || height `mod` 2 == 0 = error "Map widths and heights must be odd numbers"
+generateMapContent_ (width,height) (MapData visible_terrain visible_objects (_,Position (center_x,center_y))) = object [ "map-content" .= maplines ]
+    where maplines =
+              do y <- reverse $ [center_y - height `div` 2 .. center_y + width `div` 2]
+                 return $ Aeson.toJSON $ map ungroup $ List.group $ mapline y
+          ungroup [x] = x -- do run-length encoding on the result:
+          ungroup xs@(Aeson.Object hashmap:_) =
+              let String str = fromMaybe (error "no 't'") $ HashMap.lookup "t" hashmap
+                  in Aeson.Object $ HashMap.insert "t" (String $ T.replicate (length xs) str) hashmap
+          mapline y =
+              do x <- [center_x - width `div` 2 .. center_x + width `div` 2]
+                 return $ Aeson.toJSON $ mapstring x y
+          mapstring x y = 
+                 let maybe_terrain = Map.lookup (Position (x,y)) visible_terrain
+                     maybe_object = Map.lookup (Position (x,y)) visible_objects
+                     rendered_json = case () of
+                                () | Just (vob:_) <- maybe_object -> rendering vob
+                                () | Just terrain <- maybe_terrain -> rendering terrain
+                                () | otherwise -> object [ "t" .= ' ' ]
+                     in rendered_json
 
 data StatsData = StatsData {
     stats_health :: CreatureHealth,
@@ -420,46 +426,66 @@ createStatsBlock =
            T.concat ["Compass: ",
                      T.pack $ show $ stats_compass stats]]
 
-class Charcoded a where
-    charcodeOf :: a -> Char
+data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | DeepWet | Molten | Gloomy | FaintMagic | StrongMagic | StrongDusty
 
-instance Charcoded a => Charcoded [a] where
-    charcodeOf (a:as) = charcodeOf a
-    charcodeOf [] = ' '
+styleToCSS :: Style -> T.Text
+styleToCSS Empty = ""
+styleToCSS Strong = "B"
+styleToCSS Rocky = "r"
+styleToCSS Icy = "i"
+styleToCSS Plants = "p"
+styleToCSS Dusty = "d"
+styleToCSS Sandy = "s"
+styleToCSS Wet = "w"
+styleToCSS Molten = "o"
+styleToCSS Gloomy = "g"
+styleToCSS FaintMagic = "a"
+styleToCSS StrongMagic = "B A"
+styleToCSS StrongDusty = "B d"
+
+class Charcoded a where
+    codedRepresentation :: a -> (Char,Style)
+    rendering :: a -> Aeson.Value
+    rendering a = object [ "t" .= t, "c" .= styleToCSS c ]
+        where (t,c) = codedRepresentation a
+        
+instance Charcoded a => Charcoded (Maybe a) where
+    codedRepresentation (Just a) = codedRepresentation a
+    codedRepresentation Nothing = (' ',Empty)
 
 instance Charcoded VisibleObject where
-    charcodeOf (VisibleTool { visible_tool = t }) = charcodeOf t
-    charcodeOf (VisibleCreature { visible_creature_species = s }) = charcodeOf s
-    charcodeOf (VisibleBuilding{}) = 'X'
+    codedRepresentation (VisibleTool { visible_tool = t }) = codedRepresentation t
+    codedRepresentation (VisibleCreature { visible_creature_species = s }) = codedRepresentation s
+    codedRepresentation (VisibleBuilding{}) = ('#',StrongMagic)
 
 instance Charcoded Tool where
-    charcodeOf (Sphere {}) = '%'
-    charcodeOf (DeviceTool Gun _) = ')'
-    charcodeOf (DeviceTool Sword _) = ')'
+    codedRepresentation (Sphere {}) = ('%',Strong)
+    codedRepresentation (DeviceTool Gun _) = (')',Strong)
+    codedRepresentation (DeviceTool Sword _) = (')',Strong)
 
 instance Charcoded Species where
-    charcodeOf RedRecreant = 'r'
-    charcodeOf BlueRecreant = '@'
+    codedRepresentation RedRecreant = ('r',Strong)
+    codedRepresentation BlueRecreant = ('@',Strong)
 
 instance Charcoded TerrainPatch where
-    charcodeOf RockFace          = '#'
-    charcodeOf Rubble            = '.'
-    charcodeOf Ore               = '.'
-    charcodeOf RockyGround       = '.'
-    charcodeOf Dirt              = '.'
-    charcodeOf Grass             = '.'
-    charcodeOf Sand              = '.'
-    charcodeOf Desert            = '.'
-    charcodeOf Forest            = 'f'
-    charcodeOf DeepForest        = 'f'
-    charcodeOf TerrainData.Water = '~'
-    charcodeOf DeepWater         = '~'
-    charcodeOf Ice               = '.'
-    charcodeOf Lava              = '~'
-    charcodeOf Glass             = '.'
-    charcodeOf RecreantFactory   = '_'
-    charcodeOf Upstairs          = '<'
-    charcodeOf Downstairs        = '>'
+    codedRepresentation RockFace          = ('#',Rocky)
+    codedRepresentation Rubble            = ('.',Rocky)
+    codedRepresentation Ore               = ('.',Rocky)
+    codedRepresentation RockyGround       = ('.',Rocky)
+    codedRepresentation Dirt              = ('.',Dusty)
+    codedRepresentation Grass             = ('.',Plants)
+    codedRepresentation Sand              = ('.',Sandy)
+    codedRepresentation Desert            = ('.',Sandy)
+    codedRepresentation Forest            = ('f',Plants)
+    codedRepresentation DeepForest        = ('f',Plants)
+    codedRepresentation TerrainData.Water = ('~',Wet)
+    codedRepresentation DeepWater         = ('~',Gloomy)
+    codedRepresentation Ice               = ('.',Icy)
+    codedRepresentation Lava              = ('~',Molten)
+    codedRepresentation Glass             = ('.',Gloomy)
+    codedRepresentation RecreantFactory   = ('_',FaintMagic)
+    codedRepresentation Upstairs          = ('<',StrongDusty)
+    codedRepresentation Downstairs        = ('>',StrongDusty)
 
 main :: IO ()
 main =

@@ -89,7 +89,7 @@ whoAmI = DBPerception $ ask
 runPerception :: (DBReadable db) => CreatureRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
 
-visibleTerrain :: (DBReadable db) => DBPerception db [(TerrainPatch,Position)]
+visibleTerrain :: (DBReadable db) => DBPerception db [(Position,TerrainPatch)]
 visibleTerrain =
     do plane_ref <- whatPlaneAmIOn
        faction <- myFaction

@@ -3,10 +3,12 @@
 {{#play}}
 <div id="magicbox">
 
+{{#map}}
 <div id="gameplaybox" class="roguebox">
-  <pre>{{{map}}}</pre>
+  {{> map}}
   <a href="/help-map" class="help">?</a>
 </div>
+{{/map}}
 
 <div id="messagebox" class="roguebox">
   {{#messages}}
