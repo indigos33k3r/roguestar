@@ -10,6 +10,7 @@ module Roguestar.Lib.Roguestar
      retrieveGame,
      getNumberOfGames,
      getPlayerState,
+     getSnapshotPlayerState,
      rerollStartingSpecies,
      Creature(..),
      TerrainPatch(..),
@@ -17,6 +18,7 @@ module Roguestar.Lib.Roguestar
      Facing(..),
      Roguestar.Lib.Roguestar.beginGame,
      perceive,
+     perceiveSnapshot,
      behave,
      Roguestar.Lib.Roguestar.facingBehavior,
      Roguestar.Lib.Roguestar.hasSnapshot,
@@ -248,6 +250,7 @@ unpackMessages_ WeaponExplodesEvent {} = return ["Your weapon explodes!"]
 unpackMessages_ DisarmEvent {} = return ["Someone disarms someone else."]
 unpackMessages_ SunderEvent {} = return ["The weapon has been sundered!"]
 unpackMessages_ TeleportEvent {} = return ["You teleport."]
+unpackMessages_ SpawnEvent {} = return ["A recreant materializes on the teleportation pad!"]
 unpackMessages_ ClimbEvent {} = return ["You wonder through a network of tunnels."]
 unpackMessages_ HealEvent {} = return ["You heal."]
 unpackMessages_ ExpendToolEvent {} = return ["That material sphere has been used up."]

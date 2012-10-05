@@ -279,9 +279,14 @@ a:hover {
 
 .mapcontent {
   font-size: 12pt;
-  letter-spacing: 6.5pt;
   text-align: center;
   white-space: pre;
+}
+
+.mapcontent span {
+  text-align: center;
+  margin-left: 3.25pt;
+  margin-right: 3.25pt;
 }
 
 #gameplaybox .help {
@@ -398,4 +403,21 @@ a:hover {
 /* Gloomy */
 .g {
     color: #0000FF;
+}
+
+/* Warp-In Effect */
+.warpin {
+    color: #000000;
+    background: #FF55FF;
+}
+
+.damage {
+    color: #000000;
+    background: #FF0000;
+}
+
+.active {
+    border: solid;
+    border-width: 1px;
+    border-color: #444444;
 }

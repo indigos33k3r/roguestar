@@ -20,6 +20,8 @@
   {{#statsblock}}
     <pre>{{{text}}}</pre>
   {{/statsblock}}
+
+{{#controls}}
 <form action="/play/move" method="post">
 
 <div>
@@ -52,6 +54,13 @@
 <button type="submit" name="direction" value="se">SouthEast</button>
 </div>
 </div>
+{{/controls}}
+
+{{#is-snapshot}}
+<form class="autosubmit-after-pause" action="/play/pop" method="post">
+<button type="submit">Pop Next Event</button>
+</form>
+{{/is-snapshot}}
 
 <a href="/help-actions" class="help">?</a>
 

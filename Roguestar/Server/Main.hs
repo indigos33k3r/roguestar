@@ -147,29 +147,37 @@ options =
 
 play :: Handler App App ()
 play =
-    do resolveSnapshots
+    do --resolveSnapshots
        g <- getGame
        player_state <- oops $ liftIO $ getPlayerState g
        route [("",ifTop $ method GET $ displayGameState player_state),
               ("reroll",method POST $ reroll player_state),
               ("accept",method POST $ accept player_state),
-              ("move",method POST $ move)]
+              ("move",method POST $ move),
+              ("pop",method POST $ resolveOneSnapshot)]
               --("inventory",method GET $ displayInventory),
               --("pickup",method POST $ pickup),
               --("drop",method POST $ Main.drop),
               --("wield",method POST $ wield),
               --("unwield",method POST $ unwield)]
 
-resolveSnapshots :: Handler App App ()
-resolveSnapshots =
+resolveAllSnapshots :: Handler App App ()
+resolveAllSnapshots =
     do g <- getGame
        b <- oops $ liftIO $ hasSnapshot g
        case b of
            True ->
                do oops $ liftIO $ popSnapshot g
-                  resolveSnapshots
+                  resolveAllSnapshots
            False ->
                do return ()
+
+resolveOneSnapshot :: Handler App App ()
+resolveOneSnapshot =
+    do g <- getGame
+       b <- oops $ liftIO $ hasSnapshot g
+       when b $ oops $ liftIO $ popSnapshot g
+       replay
 
 routeRoguestar :: PlayerState -> [(BS.ByteString,PlayerState -> Handler App App ())] -> Handler App App ()
 routeRoguestar ps xs = route $ map (\(bs,f) -> (bs,f ps)) xs
@@ -185,13 +193,17 @@ getGameState (SpeciesSelectionState (Just creature)) =
               ]
            ]
 getGameState (PlayerCreatureTurn creature_ref) =
-    do map_content <- generateMapContent
+    do g <- getGame
+       map_content <- generateMapContent
        player_stats <- createStatsBlock
-       messages <- liftM (reverse . take 5) $ liftIO . getMessages =<< getGame
+       messages <- liftM (reverse . take 5) $ liftIO $ getMessages g
+       is_snapshot <- oops $ liftIO $ hasSnapshot g
        return $ object [ "play" .= object [
            "map" .= map_content,
            "statsblock" .= player_stats,
-           "messages" .= messages ]]
+           "messages" .= messages,
+           "is-snapshot" .= is_snapshot,
+           "controls" .= not is_snapshot ]]
 getGameState (GameOver PlayerIsDead) =
     do return $ object [
            "player-death" .= True ]
@@ -337,7 +349,7 @@ oops action =
                   liftIO $ putMessage g $ unpackError flag
                   replay
                   return $ error "oops:  Unreachable code."
-           Left (DBError bad) -> 
+           Left (DBError bad) ->
                do putResponse r
                   writeText "<html><head><title>Gameplay Error</title></head>"
                   writeText "<body><h1>Gameplay Error</h1>"
@@ -355,7 +367,7 @@ default_timeout :: Integer
 default_timeout = 60*15
 
 getGame :: Handler App App Game
-getGame = 
+getGame =
     do game_session_cookie <- getsRequest $ List.find ((== "game-uuid") . cookieName) . rqCookies
        game_state <- gets _app_game_state
        config <- liftIO $ getConfiguration default_timeout
@@ -376,32 +388,29 @@ generateMapContent :: Handler App App Aeson.Value
 generateMapContent =
     do let (x,y) = (21,21) --we'll probably want to let the player customize this later
        g <- getGame
-       map_data <- oops $ liftIO $ perceive g $
+       player_state <- oops $ liftIO $ getSnapshotPlayerState g
+       map_data <- oops $ liftIO $ perceiveSnapshot g $
            do visible_terrain <- liftM Map.fromList visibleTerrain
               visible_objects <- liftM stackVisibleObjects $ visibleObjects (const $ return True)
               my_position <- whereAmI
               return $ MapData visible_terrain visible_objects my_position
-       return $ generateMapContent_ (x,y) map_data
+       return $ generateMapContent_ player_state (x,y) map_data
 
-generateMapContent_ :: (Integer,Integer) -> MapData -> Aeson.Value
-generateMapContent_ (width,height) _ | width `mod` 2 == 0 || height `mod` 2 == 0 = error "Map widths and heights must be odd numbers"
-generateMapContent_ (width,height) (MapData visible_terrain visible_objects (_,Position (center_x,center_y))) = object [ "map-content" .= maplines ]
+generateMapContent_ :: PlayerState -> (Integer,Integer) -> MapData -> Aeson.Value
+generateMapContent_ _ (width,height) _ | width `mod` 2 == 0 || height `mod` 2 == 0 = error "Map widths and heights must be odd numbers"
+generateMapContent_ player_state (width,height) (MapData visible_terrain visible_objects (_,Position (center_x,center_y))) = object [ "map-content" .= maplines ]
     where maplines =
               do y <- reverse $ [center_y - height `div` 2 .. center_y + width `div` 2]
-                 return $ Aeson.toJSON $ map ungroup $ List.group $ mapline y
-          ungroup [x] = x -- do run-length encoding on the result:
-          ungroup xs@(Aeson.Object hashmap:_) =
-              let String str = fromMaybe (error "no 't'") $ HashMap.lookup "t" hashmap
-                  in Aeson.Object $ HashMap.insert "t" (String $ T.replicate (length xs) str) hashmap
+                 return $ mapline y
           mapline y =
               do x <- [center_x - width `div` 2 .. center_x + width `div` 2]
                  return $ Aeson.toJSON $ mapstring x y
-          mapstring x y = 
+          mapstring x y =
                  let maybe_terrain = Map.lookup (Position (x,y)) visible_terrain
                      maybe_object = Map.lookup (Position (x,y)) visible_objects
                      rendered_json = case () of
-                                () | Just (vob:_) <- maybe_object -> rendering vob
-                                () | Just terrain <- maybe_terrain -> rendering terrain
+                                () | Just (vob:_) <- maybe_object -> rendering player_state vob
+                                () | Just terrain <- maybe_terrain -> rendering player_state terrain
                                 () | otherwise -> object [ "t" .= ' ' ]
                      in rendered_json
 
@@ -426,7 +435,7 @@ createStatsBlock =
            T.concat ["Compass: ",
                      T.pack $ show $ stats_compass stats]]
 
-data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | DeepWet | Molten | Gloomy | FaintMagic | StrongMagic | StrongDusty
+data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | DeepWet | Molten | Gloomy | FaintMagic | StrongMagic | StrongDusty | WarpIn | Damage | Active
 
 styleToCSS :: Style -> T.Text
 styleToCSS Empty = ""
@@ -442,50 +451,68 @@ styleToCSS Gloomy = "g"
 styleToCSS FaintMagic = "a"
 styleToCSS StrongMagic = "B A"
 styleToCSS StrongDusty = "B d"
+styleToCSS WarpIn = "B warpin"
+styleToCSS Damage = "B damage"
+styleToCSS Active = "B active"
 
 class Charcoded a where
-    codedRepresentation :: a -> (Char,Style)
-    rendering :: a -> Aeson.Value
-    rendering a = object [ "t" .= t, "c" .= styleToCSS c ]
-        where (t,c) = codedRepresentation a
-        
+    codedRepresentation :: PlayerState -> a -> (Char,Style)
+    rendering :: PlayerState -> a -> Aeson.Value
+    rendering player_state a = object [ "t" .= t, "c" .= styleToCSS c ]
+        where (t,c) = codedRepresentation player_state a
+
 instance Charcoded a => Charcoded (Maybe a) where
-    codedRepresentation (Just a) = codedRepresentation a
-    codedRepresentation Nothing = (' ',Empty)
+    codedRepresentation player_state (Just a) = codedRepresentation player_state a
+    codedRepresentation player_state Nothing = (' ',Empty)
 
 instance Charcoded VisibleObject where
-    codedRepresentation (VisibleTool { visible_tool = t }) = codedRepresentation t
-    codedRepresentation (VisibleCreature { visible_creature_species = s }) = codedRepresentation s
-    codedRepresentation (VisibleBuilding{}) = ('#',StrongMagic)
+    codedRepresentation player_state (VisibleTool { visible_tool = t }) = codedRepresentation player_state t
+    codedRepresentation player_state@(SnapshotEvent (TeleportEvent { teleport_event_creature = teleport_c }))
+                                     (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     teleport_c == this_c =
+                                     (fst $ codedRepresentation player_state s, WarpIn)
+    codedRepresentation player_state@(SnapshotEvent (SpawnEvent { spawn_event_creature = spawn_c }))
+                                     (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     spawn_c == this_c =
+                                     (fst $ codedRepresentation player_state s, WarpIn)
+    codedRepresentation player_state@(SnapshotEvent (AttackEvent { attack_event_target_creature = target_c }))
+                                     (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     target_c == this_c =
+                                     (fst $ codedRepresentation player_state s, Damage)
+    codedRepresentation player_state (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     subjectOf player_state == Just this_c =
+                                     (fst $ codedRepresentation player_state s, Active)
+    codedRepresentation player_state (VisibleCreature { visible_creature_species = s }) = codedRepresentation player_state s
+    codedRepresentation _            (VisibleBuilding{}) = ('#',StrongMagic)
 
 instance Charcoded Tool where
-    codedRepresentation (Sphere {}) = ('%',Strong)
-    codedRepresentation (DeviceTool Gun _) = (')',Strong)
-    codedRepresentation (DeviceTool Sword _) = (')',Strong)
+    codedRepresentation _ (Sphere {}) = ('%',Strong)
+    codedRepresentation _ (DeviceTool Gun _) = (')',Strong)
+    codedRepresentation _ (DeviceTool Sword _) = (')',Strong)
 
 instance Charcoded Species where
-    codedRepresentation RedRecreant = ('r',Strong)
-    codedRepresentation BlueRecreant = ('@',Strong)
+    codedRepresentation _ RedRecreant = ('r',Strong)
+    codedRepresentation _ BlueRecreant = ('@',Strong)
 
 instance Charcoded TerrainPatch where
-    codedRepresentation RockFace          = ('#',Rocky)
-    codedRepresentation Rubble            = ('.',Rocky)
-    codedRepresentation Ore               = ('.',Rocky)
-    codedRepresentation RockyGround       = ('.',Rocky)
-    codedRepresentation Dirt              = ('.',Dusty)
-    codedRepresentation Grass             = ('.',Plants)
-    codedRepresentation Sand              = ('.',Sandy)
-    codedRepresentation Desert            = ('.',Sandy)
-    codedRepresentation Forest            = ('f',Plants)
-    codedRepresentation DeepForest        = ('f',Plants)
-    codedRepresentation TerrainData.Water = ('~',Wet)
-    codedRepresentation DeepWater         = ('~',Gloomy)
-    codedRepresentation Ice               = ('.',Icy)
-    codedRepresentation Lava              = ('~',Molten)
-    codedRepresentation Glass             = ('.',Gloomy)
-    codedRepresentation RecreantFactory   = ('_',FaintMagic)
-    codedRepresentation Upstairs          = ('<',StrongDusty)
-    codedRepresentation Downstairs        = ('>',StrongDusty)
+    codedRepresentation _ RockFace          = ('#',Rocky)
+    codedRepresentation _ Rubble            = ('.',Rocky)
+    codedRepresentation _ Ore               = ('.',Rocky)
+    codedRepresentation _ RockyGround       = ('.',Rocky)
+    codedRepresentation _ Dirt              = ('.',Dusty)
+    codedRepresentation _ Grass             = ('.',Plants)
+    codedRepresentation _ Sand              = ('.',Sandy)
+    codedRepresentation _ Desert            = ('.',Sandy)
+    codedRepresentation _ Forest            = ('f',Plants)
+    codedRepresentation _ DeepForest        = ('f',Plants)
+    codedRepresentation _ TerrainData.Water = ('~',Wet)
+    codedRepresentation _ DeepWater         = ('~',Gloomy)
+    codedRepresentation _ Ice               = ('.',Icy)
+    codedRepresentation _ Lava              = ('~',Molten)
+    codedRepresentation _ Glass             = ('.',Gloomy)
+    codedRepresentation _ RecreantFactory   = ('_',FaintMagic)
+    codedRepresentation _ Upstairs          = ('<',StrongDusty)
+    codedRepresentation _ Downstairs        = ('>',StrongDusty)
 
 main :: IO ()
 main =

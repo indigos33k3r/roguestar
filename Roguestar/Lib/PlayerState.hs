@@ -48,6 +48,8 @@ data SnapshotEvent =
         sunder_event_target_tool :: ToolRef }
   | TeleportEvent {
         teleport_event_creature :: CreatureRef }
+  | SpawnEvent {
+        spawn_event_creature :: CreatureRef }
   | ClimbEvent {
         climb_event_direction :: ClimbDirection,
         climb_event_creature :: CreatureRef }
@@ -80,6 +82,7 @@ instance HasSubject SnapshotEvent where
         DisarmEvent { disarm_event_source_creature = attacker_ref } -> Just attacker_ref
         SunderEvent { sunder_event_source_creature = attacker_ref } -> Just attacker_ref
         TeleportEvent { teleport_event_creature = creature_ref } -> Just creature_ref
+        SpawnEvent { spawn_event_creature = creature_ref } -> Just creature_ref
         HealEvent { heal_event_creature = creature_ref } -> Just creature_ref
         ClimbEvent { climb_event_creature = creature_ref } -> Just creature_ref
         BumpEvent { bump_event_creature = creature_ref } -> Just creature_ref

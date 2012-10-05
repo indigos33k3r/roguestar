@@ -96,7 +96,8 @@ spawnNPC terrain_type species plane_ref player_locations =
        case m_spawn_position of
            Nothing -> return False
            Just spawn_position ->
-               do _ <- newCreature Monsters species (Standing plane_ref spawn_position Here)
+               do new_creature <- newCreature Monsters species (Standing plane_ref spawn_position Here)
+                  dbPushSnapshot (SpawnEvent new_creature)
                   return True
 
 dbPerform1CreatureAITurn :: CreatureRef -> DB ()
