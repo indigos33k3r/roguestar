@@ -3,13 +3,12 @@
 import Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import Data.Text.Read
 import Data.Text.Encoding
-import qualified Text.XHtmlCombinators.Escape as XH
-import qualified Text.XmlHtml as X
-import Text.Templating.Heist
 import Control.Exception (SomeException)
 import qualified Control.Monad.CatchIO as CatchIO
 import Control.Monad.Trans
@@ -50,6 +49,7 @@ import qualified System.UUID.V4 as V4
 import GHC.Stats
 import Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HashMap
+import Text.Hastache
 
 data App = App {
     _app_game_state :: GameState,
@@ -89,13 +89,13 @@ makeGlobals =
 
 handle500 :: MonadSnap m => m a -> m ()
 handle500 m = (m >> return ()) `CatchIO.catch` \(e::SomeException) -> do
-    let t = T.pack $ show e
+    let t = LBS8.pack $ show e
     putResponse r
     writeBS "<html><head><title>Internal Server Error</title></head>"
     writeBS "<body><h1>Internal Server Error</h1>"
     writeBS "<p>A web handler threw an exception. Details:</p>"
     writeBS "<pre>\n"
-    writeText $ XH.escape t
+    writeLBS $ htmlEscape t
     writeBS "\n</pre></body></html>"
   where
     r = setContentType "text/html" $
@@ -351,12 +351,12 @@ oops action =
                   return $ error "oops:  Unreachable code."
            Left (DBError bad) ->
                do putResponse r
-                  writeText "<html><head><title>Gameplay Error</title></head>"
-                  writeText "<body><h1>Gameplay Error</h1>"
-                  writeText "<p>Roguestar returned an error condition. Details:</p>"
-                  writeText "<pre>\n"
-                  writeText $ XH.escape $ T.pack bad
-                  writeText "\n</pre></body></html>"
+                  writeBS "<html><head><title>Gameplay Error</title></head>"
+                  writeBS "<body><h1>Gameplay Error</h1>"
+                  writeBS "<p>Roguestar returned an error condition. Details:</p>"
+                  writeBS "<pre>\n"
+                  writeLBS $ htmlEscape $ LBS8.pack bad
+                  writeBS "\n</pre></body></html>"
                   finishWith =<< getResponse
   where
     r = setContentType "text/html" $

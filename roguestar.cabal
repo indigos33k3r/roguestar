@@ -1,5 +1,5 @@
 name:          roguestar
-version:       0.8.0.0
+version:       0.10.0.0
 cabal-version: >=1.2
 build-type:    Simple
 license:       OtherLicense
@@ -20,13 +20,10 @@ executable roguestar-server
                   snap-core >=0.8,
                   snap-server >= 0.8,
                   text >=0.11,
-                  xmlhtml,
-                  xhtml-combinators == 0.2.2,
                   MonadCatchIO-transformers >= 0.2,
                   data-lens-template,
                   containers >=0.3.0.0,
                   base >=4.4,
-                  heist >=0.8.0,
                   system-uuid >= 1.2.7,
                   binary >= 0.5.1
   ghc-prof-options: -prof -auto-all
