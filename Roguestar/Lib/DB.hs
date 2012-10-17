@@ -81,6 +81,7 @@ import Roguestar.Lib.DBErrorFlag
 import Control.Parallel.Strategies
 import System.IO.Unsafe
 import Roguestar.Lib.Logging
+import Control.Monad.ST
 
 data DB_History = DB_History {
     db_here :: DB_BaseType,
@@ -101,17 +102,24 @@ data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
     deriving (Read,Show)
 
 type DBResult r = Either DBError (r,DB_History)
-data DB a = DB { cycleDB :: forall r. DB_History -> (a -> DB_History -> DBResult r) -> DBResult r }
+data DB a = DB { internalRunDB :: forall s. DB_History -> ST s (DBResult a) }
 
 runDB :: DB a -> DB_BaseType -> IO (Either DBError (a,DB_BaseType))
 runDB dbAction database =
     do hist <- setupDBHistory database
-       return $ (either Left (Right . second db_here)) $ cycleDB dbAction hist $ \a h -> Right (a,h)
+       let result = runST $ internalRunDB dbAction hist
+       return $ case result of
+           Left err -> Left err
+           Right (a,DB_History here _) -> Right (a,here)
 
 instance Monad DB where
-    return a = DB $ \h f -> f a h
-    k >>= m = DB $ \h f -> cycleDB k h $ \a h' -> cycleDB (m a) h' f
-    fail = throwError . DBError
+    return a = DB $ \h -> return $ Right (a,h)
+    k >>= m = DB $ \h ->
+        do result <- internalRunDB k h
+           case result of
+               Left err -> return $ Left err
+               Right (a,h') -> internalRunDB (m a) h'
+    fail s = DB $ \_ -> return $ Left $ DBError s
 
 instance Functor DB where
     fmap = liftM
@@ -121,8 +129,8 @@ instance Applicative DB where
     (<*>) = ap
 
 instance MonadState DB_BaseType DB where
-    get = DB $ \h f -> f (db_here h) h
-    put s = DB $ \h f -> f () $ modification h
+    get = DB $ \h -> return $ Right (db_here h,h)
+    put s = DB $ \h -> return $ Right ((),modification h)
         where modification = \db -> db { db_here = s { db_action_count = succ $ db_action_count $ db_here db } }
 
 instance MonadReader DB_BaseType DB where
@@ -132,12 +140,16 @@ instance MonadReader DB_BaseType DB where
            s <- get
            modify modification
            a <- catchError (liftM Right actionM) (return . Left)
-           DB $ \h f -> f () $ h { db_here = s, db_random = split_rng }
+           DB $ \h -> return $ Right $ ((), h { db_here = s, db_random = split_rng })
            either throwError return a
 
 instance MonadError DBError DB where
-    throwError e = DB $ \_ _ -> Left e
-    catchError actionM handlerM = DB $ \h f -> either (\err -> cycleDB (handlerM err) h f) Right $ cycleDB actionM h f
+    throwError e = DB $ \_ -> return $ Left e
+    catchError actionM handlerM = DB $ \h ->
+        do result <- internalRunDB actionM h
+           case result of
+               Left err -> internalRunDB (handlerM err) h
+               x -> return $ x
 
 instance MonadRandom DB where
     getRandom = dbRandom random
@@ -146,10 +158,12 @@ instance MonadRandom DB where
     getRandomRs min_max = liftM (randomRs min_max) $ dbRandom Random.split
 
 dbRandom :: (RNG -> (a,RNG)) -> DB a
-dbRandom rgen = DB $ \h f -> let (x,g) = rgen (db_random h) in f x (h { db_random = g })
+dbRandom rgen = DB $ \h ->
+    do let (x,g) = rgen (db_random h)
+       return $ Right (x, h { db_random = g })
 
 dbRandomSplit :: DB RNG
-dbRandomSplit = DB $ \h f -> let (a,b) = Random.split (db_random h) in f a (h { db_random = b })
+dbRandomSplit = dbRandom Random.split
 
 class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,MonadRandom db,Applicative db) => DBReadable db where
     dbSimulate :: DB a -> db a
@@ -158,14 +172,14 @@ class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,MonadRandom db,
 instance DBReadable DB where
     dbSimulate = local id
     dbPeepSnapshot actionM =
-        do s <- DB $ \h f -> f (db_here h) h
+        do s <- DB $ \h -> return $ Right ((db_here h),h)
            m_snapshot <- gets db_prior_snapshot
            case m_snapshot of
                Just snapshot ->
                    do split_rng <- dbRandomSplit
-                      DB $ \h f -> f () $ h { db_here = snapshot }
+                      DB $ \h -> return $ Right ((), h { db_here = snapshot })
                       a <- dbSimulate actionM
-                      DB $ \h f -> f () $ h { db_here = s, db_random = split_rng }
+                      DB $ \h -> return $ Right ((), h { db_here = s, db_random = split_rng })
                       return $ Just a
                Nothing ->  return Nothing
 
