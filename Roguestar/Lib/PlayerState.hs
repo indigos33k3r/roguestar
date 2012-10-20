@@ -16,10 +16,10 @@ data PlayerState =
   | PlayerCreatureTurn CreatureRef
   | SnapshotEvent SnapshotEvent
   | GameOver GameOverReason
-     deriving (Read,Show)
+     deriving (Read,Show,Eq)
 
 data GameOverReason = PlayerIsDead | PlayerIsVictorious
-     deriving (Read,Show)
+     deriving (Read,Show,Eq)
 
 data SnapshotEvent =
     AttackEvent {
@@ -61,7 +61,7 @@ data SnapshotEvent =
         bump_event_creature :: CreatureRef,
         bump_event_new_level :: Maybe Integer,
         bump_event_new_class :: Maybe CharacterClass }
-            deriving (Read,Show)
+            deriving (Read,Show,Eq)
 
 class HasSubject a where
     subjectOf :: a -> Maybe CreatureRef

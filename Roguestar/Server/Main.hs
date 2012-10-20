@@ -84,7 +84,7 @@ makeGlobals :: IO Aeson.Value
 makeGlobals =
     do (unit_test_result,unit_tests_passed) <- liftIO runTests
        return $ object $ concat $ [
-           (if not unit_tests_passed then ["failed_unit_tests" .= object ["text_content" .= String unit_test_result]] else [])
+           (if not unit_tests_passed then ["failed-unit-tests" .= object ["text-content" .= String unit_test_result]] else [])
            ]
 
 handle500 :: MonadSnap m => m a -> m ()

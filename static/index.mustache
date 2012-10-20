@@ -2,12 +2,14 @@
 
 <div id="documenttext" class="roguebox">
 
-{{#failed_unit_tests}}
+{{#server-globals}}{{#failed-unit-tests}}
+<div class="horrible">
 <p>One or more unit tests failed:</p>
 <pre>
-{{{text_content}}}
+{{{text-content}}}
 </pre>
-{{/failed_unit_tests}}
+</div>
+{{/failed-unit-tests}}{{/server-globals}}
 
 <h1>Roguestar</h1>
 

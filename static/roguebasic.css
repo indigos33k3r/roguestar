@@ -8,7 +8,7 @@ body {
 }
 
 #main {
-	width: 1028px;
+    width: 1028px;
     margin: auto;
     padding: 0;
 }
@@ -26,14 +26,14 @@ body {
 }
 
 #menu ul {
-	overflow: hidden;
+    overflow: hidden;
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
 #menu ul li {
-	float: left;
+    float: left;
     display: inline;
     white-space: nowrap;
     border-right: ridge;
@@ -55,7 +55,7 @@ body {
 }
 
 #menu ul li a:hover {
-	text-decoration: none;
+    text-decoration: none;
 }
 
 #menu ul li.right {
@@ -72,6 +72,16 @@ body {
     top: 0;
     margin: 0;
     padding: 0;
+}
+
+.horrible {
+    padding: 1cm;
+    font-weight: bold;
+    border: solid;
+    border-width: 1cm;
+    border-color: #AA0000;
+    background-color: #000000;
+    color: #FFFFFF;
 }
 
 .help {

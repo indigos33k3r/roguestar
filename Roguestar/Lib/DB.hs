@@ -7,8 +7,7 @@
              TypeFamilies #-}
 
 module Roguestar.Lib.DB
-    (DBResult,
-     DB,
+    (DB,
      runDB,
      DBReadable(..),
      playerState,
@@ -82,10 +81,11 @@ import Control.Parallel.Strategies
 import System.IO.Unsafe
 import Roguestar.Lib.Logging
 import Control.Monad.ST
+import Data.STRef
 
-data DB_History = DB_History {
-    db_here :: DB_BaseType,
-    db_random :: RNG }
+data DBContext s = DBContext {
+    db_info    :: STRef s DB_BaseType,
+    db_rng     :: STRef s RNG }
 
 data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
@@ -101,24 +101,27 @@ data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_action_count :: Integer }
     deriving (Read,Show)
 
-type DBResult r = Either DBError (r,DB_History)
-data DB a = DB { internalRunDB :: forall s. DB_History -> ST s (DBResult a) }
+data DB a = DB { internalRunDB :: forall s. DBContext s -> ST s (Either DBError a) }
 
 runDB :: DB a -> DB_BaseType -> IO (Either DBError (a,DB_BaseType))
 runDB dbAction database =
-    do hist <- setupDBHistory database
-       let result = runST $ internalRunDB dbAction hist
-       return $ case result of
-           Left err -> Left err
-           Right (a,DB_History here _) -> Right (a,here)
+    do rng <- randomIO
+       return $ runST $
+           do data_ref <- newSTRef database
+              rng_ref <- newSTRef rng
+              result <- internalRunDB dbAction (DBContext data_ref rng_ref)
+              database' <- readSTRef data_ref
+              return $ case result of
+                  Left err -> Left err
+                  Right a -> Right (a,database')
 
 instance Monad DB where
-    return a = DB $ \h -> return $ Right (a,h)
-    k >>= m = DB $ \h ->
-        do result <- internalRunDB k h
+    return a = DB $ const $ return $ Right a
+    k >>= m = DB $ \context ->
+        do result <- internalRunDB k context
            case result of
                Left err -> return $ Left err
-               Right (a,h') -> internalRunDB (m a) h'
+               Right a -> internalRunDB (m a) context
     fail s = DB $ \_ -> return $ Left $ DBError s
 
 instance Functor DB where
@@ -129,18 +132,21 @@ instance Applicative DB where
     (<*>) = ap
 
 instance MonadState DB_BaseType DB where
-    get = DB $ \h -> return $ Right (db_here h,h)
-    put s = DB $ \h -> return $ Right ((),modification h)
-        where modification = \db -> db { db_here = s { db_action_count = succ $ db_action_count $ db_here db } }
+    get = DB $ \context -> liftM Right $ readSTRef (db_info context)
+    put db1 = DB $ \context ->
+                do db0 <- readSTRef (db_info context)
+                   writeSTRef (db_info context) $
+                       db1 { db_action_count = succ $ db_action_count db0 }
+                   return $ Right ()
 
 instance MonadReader DB_BaseType DB where
     ask = get
     local modification actionM =
         do split_rng <- dbRandomSplit
-           s <- get
+           db <- get
            modify modification
            a <- catchError (liftM Right actionM) (return . Left)
-           DB $ \h -> return $ Right $ ((), h { db_here = s, db_random = split_rng })
+           DB $ \context -> liftM Right $ writeSTRef (db_rng context) split_rng
            either throwError return a
 
 instance MonadError DBError DB where
@@ -158,9 +164,11 @@ instance MonadRandom DB where
     getRandomRs min_max = liftM (randomRs min_max) $ dbRandom Random.split
 
 dbRandom :: (RNG -> (a,RNG)) -> DB a
-dbRandom rgen = DB $ \h ->
-    do let (x,g) = rgen (db_random h)
-       return $ Right (x, h { db_random = g })
+dbRandom rgen = DB $ \context ->
+    do g0 <- readSTRef (db_rng context)
+       let (x,g1) = rgen g0
+       writeSTRef (db_rng context) g1
+       return $ Right x
 
 dbRandomSplit :: DB RNG
 dbRandomSplit = dbRandom Random.split
@@ -172,14 +180,15 @@ class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,MonadRandom db,
 instance DBReadable DB where
     dbSimulate = local id
     dbPeepSnapshot actionM =
-        do s <- DB $ \h -> return $ Right ((db_here h),h)
+        do db <- get
            m_snapshot <- gets db_prior_snapshot
            case m_snapshot of
                Just snapshot ->
                    do split_rng <- dbRandomSplit
-                      DB $ \h -> return $ Right ((), h { db_here = snapshot })
+                      put snapshot
                       a <- dbSimulate actionM
-                      DB $ \h -> return $ Right ((), h { db_here = s, db_random = split_rng })
+                      put db
+                      DB $ \context -> liftM Right $ writeSTRef (db_rng context) split_rng
                       return $ Just a
                Nothing ->  return Nothing
 
@@ -229,13 +238,6 @@ initial_db = DB_BaseType {
     db_time_coordinates = Map.fromList [(genericReference the_universe, zero_time)],
     db_prior_snapshot = Nothing,
     db_action_count = 0 }
-
-setupDBHistory :: DB_BaseType -> IO DB_History
-setupDBHistory db =
-    do rng <- randomIO
-       return $ DB_History {
-           db_here = db,
-           db_random = rng }
 
 playerState :: (DBReadable m) => m PlayerState
 playerState = asks db_player_state

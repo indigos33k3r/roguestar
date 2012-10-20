@@ -29,7 +29,7 @@ data Creature = Creature { creature_traits :: Map.Map CreatureTrait Integer,
                            creature_damage :: Integer,
                            creature_faction :: Faction,
                            creature_points :: Integer }
-                                deriving (Read,Show)
+                                deriving (Read,Show,Eq)
 
 -- | Creature having no attributes and undefined 'creature_species', 'creature_random_id', and 'creature_faction'
 --
