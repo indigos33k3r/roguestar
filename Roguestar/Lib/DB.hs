@@ -63,7 +63,6 @@ import Roguestar.Lib.RNG
 import Data.Map as Map
 import Data.List as List
 import qualified Roguestar.Lib.HierarchicalDatabase as HD
-import Roguestar.Lib.SpeciesData
 import Data.Maybe
 import Roguestar.Lib.ToolData
 import Control.Monad.State
@@ -72,7 +71,6 @@ import Control.Monad.Reader
 import Control.Applicative
 import Roguestar.Lib.TimeCoordinate
 import Data.Ord
-import Control.Arrow (first,second)
 import Control.Monad.Random as Random
 import Roguestar.Lib.Random
 import Roguestar.Lib.PlayerState
@@ -82,10 +80,14 @@ import System.IO.Unsafe
 import Roguestar.Lib.Logging
 import Control.Monad.ST
 import Data.STRef
+import qualified Data.Vector.Unboxed as Vector
+import qualified System.Random.MWC as MWC
+import Data.Word
 
 data DBContext s = DBContext {
     db_info    :: STRef s DB_BaseType,
-    db_rng     :: STRef s RNG }
+    db_rng     :: STRef s RNG,
+    db_mwc_rng :: STRef s (MWC.GenST s) }
 
 data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
@@ -106,10 +108,13 @@ data DB a = DB { internalRunDB :: forall s. DBContext s -> ST s (Either DBError 
 runDB :: DB a -> DB_BaseType -> IO (Either DBError (a,DB_BaseType))
 runDB dbAction database =
     do rng <- randomIO
+       (seed :: Vector.Vector Word32) <- MWC.withSystemRandom . MWC.asGenIO $ \gen ->
+                   MWC.uniformVector gen 256
        return $ runST $
-           do data_ref <- newSTRef database
+           do mwc_rng_ref <- newSTRef =<< MWC.initialize seed
+              data_ref <- newSTRef database
               rng_ref <- newSTRef rng
-              result <- internalRunDB dbAction (DBContext data_ref rng_ref)
+              result <- internalRunDB dbAction (DBContext data_ref rng_ref mwc_rng_ref)
               database' <- readSTRef data_ref
               return $ case result of
                   Left err -> Left err
@@ -142,11 +147,10 @@ instance MonadState DB_BaseType DB where
 instance MonadReader DB_BaseType DB where
     ask = get
     local modification actionM =
-        do split_rng <- dbRandomSplit
-           db <- get
+        do db <- get
            modify modification
            a <- catchError (liftM Right actionM) (return . Left)
-           DB $ \context -> liftM Right $ writeSTRef (db_rng context) split_rng
+           put db
            either throwError return a
 
 instance MonadError DBError DB where
@@ -170,27 +174,26 @@ dbRandom rgen = DB $ \context ->
        writeSTRef (db_rng context) g1
        return $ Right x
 
-dbRandomSplit :: DB RNG
-dbRandomSplit = dbRandom Random.split
-
 class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,MonadRandom db,Applicative db) => DBReadable db where
     dbSimulate :: DB a -> db a
     dbPeepSnapshot :: (DBReadable db) => (forall m. DBReadable m => m a) -> db (Maybe a)
+    uniform :: (Int,Int) -> db Int
+    uniformVector :: Int -> (Int,Int) -> db (Vector.Vector Int)
 
 instance DBReadable DB where
     dbSimulate = local id
     dbPeepSnapshot actionM =
-        do db <- get
-           m_snapshot <- gets db_prior_snapshot
+        do m_snapshot <- gets db_prior_snapshot
            case m_snapshot of
                Just snapshot ->
-                   do split_rng <- dbRandomSplit
-                      put snapshot
-                      a <- dbSimulate actionM
-                      put db
-                      DB $ \context -> liftM Right $ writeSTRef (db_rng context) split_rng
-                      return $ Just a
+                   do liftM Just $ local (const snapshot) $ dbSimulate actionM
                Nothing ->  return Nothing
+    uniform range = DB $ \context ->
+        do gen <- readSTRef (db_mwc_rng context)
+           liftM Right $ MWC.uniformR range gen
+    uniformVector n (a,b) = DB $ \ context ->
+        do gen <- readSTRef (db_mwc_rng context)
+           liftM (Right . Vector.map ((+a) . (`mod` (b-a)))) $ MWC.uniformVector gen n
 
 logDB :: (DBReadable db) => String -> Priority -> String -> db ()
 logDB l p s = return $! unsafePerformIO $ logM l p $ l ++ ": " ++ s
@@ -243,7 +246,7 @@ playerState :: (DBReadable m) => m PlayerState
 playerState = asks db_player_state
 
 setPlayerState :: PlayerState -> DB ()
-setPlayerState state = modify (\db -> db { db_player_state = state })
+setPlayerState player_state = modify (\db -> db { db_player_state = player_state })
 
 getPlayerCreature :: (DBReadable m) => m CreatureRef
 getPlayerCreature = liftM (fromMaybe $ error "No player creature selected yet.") $ asks db_player_creature
@@ -269,10 +272,10 @@ dbAddObjectComposable :: (ReferenceType a) =>
                          (Reference a -> a -> DB ()) ->
                          (Reference a -> l -> Location) ->
                          a -> l -> DB (Reference a)
-dbAddObjectComposable constructReference updateObject constructLocation thing loc =
-    do ref <- liftM constructReference $ dbNextObjectRef
-       updateObject ref thing
-       setLocation $ constructLocation ref loc
+dbAddObjectComposable constructReferenceAction updateObjectAction constructLocationAction thing loc =
+    do ref <- liftM constructReferenceAction $ dbNextObjectRef
+       updateObjectAction ref thing
+       setLocation $ constructLocationAction ref loc
        genericParent_ref <- liftM parentReference $ whereIs ref
        dbSetTimeCoordinate (genericReference ref) =<< dbGetTimeCoordinate (genericReference genericParent_ref)
        return ref

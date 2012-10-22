@@ -11,6 +11,7 @@ import Data.Monoid
 import System.IO
 import Roguestar.Lib.DB
 import Roguestar.Lib.PlayerState
+import Control.Monad.Reader.Class
 
 type UnitTest = WriterT (T.Text,All) IO ()
 
@@ -22,7 +23,8 @@ runTests =
 unit_tests :: [UnitTest]
 unit_tests = [testSessionAliveBeforeTimeout,
               testSessionExpiredAfterTimeout,
-              testSetPlayerState]
+              testSetPlayerState,
+              testLocal]
 
 assert :: Bool -> T.Text -> UnitTest
 assert ok test_name =
@@ -66,3 +68,14 @@ testSetPlayerState =
        case m_pstate of
            Left err -> assert False "testSetPlayerState (failed in monad)"
            Right (pstate,_) -> assertEqual pstate (GameOver PlayerIsVictorious) "testSetPlayerState"
+
+testLocal :: UnitTest
+testLocal =
+    do m_pstate <- liftIO $ flip runDB initial_db $
+           do local id $ setPlayerState (GameOver PlayerIsVictorious)
+              playerState
+       case m_pstate of
+           Left err -> assert False "testLocal (failed in monad)"
+           Right (pstate,_) -> assertEqual pstate (SpeciesSelectionState Nothing) "testLocal"
+
+

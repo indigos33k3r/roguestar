@@ -29,7 +29,7 @@ executable roguestar-server
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
-    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
+    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all -Wall
   else
     ghc-options: -threaded -fno-warn-type-defaults
   other-modules:  Roguestar.Lib.HTML.Mustache
@@ -53,7 +53,8 @@ library
                   old-time >=1.0.0.3,
                   array >=0.3.0.0,
                   containers >=0.3.0.0,
-                  base >=4
+                  base >=4,
+                  mwc-random >= 0.12.0.1
   other-modules:  Roguestar.Lib.TravelData,
                   Roguestar.Lib.VisibilityData,
                   Roguestar.Lib.FactionData,
@@ -107,7 +108,7 @@ library
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
-    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all
+    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all -Wall
   else
     ghc-options: -threaded -fno-warn-type-defaults
   exposed-modules: Roguestar.Lib.UnitTests,
