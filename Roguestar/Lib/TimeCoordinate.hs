@@ -1,3 +1,4 @@
+--Data -- this module is dubious, may deprecate
 module Roguestar.Lib.TimeCoordinate
     (TimeCoordinate,
      advanceTime,

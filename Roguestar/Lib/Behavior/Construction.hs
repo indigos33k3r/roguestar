@@ -7,7 +7,7 @@ module Roguestar.Lib.Behavior.Construction
     where
 
 import Roguestar.Lib.DB
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Facing

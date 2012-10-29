@@ -1,5 +1,6 @@
 {-# LANGUAGE ExistentialQuantification, Rank2Types, ScopedTypeVariables #-}
 
+-- Mechanics
 module Roguestar.Lib.Behavior
     (Behavior(..),
      facingBehavior,
@@ -21,7 +22,7 @@ import Roguestar.Lib.Behavior.Travel
 import Roguestar.Lib.TravelData
 import Roguestar.Lib.Creature
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneVisibility
 import Data.List
 import Control.Monad.Maybe
@@ -31,7 +32,7 @@ import Roguestar.Lib.Behavior.Construction
 import Roguestar.Lib.Building
 import Roguestar.Lib.Reference
 import Roguestar.Lib.DetailedLocation
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 
 --

@@ -18,7 +18,7 @@ import Roguestar.Lib.Facing
 import Data.Maybe
 import Roguestar.Lib.Behavior.DeviceActivation
 import Roguestar.Lib.Contact
-import Roguestar.Lib.Plane as Plane
+import Roguestar.Lib.Core.Plane as Plane
 import Roguestar.Lib.DetailedLocation
 
 data AttackModel =

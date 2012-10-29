@@ -1,4 +1,4 @@
-
+--Data
 module Roguestar.Lib.PlaneData
     (Plane(..))
     where

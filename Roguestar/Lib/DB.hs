@@ -6,6 +6,7 @@
              ScopedTypeVariables,
              TypeFamilies #-}
 
+--Core
 module Roguestar.Lib.DB
     (DB,
      runDB,
@@ -109,7 +110,7 @@ runDB :: DB a -> DB_BaseType -> IO (Either DBError (a,DB_BaseType))
 runDB dbAction database =
     do rng <- randomIO
        (seed :: Vector.Vector Word32) <- MWC.withSystemRandom . MWC.asGenIO $ \gen ->
-                   MWC.uniformVector gen 256
+                   MWC.uniformVector gen 2
        return $ runST $
            do mwc_rng_ref <- newSTRef =<< MWC.initialize seed
               data_ref <- newSTRef database

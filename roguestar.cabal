@@ -29,7 +29,7 @@ executable roguestar-server
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
-    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all -Wall
+    ghc-options: -threaded -rtsopts=all -Wall -fno-warn-type-defaults
   else
     ghc-options: -threaded -fno-warn-type-defaults
   other-modules:  Roguestar.Lib.HTML.Mustache
@@ -54,7 +54,8 @@ library
                   array >=0.3.0.0,
                   containers >=0.3.0.0,
                   base >=4,
-                  mwc-random >= 0.12.0.1
+                  mwc-random >= 0.12.0.1,
+                  streams >= 0.8.2
   other-modules:  Roguestar.Lib.TravelData,
                   Roguestar.Lib.VisibilityData,
                   Roguestar.Lib.FactionData,
@@ -65,7 +66,8 @@ library
                   Roguestar.Lib.Perception,
                   Roguestar.Lib.PlaneVisibility,
                   Roguestar.Lib.Turns,
-                  Roguestar.Lib.Plane,
+                  Roguestar.Lib.Core.Plane,
+                  Roguestar.Lib.Utility.SiteCriteria,
                   Roguestar.Lib.CreatureData,
                   Roguestar.Lib.Character,
                   Roguestar.Lib.Tool,
@@ -108,7 +110,7 @@ library
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
-    ghc-options: -threaded -fno-warn-type-defaults -rtsopts=all -Wall
+    ghc-options: -threaded -rtsopts=all -Wall -fno-warn-type-defaults
   else
     ghc-options: -threaded -fno-warn-type-defaults
   exposed-modules: Roguestar.Lib.UnitTests,

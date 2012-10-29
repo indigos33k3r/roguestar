@@ -1,5 +1,6 @@
 {-# LANGUAGE PatternGuards, FlexibleContexts, ScopedTypeVariables, RankNTypes #-}
 
+--Utility
 module Roguestar.Lib.PlaneVisibility
     (dbGetVisibleTerrainForFaction,
      dbGetVisibleObjectsForFaction)
@@ -9,7 +10,7 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.DB
 import Roguestar.Lib.TerrainData
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 import Control.Monad
 import Roguestar.Lib.CreatureData

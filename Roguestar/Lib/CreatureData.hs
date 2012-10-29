@@ -1,4 +1,4 @@
-
+--Data
 module Roguestar.Lib.CreatureData
     (Creature(..),
      CreatureTrait(..),
@@ -13,13 +13,11 @@ module Roguestar.Lib.CreatureData
     where
 
 import Roguestar.Lib.PersistantData
-import Roguestar.Lib.Alignment
 import Data.Ratio
 import Data.Maybe
 import Roguestar.Lib.FactionData
 import Data.Monoid
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.TerrainData
 
@@ -113,17 +111,17 @@ instance CreatureScore CharacterClass where
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
 figureAbility :: [CreatureTrait] -> Creature -> Integer
-figureAbility traits c = round $ realToFrac x ** (1.0 / realToFrac (length traits))
+figureAbility traits c = round $ (realToFrac x :: Double) ** (1.0 / realToFrac (length traits))
     where x = product (map ((+1) . flip rawScore c) traits)
 
 creatureAbilityScore :: CreatureAbility -> Creature -> Integer
 creatureAbilityScore ToughnessTrait = figureAbility [Caution,Fortitude]
-creatureAbilityScore (AttackSkill x) = figureAbility [Aggression,Dexterity]
-creatureAbilityScore (DefenseSkill x) = figureAbility [Caution,Dexterity]
-creatureAbilityScore (DamageSkill x) = figureAbility [Aggression,Bulk]
-creatureAbilityScore (DamageReductionTrait x) = figureAbility [Caution,Bulk]
-creatureAbilityScore (ReloadSkill x) = figureAbility [Aggression,Speed]
-creatureAbilityScore (TerrainAffinity terrain_type) = figureAbility []
+creatureAbilityScore (AttackSkill _) = figureAbility [Aggression,Dexterity]
+creatureAbilityScore (DefenseSkill _) = figureAbility [Caution,Dexterity]
+creatureAbilityScore (DamageSkill _) = figureAbility [Aggression,Bulk]
+creatureAbilityScore (DamageReductionTrait _) = figureAbility [Caution,Bulk]
+creatureAbilityScore (ReloadSkill _) = figureAbility [Aggression,Speed]
+creatureAbilityScore (TerrainAffinity _) = figureAbility []
 creatureAbilityScore HideSkill = figureAbility [Aggression,Perception]
 creatureAbilityScore SpotSkill = figureAbility [Caution,Perception]
 creatureAbilityScore JumpSkill = figureAbility [Speed]

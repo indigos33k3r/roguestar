@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+--Mechanics
 module Roguestar.Lib.MakeData
     (PrepareMake(..),
      prepare_make,

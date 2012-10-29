@@ -1,4 +1,4 @@
-
+--Deprecated
 module Roguestar.Lib.Tests 
     (TestResult(..), 
      TestCase, 
@@ -38,6 +38,6 @@ test str False = return $ Failed str
 runAllTests :: [TestCase] -> IO Bool
 runAllTests [] = do return True
 runAllTests (testCase:testCases) = do testResult <- testCase
-				      putStrLn (show testResult)
-				      testResults <- runAllTests testCases
-				      return (testResults && testResultToBool testResult)
+                                      putStrLn (show testResult)
+                                      testResults <- runAllTests testCases
+                                      return (testResults && testResultToBool testResult)

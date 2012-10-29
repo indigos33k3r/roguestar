@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+--Data
 module Roguestar.Lib.FactionData
     (Faction(..),factionPrefix)
     where

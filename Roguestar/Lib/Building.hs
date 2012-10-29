@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
+--Core
 module Roguestar.Lib.Building
     (buildingSize,
      buildingShape,
@@ -17,7 +17,7 @@ import Data.Maybe
 import Control.Monad.Maybe
 import Control.Monad.Random
 import Roguestar.Lib.PlaneData
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Position
 import Roguestar.Lib.TerrainData
 import Control.Monad.Error
@@ -60,8 +60,8 @@ activateBuilding :: BuildingBehavior -> CreatureRef -> BuildingRef -> DB Bool
 activateBuilding (PowerUp pud) creature_ref building_ref =
     do captureNode pud creature_ref building_ref
        return True
-activateBuilding (TwoWayStargate region) creature_ref building_ref =
-    do (Parent plane_ref :: Parent Plane,building_position :: Position) <- liftM detail $ getPlanarLocation building_ref
+activateBuilding (TwoWayStargate _) creature_ref building_ref =
+    do (Parent _ :: Parent Plane,building_position :: Position) <- liftM detail $ getPlanarLocation building_ref
        (creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
        case () of
            () | distanceBetweenChessboard creature_position building_position == 1 ->
@@ -70,10 +70,10 @@ activateBuilding (TwoWayStargate region) creature_ref building_ref =
                do throwError $ DBErrorFlag BuildingApproachWrongAngle
        return True
 activateBuilding (OneWayStargate region) creature_ref building_ref =
-    do (Parent plane_ref :: Parent Plane,Position (bx,by))
+    do (Parent plane_ref :: Parent Plane,Position (_,by))
             <- liftM detail $ getPlanarLocation building_ref
-       (Position (cx,cy)) <- liftM detail $ getPlanarLocation creature_ref
-       case () of
+       (Position (_,cy)) <- liftM detail $ getPlanarLocation creature_ref
+       _ <- case () of
            () | cy - by == 1 ->
                do subsequent_plane <- maybe (throwError $ DBErrorFlag NoStargateAddress) return
                       =<< getSubsequent region plane_ref
@@ -89,7 +89,7 @@ portalCreatureTo building_behavior offset creature_ref plane_ref =
        portals <- filterM (liftM ((== building_behavior) . Just) . buildingBehavior) all_buildings
        ideal_position <- if null portals
            then liftM2 (\x y -> Position (x,y)) (getRandomR (-40,40)) (getRandomR (-40,40))
-           else do portal <- pickM portals
+           else do portal <- weightedPickM $ unweightedSet portals
                    liftM (offsetPosition (0,offset) . detail) $ getPlanarLocation portal
        position <- pickRandomClearSite 1 0 0 ideal_position (not . (`elem` impassable_terrains)) plane_ref
        dbPushSnapshot $ TeleportEvent creature_ref

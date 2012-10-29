@@ -1,4 +1,4 @@
-
+--Data
 module Roguestar.Lib.VisibilityData
     (distanceCostForSight,
      terrainHideMultiplier,
@@ -63,8 +63,8 @@ terrainOpacity Upstairs = 0
 distanceCostForSight :: Facing -> (Integer,Integer) -> Integer
 distanceCostForSight facing (x,y) =
     let (xface,yface) = facingToRelative facing
-	(x',y') = (x-xface,y-yface)
-	in (x*x' + y*y')
+        (x',y') = (x-xface,y-yface)
+        in (x*x' + y*y')
 
 -- |
 -- The maximum distance from any point that a creature with that spot check could see anything,

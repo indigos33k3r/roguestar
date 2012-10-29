@@ -1,7 +1,11 @@
 
+--Core
 module Roguestar.Lib.Random
-    (pick,
-     pickM,
+    (WeightedSet,
+     weightedSet,
+     unweightedSet,
+     append,
+     fromWeightedSet,
      weightedPick,
      weightedPickM,
      linearRoll,
@@ -13,33 +17,50 @@ module Roguestar.Lib.Random
     where
 
 import Data.List
-import Data.Maybe
 import System.Random ()
 import Control.Monad.Random
 import Control.Monad
 import Data.Ratio
+import Data.Ord
+import qualified Data.Vector as Vector
 
--- | Pick an element of a list at random.
-pick :: (RandomGen g) => [a] -> g -> (a,g)
-pick elems = runRand (pickM elems)
+data WeightedSet a = WeightedSet {
+    weighted_set_total :: Integer,
+    weighted_set :: Vector.Vector (Integer,a) }
+        deriving (Read,Show)
+
+weightedSet :: [(Integer,a)] -> WeightedSet a
+weightedSet [] = error "Tried to pick from an empty list."
+weightedSet as = WeightedSet {
+    weighted_set_total = sum $ map fst as,
+    weighted_set = Vector.fromList $ reverse $ sortBy (comparing fst) as }
+
+unweightedSet :: [a] -> WeightedSet a
+unweightedSet [] = error "Tried to pick from an empty list."
+unweightedSet as = WeightedSet {
+    weighted_set_total = genericLength as,
+    weighted_set = Vector.fromList $ map (\x -> (1,x)) as }
+
+append :: WeightedSet a -> WeightedSet a -> WeightedSet a
+append a b = weightedSet $ (Vector.toList $ weighted_set a) ++ (Vector.toList $ weighted_set b)
+
+fromWeightedSet :: WeightedSet a -> [a]
+fromWeightedSet = map snd . Vector.toList . weighted_set
 
 -- | Pick an element of a weighted list at random.  E.g. in "[(2,x),(3,y)]" "y" will be picked three times out of five while "x" will be picked 2 times out of five.
-weightedPick :: (RandomGen g) => [(Integer,a)] -> g -> (a,g)
+weightedPick :: (RandomGen g) => WeightedSet a -> g -> (a,g)
 weightedPick elems = runRand (weightedPickM elems)
 
--- | 'pick' in MinadRandom
-pickM :: (MonadRandom m) => [a] -> m a
-pickM elems = weightedPickM (map (\x -> (1,x)) elems)
-
 -- | 'weightedPick' in MonadRandom
-weightedPickM :: (MonadRandom m) => [(Integer,a)] -> m a
-weightedPickM [] = error "Tried to pick from an empty list."
-weightedPickM elems = 
-    do let (weights,values) = unzip elems
-       let (weight_total,weight_totals) = mapAccumL (\x y -> (x+y,x+y)) 0 weights
-       weight_to_find <- getRandomR (1,weight_total)
-       let index = fromJust $ findIndex (\x -> x >= weight_to_find) weight_totals
-       return $ values !! index
+weightedPickM :: (MonadRandom m) => WeightedSet a -> m a
+weightedPickM elems =
+    do weight_to_find <- getRandomR (1,weighted_set_total elems)
+       return $ pickWithWeight weight_to_find 0 $ weighted_set elems
+
+pickWithWeight :: Integer -> Int -> Vector.Vector (Integer,a) -> a
+pickWithWeight i ix v = case Vector.unsafeIndex v ix of
+    (x,_) | i > x -> pickWithWeight (i-x) (succ ix) v
+    (_,a) | otherwise -> a
 
 -- | Roll an (n+1) sided die numbered zero to n.
 linearRoll :: (MonadRandom m) => Integer -> m Integer
@@ -63,7 +84,7 @@ fixedSumRoll rs a =
 --
 logRoll :: (MonadRandom m) => Integer -> m Integer
 logRoll n = liftM (min n) $ accumRoll 0 n
-    where accumRoll c x = 
+    where accumRoll c x =
               do x' <- linearRoll x
                  case x' of
                      0 -> return c

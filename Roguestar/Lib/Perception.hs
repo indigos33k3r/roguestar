@@ -1,5 +1,6 @@
 {-# LANGUAGE ExistentialQuantification, Rank2Types, FlexibleContexts, ScopedTypeVariables, PatternGuards #-}
 
+--Utility
 -- | The Perception monad is a wrapper for roguestar's core
 -- monad that reveals only as much information as a character
 -- legitimately has.  Thus, it is suitable for writing AI
@@ -44,7 +45,7 @@ import Roguestar.Lib.Position as Position
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.BuildingData
 import Roguestar.Lib.Building
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.Building
 import Roguestar.Lib.SpeciesData

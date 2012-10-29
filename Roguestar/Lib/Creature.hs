@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, PatternGuards #-}
-
+--Core
 module Roguestar.Lib.Creature
     (generateInitialPlayerCreature,
      newCreature,
@@ -24,12 +24,9 @@ import Roguestar.Lib.Species
 import Roguestar.Lib.FactionData
 import Control.Monad.Error
 import Control.Monad.Random
-import Roguestar.Lib.Tool
-import Data.Monoid
-import Data.Ratio
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Position
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlayerState
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.Logging

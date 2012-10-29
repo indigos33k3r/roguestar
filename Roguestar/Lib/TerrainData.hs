@@ -1,4 +1,4 @@
-
+--Data
 module Roguestar.Lib.TerrainData
     (Biome(..),
      TerrainPatch(..),
@@ -17,8 +17,7 @@ import Roguestar.Lib.Grids
 import Data.List as List
 import Data.Map as Map
 --import Substances hiding (Water)
-import Roguestar.Lib.RNG
-
+import Roguestar.Lib.Random as Random
 
 -- |
 -- Most automatically generated surface maps belong to a Biome, representing the kind of terrain
@@ -76,7 +75,7 @@ data TerrainGenerationData = TerrainGenerationData
 
 data TerrainPlacement = TerrainPlacement {
     placement_sources :: [(Double,TerrainPatch)],
-    placement_replacements :: [(Integer,TerrainPatch)],
+    placement_replacements :: WeightedSet TerrainPatch,
     placement_seed :: Integer,
     placement_blob :: Blob }
         deriving (Read,Show)
@@ -100,7 +99,7 @@ recreantFactories seed = TerrainPlacement {
          (1/100,Forest),
          (1/2,RockyGround)],
     placement_replacements =
-        [(1,RecreantFactory)],
+        unweightedSet [RecreantFactory],
     placement_seed = seed,
     placement_blob = ConeBlob (0,0) 100 }
 
@@ -112,7 +111,7 @@ stairsUp seed depth = TerrainPlacement {
          (1/(50+10*realToFrac depth),Water),
          (1/(75+15*realToFrac depth),RockFace)],
     placement_replacements =
-        [(1,Upstairs)],
+        unweightedSet [Upstairs],
     placement_seed = seed,
     placement_blob = UnitBlob }
 
@@ -125,7 +124,7 @@ stairsDown seed depth = TerrainPlacement {
          (1/(40+10*realToFrac depth),Dirt),
          (1/60,Grass)],
     placement_replacements =
-        [(1,Downstairs)],
+        unweightedSet[Downstairs],
     placement_seed = seed,
     placement_blob = UnitBlob }
 
@@ -143,54 +142,69 @@ difficult_terrains = impassable_terrains ++
 impassable_terrains :: [TerrainPatch]
 impassable_terrains = [RockFace,Forest,DeepForest]
 
-terrainFrequencies :: Biome -> [(Integer,TerrainPatch)]
-terrainFrequencies ShallowDungeon = [(40,RockFace),(50,RockyGround),(5,Sand),(5,Dirt)]
-terrainFrequencies DeepDungeon = [(50,RockFace),(25,Rubble),(25,RockyGround)]
-terrainFrequencies FrozenDungeon = [(75,RockFace),(5,Rubble),(10,RockyGround),(10,Ice)]
-terrainFrequencies AbyssalDungeon = [(60,RockFace),(10,Rubble),(10,RockyGround),(20,Water)]
-terrainFrequencies InfernalDungeon = [(70,RockFace),(15,Rubble),(15,Lava)]
-terrainFrequencies RockBiome = [(15,RockFace),(15,Rubble),(55,RockyGround),(15,Sand)]
-terrainFrequencies IcyRockBiome = [(10,RockFace),(10,Rubble),(20,RockyGround),(60,Ice)]
-terrainFrequencies GrasslandBiome = [(5,RockFace),(5,RockyGround),(10,Dirt),(10,Sand),(10,Forest),(10,Water),(50,Grass)]
-terrainFrequencies ForestBiome = [(10,RockFace),(10,RockyGround),(10,Dirt),(10,Water),(10,Grass),(25,Forest),(25,DeepForest)]
-terrainFrequencies TundraBiome = [(10,RockFace),(10,RockyGround),(10,Sand),(10,Water),(60,Ice)]
-terrainFrequencies DesertBiome = [(10,RockFace),(10,RockyGround),(9,Grass),(1,Water),(70,Desert)]
-terrainFrequencies OceanBiome = [(5,RockyGround),(10,Sand),(5,Grass),(5,Forest),(25,Water),(50,DeepWater)]
-terrainFrequencies MountainBiome = [(50,RockFace),(25,RockyGround),(5,Rubble),(5,Sand),(5,Grass),(5,Forest),(5,Water)]
-terrainFrequencies SwampBiome = [(40,Forest),(50,Water),(5,Sand),(5,Grass)]
-terrainFrequencies PolarBiome = [(40,Ice),(30,Water),(5,DeepWater),(4,RockyGround),(1,RockFace)]
+terrainFrequencies :: Biome -> WeightedSet TerrainPatch
+terrainFrequencies ShallowDungeon =
+     weightedSet [(40,RockFace),(50,RockyGround),(5,Sand),(5,Dirt)]
+terrainFrequencies DeepDungeon =
+     weightedSet [(50,RockFace),(25,Rubble),(25,RockyGround)]
+terrainFrequencies FrozenDungeon =
+     weightedSet [(75,RockFace),(5,Rubble),(10,RockyGround),(10,Ice)]
+terrainFrequencies AbyssalDungeon =
+     weightedSet [(60,RockFace),(10,Rubble),(10,RockyGround),(20,Water)]
+terrainFrequencies InfernalDungeon =
+     weightedSet [(70,RockFace),(15,Rubble),(15,Lava)]
+terrainFrequencies RockBiome =
+     weightedSet [(15,RockFace),(15,Rubble),(55,RockyGround),(15,Sand)]
+terrainFrequencies IcyRockBiome =
+     weightedSet [(10,RockFace),(10,Rubble),(20,RockyGround),(60,Ice)]
+terrainFrequencies GrasslandBiome =
+     weightedSet [(5,RockFace),(5,RockyGround),(10,Dirt),(10,Sand),(10,Forest),(10,Water),(50,Grass)]
+terrainFrequencies ForestBiome =
+     weightedSet [(10,RockFace),(10,RockyGround),(10,Dirt),(10,Water),(10,Grass),(25,Forest),(25,DeepForest)]
+terrainFrequencies TundraBiome =
+     weightedSet [(10,RockFace),(10,RockyGround),(10,Sand),(10,Water),(60,Ice)]
+terrainFrequencies DesertBiome =
+     weightedSet [(10,RockFace),(10,RockyGround),(9,Grass),(1,Water),(70,Desert)]
+terrainFrequencies OceanBiome =
+     weightedSet [(5,RockyGround),(10,Sand),(5,Grass),(5,Forest),(25,Water),(50,DeepWater)]
+terrainFrequencies MountainBiome =
+     weightedSet [(50,RockFace),(25,RockyGround),(5,Rubble),(5,Sand),(5,Grass),(5,Forest),(5,Water)]
+terrainFrequencies SwampBiome =
+     weightedSet [(40,Forest),(50,Water),(5,Sand),(5,Grass)]
+terrainFrequencies PolarBiome =
+     weightedSet [(40,Ice),(30,Water),(5,DeepWater),(4,RockyGround),(1,RockFace)]
 
-terrainInterpFn :: (TerrainPatch,TerrainPatch) -> [(Integer,TerrainPatch)]
-terrainInterpFn (a,b) = [(1,a),(1,b)] ++ (terrainInterpRule (a,b)) ++ (terrainInterpRule (b,a))
+terrainInterpFn :: (TerrainPatch,TerrainPatch) -> WeightedSet TerrainPatch
+terrainInterpFn (a,b) = weightedSet [(1,a),(1,b)] `Random.append` terrainInterpRule (a,b) `Random.append` terrainInterpRule (b,a)
 
 -- Notice, in terrainInterpFn, we always throw in both terrain patches with a weight of 1.
-terrainInterpRule :: (TerrainPatch,TerrainPatch) -> [(Integer,TerrainPatch)]
-terrainInterpRule (RockFace,RockFace) = []
-terrainInterpRule (RockFace,RockyGround) = [(3,RockFace),(1,Rubble),(3,RockyGround)]
-terrainInterpRule (RockFace,x) = [(3,RockFace),(2,Rubble),(1,RockyGround),(1,Sand),(7,x)]
-terrainInterpRule (Rubble,x) = [(1,Rubble),(2,Sand),(2,Dirt),(5,x)]
-terrainInterpRule (DeepWater,DeepWater) = []
-terrainInterpRule (DeepWater,Water) = [(3,DeepWater)]
-terrainInterpRule (DeepWater,_) = [(3,Water)]
-terrainInterpRule (DeepForest,DeepForest) = [(1,Grass)]
-terrainInterpRule (DeepForest,Forest) = [(2,Grass)]
-terrainInterpRule (DeepForest,_) = [(1,Forest)]
-terrainInterpRule (Forest,DeepForest) = []
-terrainInterpRule (Forest,Forest) = [(3,Grass)]
-terrainInterpRule (Forest,_) = [(3,Grass)]
-terrainInterpRule (Water,Water) = [(20,Water),(1,Sand)]
-terrainInterpRule (Water,DeepWater) = []
-terrainInterpRule (Water,_) = [(1,Sand)]
-terrainInterpRule (Sand,Desert) = [(1,Grass),(1,Forest)]
-terrainInterpRule _ = []
+terrainInterpRule :: (TerrainPatch,TerrainPatch) -> WeightedSet TerrainPatch
+terrainInterpRule (RockFace,RockFace) = unweightedSet [RockFace]
+terrainInterpRule (RockFace,RockyGround) = weightedSet [(3,RockFace),(1,Rubble),(3,RockyGround)]
+terrainInterpRule (RockFace,x) = weightedSet [(3,RockFace),(2,Rubble),(1,RockyGround),(1,Sand),(7,x)]
+terrainInterpRule (Rubble,x) = weightedSet [(1,Rubble),(2,Sand),(2,Dirt),(5,x)]
+terrainInterpRule (DeepWater,DeepWater) = unweightedSet [DeepWater]
+terrainInterpRule (DeepWater,Water) = weightedSet [(3,DeepWater)]
+terrainInterpRule (DeepWater,_) = weightedSet [(3,Water)]
+terrainInterpRule (DeepForest,DeepForest) = weightedSet [(1,Grass)]
+terrainInterpRule (DeepForest,Forest) = weightedSet [(2,Grass)]
+terrainInterpRule (DeepForest,_) = weightedSet [(1,Forest)]
+terrainInterpRule (Forest,DeepForest) = unweightedSet [Forest,DeepForest]
+terrainInterpRule (Forest,Forest) = weightedSet [(3,Grass)]
+terrainInterpRule (Forest,_) = weightedSet [(3,Grass)]
+terrainInterpRule (Water,Water) = weightedSet [(20,Water),(1,Sand)]
+terrainInterpRule (Water,DeepWater) = unweightedSet [Water,DeepWater]
+terrainInterpRule (Water,_) = weightedSet [(1,Sand)]
+terrainInterpRule (Sand,Desert) = weightedSet [(1,Grass),(1,Forest)]
+terrainInterpRule (a,b) = unweightedSet [a,b]
 
 -- |
 -- A list of every TerrainPatch that might be created from the terrainFrequencies function.
 --
 baseTerrainPatches :: [TerrainPatch]
-baseTerrainPatches = nub $ List.map snd $ concatMap terrainFrequencies [minBound..maxBound]
+baseTerrainPatches = nub $ concatMap (fromWeightedSet . terrainFrequencies) [minBound..maxBound]
 
-terrainInterpMap :: Map (TerrainPatch,TerrainPatch) [(Integer,TerrainPatch)]
+terrainInterpMap :: Map (TerrainPatch,TerrainPatch) (WeightedSet TerrainPatch)
 terrainInterpMap = let terrain_patch_pairs = [(a,b) | a <- baseTerrainPatches, b <- baseTerrainPatches]
                        interps = List.map terrainInterpFn terrain_patch_pairs
                        in fromList (zip terrain_patch_pairs interps)

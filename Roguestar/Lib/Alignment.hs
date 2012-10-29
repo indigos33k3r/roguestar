@@ -1,3 +1,4 @@
+-- Data
 module Roguestar.Lib.Alignment
     (Alignment,
      MoralAlignment(..),

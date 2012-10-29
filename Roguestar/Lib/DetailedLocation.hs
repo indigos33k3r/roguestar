@@ -1,9 +1,10 @@
 {-# LANGUAGE TypeFamilies, EmptyDataDecls, ScopedTypeVariables, PatternGuards, FlexibleContexts #-}
-
+--Core
 module Roguestar.Lib.DetailedLocation
     (DetailedLocation,
      PlaneLocation,
      BuildingLocation,
+     CreatureLocation,
      ToolLocation,
      CarriedLocation,
      PlanarLocation,
@@ -82,6 +83,7 @@ instance LocationConstructor Planar where
                                    constructLocation building_ref $ Constructed (planar_parent planar)
                                                                                 (planar_position planar)
                                                                                 (error "LocationConstructor Planar: constructLocation: indeterminate")
+    constructLocation _ _ | otherwise = error "LocationConstructor Planar - constructLocation: failed match"
 
 -- | Meaning that an assignment from one location type to another is guaranteed to succeed.
 data Supported

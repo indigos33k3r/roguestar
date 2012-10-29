@@ -1,4 +1,4 @@
-
+-- Services
 module Roguestar.Lib.HierarchicalDatabase
     (HierarchicalDatabase,
      HierarchicalRelation(..),

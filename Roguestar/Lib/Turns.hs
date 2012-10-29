@@ -1,5 +1,5 @@
 {-# LANGUAGE PatternGuards, ScopedTypeVariables #-}
-
+--Mechanics
 module Roguestar.Lib.Turns
     (dbPerformPlayerTurn)
     where
@@ -12,7 +12,7 @@ import Roguestar.Lib.Reference
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.CreatureData (Creature)
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Control.Monad
 import Roguestar.Lib.Creature
 import Data.Ratio
@@ -79,7 +79,7 @@ dbPerform1PlanarAITurn plane_ref =
        player_locations <- filterRO (liftM (== Player) . getCreatureFaction . asChild . detail) creature_locations
        num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 3) $
-           do (terrain_type,species) <- pickM monster_spawns
+           do (terrain_type,species) <- weightedPickM $ unweightedSet monster_spawns
               _ <- spawnNPC terrain_type species plane_ref $ map detail $ player_locations
               return ()
        dbAdvanceTime plane_ref (1%planar_turn_frequency)
@@ -91,7 +91,7 @@ dbPerform1PlanarAITurn plane_ref =
 spawnNPC :: TerrainPatch -> Species -> PlaneRef -> [Position] -> DB Bool
 spawnNPC terrain_type species plane_ref player_locations =
     do logDB log_turns INFO $ "spawnNPC; Spawning an NPC"
-       p <- pickM player_locations
+       p <- weightedPickM $ unweightedSet player_locations
        m_spawn_position <- pickRandomClearSite_withTimeout (Just 2) 7 0 0 p (== terrain_type) plane_ref
        case m_spawn_position of
            Nothing -> return False
@@ -113,7 +113,7 @@ dbPerform1CreatureAITurn creature_ref =
            -- FIXME: what if there is more than one player
            player_position <- MaybeT $ return $ listToMaybe visible_player_locations
            (rand_x :: Integer) <- lift $ getRandomR (1,100)
-           rand_face <- lift $ pickM [minBound..maxBound]
+           rand_face <- lift $ weightedPickM $ unweightedSet [minBound..maxBound]
            (_,my_position) <- lift P.whereAmI
            let face_to_player = faceAt my_position player_position
            return $ case distanceBetweenChessboard my_position player_position of

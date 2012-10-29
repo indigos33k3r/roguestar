@@ -1,3 +1,4 @@
+--Services
 module Roguestar.Lib.Logging
     (initLogging,
      log_creature,

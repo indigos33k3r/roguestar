@@ -2,7 +2,7 @@
 body {
     padding: 0px;
     margin: 0px;
-    font-family: monospace;
+    font-family: "Verdana", sans-serif;
     background: #000000;
     color: #EEEEEE;
 }
@@ -23,6 +23,9 @@ body {
     margin-top: 1em;
     margin-bottom: 1em;
     width: 1024px;
+    background-image: url('/static/glass-vertical.png');
+    background-repeat: repeat-x;
+    background-position: center center;
 }
 
 #menu ul {
@@ -273,7 +276,6 @@ a:hover {
    padding-right: 1.62in;
    margin: 0;
    margin-bottom: 1em;
-   font-family: "Georgia", serif;
    color: #BBBBBB;
 }
 
@@ -287,6 +289,19 @@ a:hover {
     background: #000000;
 }
 
+#gameplaybox-overlay {
+    overflow: hidden;
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: 500px;
+    height: 500px;
+    background-image: url('/static/glass-vertical.png');
+    background-repeat: repeat-x;
+    background-position: center center;
+    z-index: 10;
+}
+
 .mapcontent {
   font-size: 12pt;
   text-align: center;
@@ -294,24 +309,47 @@ a:hover {
 }
 
 .mapcontent span {
+  font-family: monospace;
+  font-size: 14pt;
   text-align: center;
-  margin-left: 3.25pt;
-  margin-right: 3.25pt;
+  margin: 0px;
+  display: inline-block;
+  width: 32px;
+  line-height: 32px;
+  height: 32px;
+  border: solid;
+  border-color: black;
+  border-width: 1px;
+  background-image: url('/static/faded-bead.png');
 }
 
-#gameplaybox .help {
+#help-map {
     position: absolute;
     left: 476px;
     top: 10px;
+    z-index: 20;
 }
 
 #messagebox {
+    font-family: monospace;
     overflow: auto;
     position: absolute;
+    padding: 0px;
     left: 0px;
     top: 504px;
-    height: 96px;
+    height: 95px;
     width: 1024px;
+    background: #000000;
+    background-image: url('/static/glass-vertical.png');
+    background-repeat: repeat-x;
+    background-position: center center;
+}
+
+#messagebox p {
+    line-height: 19px;
+    height: 19px;
+    margin: 0px;
+    padding: 0px;
 }
 
 #controls {
@@ -321,9 +359,13 @@ a:hover {
     top: 0px;
     height: 500px;
     width: 520px;
+    background: #000000;
+    background-image: url('/static/glass-vertical.png');
+    background-repeat: repeat-x;
+    background-position: center center;
 }
 
-#controls .help {
+#help-actions {
     position: absolute;
     left: 496px;
     top: 10px;
@@ -361,73 +403,73 @@ a:hover {
 }
 
 .feedback button {
-	margin-top: 1cm;
+    margin-top: 1cm;
     clear: both;
 }
 
 /* Strong */
-.B {
+.mapcontent span.B {
     font-weight: bold;
+    background-image: url('/static/glass-bead.png');
 }
 
 /* Sandy */
-.s {
+.mapcontent span.s {
     color: #FFFF00;
 }
 
 /* Dusty */
-.d {
+.mapcontent span.d {
     color: #888800;
 }
 
 /* Icy */
-.i {
+.mapcontent span.i {
     color: #00FFFF;
 }
 
 /* Plants */
-.p {
+.mapcontent span.p {
     color: #00FF00;
 }
 
 /* FaintMagic */
-.a {
+.mapcontent span.a {
     color: #AA55AA;
 }
 
 /* StrongMagic */
-.A {
+.mapcontent span.A {
     color: #FF00FF;
 }
 
 /* Wet */
-.w {
+.mapcontent span.w {
     color: #4488FF;
 }
 
 /* Molten */
-.m {
+.mapcontent span.m {
     color: #FF0000;
 }
 
 /* Gloomy */
-.g {
+.mapcontent span.g {
     color: #0000FF;
 }
 
 /* Warp-In Effect */
-.warpin {
+.mapcontent span.warpin {
     color: #000000;
-    background: #FF55FF;
+    background-color: #FF55FF;
 }
 
-.damage {
+.mapcontent span.damage {
     color: #000000;
-    background: #FF0000;
+    background-color: #FF0000;
 }
 
-.active {
-    border: solid;
-    border-width: 1px;
-    border-color: #444444;
+.mapcontent span.active {
+    /* border-color: #444444; */
+    background-image: url('/static/glass-bead-bright.png');
 }

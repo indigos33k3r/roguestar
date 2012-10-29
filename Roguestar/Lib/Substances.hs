@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+--Data
 module Roguestar.Lib.Substances
     (Gas(..),
      Material(..),
@@ -16,12 +17,11 @@ module Roguestar.Lib.Substances
      prettySubstance,
      gasValue,
      chromaliteAlignment,
-     chromalitePotency)
+     chromalitePotency,
+     substanceValue)
     where
 
 import Roguestar.Lib.Alignment
-import Data.List
-import Data.Ord
 import Data.Maybe
 import qualified Data.Text as T
 

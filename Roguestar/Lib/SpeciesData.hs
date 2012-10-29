@@ -1,8 +1,10 @@
+--Data
 module Roguestar.Lib.SpeciesData
     (Species(..),
      all_species)
     where
 
+--Data
 data Species =
      BlueRecreant
    | RedRecreant

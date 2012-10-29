@@ -262,14 +262,14 @@ inventoryAction tool_ref (action_name,css_class,action_path) =
 reroll :: PlayerState -> Handler App App ()
 reroll (SpeciesSelectionState _) =
     do g <- getGame
-       liftIO $ rerollStartingSpecies g
+       _ <- liftIO $ rerollStartingSpecies g
        replay
 reroll _ = pass
 
 accept :: PlayerState -> Handler App App ()
 accept (SpeciesSelectionState (Just _)) =
     do g <- getGame
-       liftIO $ beginGame g
+       _ <- liftIO $ beginGame g
        replay
 accept _ = pass
 
@@ -386,7 +386,7 @@ data MapData = MapData {
 
 generateMapContent :: Handler App App Aeson.Value
 generateMapContent =
-    do let (x,y) = (21,21) --we'll probably want to let the player customize this later
+    do let (x,y) = (13,13) --we'll probably want to let the player customize this later
        g <- getGame
        player_state <- oops $ liftIO $ getSnapshotPlayerState g
        map_data <- oops $ liftIO $ perceiveSnapshot g $

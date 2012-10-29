@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
-
+--Core
 module Roguestar.Lib.Tool
     (pickupTool,
      wieldTool,
@@ -20,7 +20,7 @@ import Data.Maybe
 import Data.List as List
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.Substances
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 
 pickupTool :: (DBReadable db) =>

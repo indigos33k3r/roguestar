@@ -1,4 +1,4 @@
-
+--Data
 module Roguestar.Lib.TravelData
     (ClimbDirection(..)) where
 

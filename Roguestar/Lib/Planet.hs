@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-
+--World
 module Roguestar.Lib.Planet
     (makePlanets,
      generatePlanetInfo)
@@ -8,7 +8,7 @@ module Roguestar.Lib.Planet
 import Roguestar.Lib.PlanetData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.DB
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.TerrainData
 import Control.Monad
 import Control.Monad.Random

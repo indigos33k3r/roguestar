@@ -1,3 +1,4 @@
+-- Mechanics
 module Roguestar.Lib.Activate
     (ActivationOutcome,
      resolveActivation,

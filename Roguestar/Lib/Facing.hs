@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+--Data
 module Roguestar.Lib.Facing
     (Facing(..),
      facingToRelative,
@@ -15,15 +16,15 @@ import Data.List
 import qualified Data.ByteString.Char8 as B
 
 data Facing = North
-	    | NorthEast
-	    | East
-	    | SouthEast
-	    | South
-	    | SouthWest
-	    | West
-	    | NorthWest
-	    | Here
-	      deriving (Eq,Ord,Enum,Bounded,Read,Show)
+            | NorthEast
+            | East
+            | SouthEast
+            | South
+            | SouthWest
+            | West
+            | NorthWest
+            | Here
+              deriving (Eq,Ord,Enum,Bounded,Read,Show)
 
 -- |
 -- Takes an abbreviation (n,e,sw, etc) and answers a facing.

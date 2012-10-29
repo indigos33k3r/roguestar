@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-
+--Core
 module Roguestar.Lib.DetailedTravel
     (Roguestar.Lib.DetailedTravel.whereIs,
      Roguestar.Lib.DetailedTravel.getContents)

@@ -1,11 +1,9 @@
-
+-- Core
 module Roguestar.Lib.Character
     (applyCharacterClass)
     where
 
-import Roguestar.Lib.Alignment
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.TerrainData
 import Roguestar.Lib.PersistantData
 
 applyCharacterClass :: CharacterClass -> Creature -> Creature

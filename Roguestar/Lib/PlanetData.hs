@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+--World
 module Roguestar.Lib.PlanetData
     (PlanetRegion(..),
      PlanetInfo(..),
@@ -96,6 +97,7 @@ nonaligned_second_series_planets = [
     nonaligned 4 "ocracoke" OceanBiome,
     (nonaligned 7 "emerald" GrasslandBiome `removeTown` [basic_stargate]) { planet_info_priority = 100.0 }]
 
+cyborg_planets :: [PlanetInfo]
 cyborg_planets = [
     cyber "" TundraBiome,
     cyber "" TundraBiome,

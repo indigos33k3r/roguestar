@@ -14,7 +14,7 @@ module Roguestar.Lib.Behavior.Travel
 import Control.Monad.Maybe
 import Roguestar.Lib.Facing
 import Roguestar.Lib.DB as DB
-import Roguestar.Lib.Plane
+import Roguestar.Lib.Core.Plane
 import Data.Maybe
 import Control.Monad
 import Control.Monad.Trans

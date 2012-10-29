@@ -29,9 +29,7 @@ module Roguestar.Lib.Roguestar
      Behavior(..))
     where
 
-import Data.UUID
 import System.UUID.V4 as V4
-import qualified Data.Binary as Binary
 import Data.Map as Map
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -40,7 +38,6 @@ import Control.Concurrent.STM
 import Control.Monad
 import Roguestar.Lib.PlayerState
 import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.Random
 import Roguestar.Lib.Creature
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.BeginGame as BeginGame
@@ -96,7 +93,7 @@ cleanupGameState config game_state =
               when needs_cleanup $ writeTVar (game_state_last_cleanup game_state) (game_config_current_clock_time_seconds config)
               return needs_cleanup
        when needs_cleanup $ 
-           do forkIO $ doCleanup config game_state
+           do _ <- forkIO $ doCleanup config game_state
               return ()
 
 doCleanup :: GameConfiguration -> GameState -> IO ()
@@ -111,12 +108,12 @@ doCleanup config game_state =
 createGame :: GameConfiguration -> GameState -> IO BS.ByteString
 createGame config game_state =
     do cleanupGameState config game_state
-       uuid <- liftM (BS8.pack . show) V4.uuid
+       new_uuid <- liftM (BS8.pack . show) V4.uuid
        g <- newGame config
        atomically $
            do gs <- readTVar (game_state_gamelist game_state)
-              writeTVar (game_state_gamelist game_state) $ Map.insert uuid g gs
-       return uuid
+              writeTVar (game_state_gamelist game_state) $ Map.insert new_uuid g gs
+       return new_uuid
 
 retrieveGame :: BS.ByteString -> GameConfiguration -> GameState -> IO (Maybe Game)
 retrieveGame uuid config game_state =
@@ -158,7 +155,7 @@ rerollStartingSpecies g =
            do writeTVar (game_db g) initial_db
               writeTVar (game_message_text g) []
        poke g $
-           do species <- pickM all_species
+           do species <- weightedPickM $ unweightedSet all_species
               generateInitialPlayerCreature BlueRecreant
               return species
 

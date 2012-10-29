@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, PatternGuards, TypeFamilies #-}
-
+--Data
 module Roguestar.Lib.DBData
     (Reference,
      toUID,
@@ -36,7 +36,6 @@ import Roguestar.Lib.ToolData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.BuildingData
-import Data.Maybe
 import Control.Monad
 import Roguestar.Lib.Position
 import Roguestar.Lib.Reference
@@ -146,7 +145,7 @@ instance LocationDetail Position where
     fromLocation (IsBeneath {}) = Nothing
 
 instance LocationDetail MultiPosition where
-    fromLocation (IsConstructed b c) = Just $ multiPosition (constructed_position c) (buildingOccupies $ constructed_shape c)
+    fromLocation (IsConstructed _ c) = Just $ multiPosition (constructed_position c) (buildingOccupies $ constructed_shape c)
     fromLocation x = fmap (toMultiPosition :: Position -> MultiPosition) $ fromLocation x
 
 instance LocationDetail Facing where
@@ -210,5 +209,5 @@ returnToInventory _ | otherwise = Nothing
 
 shuntToTheUniverse :: Location -> Maybe Location
 shuntToTheUniverse l | Just (Child plane) <- fromLocation l = Just $ InTheUniverse plane
-shuntToTHeUniverse _ | otherwise = Nothing
+shuntToTheUniverse _ | otherwise = Nothing
 

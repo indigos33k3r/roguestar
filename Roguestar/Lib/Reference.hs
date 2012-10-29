@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
+--Data
 module Roguestar.Lib.Reference
     (ReferenceType(..),
      (=:=),
@@ -11,8 +12,6 @@ import Roguestar.Lib.PlaneData
 import Roguestar.Lib.BuildingData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.CreatureData
-import Data.Either
-import Data.Maybe
 
 --
 -- Reference Equality
@@ -51,16 +50,10 @@ instance ReferenceType TheUniverse where
 
 instance (ReferenceType a, ReferenceType b) => ReferenceType (Either a b) where
     coerceReference x =
-        let -- all of this monstrous let-binding is just to make the typecheck unambiguous
-            bind :: Maybe (Reference x) -> x
-            bind = undefined
-            alike :: a -> a -> Bool
-            alike _ _ = True
+        let coerce_left :: Maybe (Reference a)
             coerce_left = coerceReference x
+            coerce_right :: Maybe (Reference b)
             coerce_right = coerceReference x
-            bind_either = either (alike $ bind coerce_left)
-                                 (alike $ bind coerce_right)
-                                 (bind result)
             result = case (coerce_left,coerce_right) of
                 (Just l,_) -> Just $ unsafeReference l
                 (_,Just r) -> Just $ unsafeReference r

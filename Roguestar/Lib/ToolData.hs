@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+
+--Data
 module Roguestar.Lib.ToolData
     (Tool(..),
      toolName,

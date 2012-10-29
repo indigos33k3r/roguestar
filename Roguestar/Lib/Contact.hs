@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 
+-- Mechanics
 module Roguestar.Lib.Contact
     (findContacts,
      ContactMode(..),
@@ -10,14 +11,11 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Facing
 import Roguestar.Lib.DB
-import Roguestar.Lib.Reference
 import Roguestar.Lib.CreatureData
 import Control.Monad
-import Roguestar.Lib.Plane
 import Roguestar.Lib.PlaneData
 import Data.Ord
 import Data.List as List
-import Data.Maybe
 import Roguestar.Lib.DetailedLocation
 
 -- | 'Touch' contacts are on the same or facing square as the subject.

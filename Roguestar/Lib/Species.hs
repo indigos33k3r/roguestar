@@ -1,14 +1,12 @@
-
+--Data
 module Roguestar.Lib.Species
     (SpeciesData(..),
      speciesInfo)
     where
 
-import Data.Char
+--Data
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.SpeciesData
-import Data.Monoid
-import Roguestar.Lib.TerrainData
 
 data SpeciesData = SpeciesData {
         species_traits :: [(CreatureTrait,Integer)] }
