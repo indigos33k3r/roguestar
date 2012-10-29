@@ -22,7 +22,7 @@ import Data.Maybe
 import Roguestar.Lib.Behavior
 import qualified Roguestar.Lib.Perception as P
 import Roguestar.Lib.Position
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.Logging
 import Roguestar.Lib.DetailedLocation
 import Control.Monad.Random
@@ -105,8 +105,8 @@ dbPerform1CreatureAITurn creature_ref =
     do logDB log_turns INFO $ "dbPerform1CreatureAITurn; Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
        liftM (const ()) $ atomic (flip dbBehave creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
         do let isPlayer :: forall db. (DBReadable db) => Reference () -> P.DBPerception db Bool
-               isPlayer ref | (Just creature_ref) <- coerceReference ref =
-                   do f <- P.getCreatureFaction creature_ref
+               isPlayer ref | (Just might_be_the_player_creature_ref) <- coerceReference ref =
+                   do f <- P.getCreatureFaction might_be_the_player_creature_ref
                       return $ f == Player
                isPlayer _ | otherwise = return False
            (visible_player_locations :: [Position]) <- lift $ liftM (map P.visible_object_position) $ P.visibleObjects isPlayer

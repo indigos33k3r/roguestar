@@ -27,7 +27,7 @@ import Control.Monad.Random
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Position
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.Logging
 

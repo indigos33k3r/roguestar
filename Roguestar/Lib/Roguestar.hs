@@ -31,12 +31,13 @@ module Roguestar.Lib.Roguestar
 
 import System.UUID.V4 as V4
 import Data.Map as Map
+import Data.List as List
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Roguestar.Lib.DB as DB
 import Control.Concurrent.STM
 import Control.Monad
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Creature
 import Roguestar.Lib.CreatureData
@@ -46,9 +47,12 @@ import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Behavior as Behavior
 import Roguestar.Lib.Turns
+import Roguestar.Lib.Core.Plane
 import Data.Text as T
 import System.Time
 import Control.Concurrent
+import Roguestar.Lib.FactionData
+import Roguestar.Lib.PlaneVisibility
 
 -- Session timeout information.
 data GameConfiguration = GameConfiguration {
@@ -104,7 +108,7 @@ doCleanup config game_state =
                   do last_touched <- readTVar $ game_last_touched value
                      when (game_config_current_clock_time_seconds config > last_touched + game_config_timeout_seconds config) $
                          writeTVar (game_state_gamelist game_state) =<< liftM (Map.delete key) (readTVar $ game_state_gamelist game_state)
-       
+
 createGame :: GameConfiguration -> GameState -> IO BS.ByteString
 createGame config game_state =
     do cleanupGameState config game_state
@@ -139,12 +143,33 @@ peek g f =
 poke :: Game -> DB a -> IO (Either DBError a)
 poke g f =
     do game <- atomically $ readTVar (game_db g)
-       result <- runDB f game
+       result <- flip runDB game $
+           do result <- f
+              cleanupNonPlayerSnapshots
+              return result
        case result of
            Left err -> return $ Left err
            Right (a,next_db) ->
                do atomically $ writeTVar (game_db g) next_db
                   return $ Right a
+
+cleanupNonPlayerSnapshots :: DB ()
+cleanupNonPlayerSnapshots =
+    do has_snapshot <- DB.hasSnapshot
+       is_relevant <- DB.peepOldestSnapshot $
+           do participants <- liftM (List.map genericReference . participantsOf) playerState
+              m_plane_ref <- getCurrentPlane
+              case m_plane_ref of
+                  _ | List.null participants -> return False
+                  Nothing                    -> return True
+                  Just plane_ref ->
+                      liftM (not . List.null) $ dbGetVisibleObjectsForFaction
+                          (return . (`elem` participants))
+                          Player
+                          plane_ref
+       when (has_snapshot && not is_relevant) $
+           do DB.popOldestSnapshot
+              cleanupNonPlayerSnapshots
 
 getPlayerState :: Game -> IO (Either DBError PlayerState)
 getPlayerState g = peek g playerState
@@ -206,7 +231,7 @@ putMessage :: Game -> T.Text -> IO ()
 putMessage g t = atomically $
     do ts <- readTVar $ game_message_text g
        writeTVar (game_message_text g) $ Prelude.take max_messages $ t:ts
-       
+
 getMessages :: Game -> IO [T.Text]
 getMessages g = readTVarIO (game_message_text g)
 

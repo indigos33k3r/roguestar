@@ -106,6 +106,7 @@ library
                   Roguestar.Lib.CharacterAdvancement,
                   Roguestar.Lib.PersistantData,
                   Roguestar.Lib.PowerUpData,
+                  Roguestar.Lib.Data.PlayerState,
                   Roguestar.Lib.HTML.Mustache
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all

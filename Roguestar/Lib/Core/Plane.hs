@@ -32,7 +32,7 @@ import Control.Monad.Random as Random
 import Data.Maybe
 import Data.List
 import Roguestar.Lib.Position as Position
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.DetailedLocation
 import qualified Data.ByteString.Char8 as B

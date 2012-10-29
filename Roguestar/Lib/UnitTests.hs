@@ -9,7 +9,7 @@ import Data.Maybe
 import Control.Concurrent
 import System.IO
 import Roguestar.Lib.DB
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Control.Monad.Reader.Class
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.TerrainData

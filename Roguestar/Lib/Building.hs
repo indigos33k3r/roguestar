@@ -24,7 +24,7 @@ import Control.Monad.Error
 import Roguestar.Lib.PowerUpData
 import Roguestar.Lib.CharacterAdvancement
 import Roguestar.Lib.DetailedLocation
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 
 -- | The total occupied surface area of a building.
 buildingSize :: (DBReadable db) => BuildingRef -> db Integer

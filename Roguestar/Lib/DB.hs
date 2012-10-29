@@ -74,7 +74,7 @@ import Roguestar.Lib.TimeCoordinate
 import Data.Ord
 import Control.Monad.Random as Random
 import Roguestar.Lib.Random
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.DBErrorFlag
 import Control.Parallel.Strategies
 import System.IO.Unsafe

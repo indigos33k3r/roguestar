@@ -14,7 +14,7 @@ import Roguestar.Lib.ToolData
 import Control.Monad
 import Control.Monad.Error
 import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.Town
 import qualified Data.ByteString.Char8 as B ()
 import Control.Monad.Random

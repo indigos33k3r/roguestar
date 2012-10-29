@@ -31,7 +31,7 @@ import Data.Ord
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Roguestar.Lib.Roguestar
-import Roguestar.Lib.PlayerState
+import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.DBErrorFlag
 import Roguestar.Lib.Perception
 import Roguestar.Lib.SpeciesData

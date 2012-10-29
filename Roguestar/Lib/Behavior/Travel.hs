@@ -37,7 +37,6 @@ walkCreature face (x',y') creature_ref =
     do l <- DetailedTravel.whereIs creature_ref
        let (Parent plane_ref) = detail l
            Position (x,y) = detail l
-           (Child creature_ref) = identityDetail l
            standing = Standing { standing_plane = plane_ref,
                                  standing_position = Position (x+x',y+y'),
                                  standing_facing = face }
