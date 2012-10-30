@@ -21,8 +21,8 @@ import Control.Monad.Random
 import Roguestar.Lib.Utility.SiteCriteria
 
 homeBiome :: Species -> WeightedSet Biome
-homeBiome RedRecreant = unweightedSet [ForestBiome,TundraBiome,MountainBiome]
-homeBiome BlueRecreant = unweightedSet [ForestBiome,TundraBiome,MountainBiome]
+homeBiome RedRecreant = weightedSet [(2,TemperateForest),(2,TemperateClearing),(1,RelaxingPond),(1,CraterInterior)]
+homeBiome BlueRecreant = weightedSet [(2,TemperateForest),(2,TemperateClearing),(1,RelaxingPond),(1,CraterInterior)]
 
 startingEquipmentBySpecies :: Species -> [Tool]
 startingEquipmentBySpecies RedRecreant = []
@@ -31,10 +31,9 @@ startingEquipmentBySpecies BlueRecreant = []
 dbCreateStartingPlane :: Creature -> DB PlaneRef
 dbCreateStartingPlane creature =
     do seed <- getRandom
-       biome <- weightedPickM $ homeBiome (creature_species creature)
        dbNewPlane "belhaven" (TerrainGenerationData {
-           tg_smootheness = 2,
-           tg_biome = biome,
+           tg_smootheness = 3,
+           tg_biome = homeBiome (creature_species creature),
            tg_placements = [recreantFactories seed] }) TheUniverse
 
 -- |

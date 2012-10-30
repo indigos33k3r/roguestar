@@ -53,8 +53,8 @@ activateFacingBuilding face creature_ref = liftM (fromMaybe False) $ runMaybeT $
     do (Parent plane_ref,position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
        buildings <- lift $ liftM mapLocations $ whatIsOccupying plane_ref $ offsetPosition (facingToRelative face) position
        liftM or $ lift $ forM buildings $ \(Child building_ref) ->
-           do building_behavior <- buildingBehavior building_ref
-              activateBuilding building_behavior creature_ref building_ref
+           do building_behavior_type <- buildingBehavior building_ref
+              activateBuilding building_behavior_type creature_ref building_ref
 
 activateBuilding :: BuildingBehavior -> CreatureRef -> BuildingRef -> DB Bool
 activateBuilding (PowerUp pud) creature_ref building_ref =
@@ -84,9 +84,9 @@ activateBuilding (OneWayStargate region) creature_ref building_ref =
 -- | Deposit a creature in front of (-1) or behind (+1) a random portal on the specified plane.  Returns
 -- the dbMove result from the action.
 portalCreatureTo :: Maybe BuildingBehavior -> Integer -> CreatureRef -> PlaneRef -> DB (Location,Location)
-portalCreatureTo building_behavior offset creature_ref plane_ref =
+portalCreatureTo building_behavior_type offset creature_ref plane_ref =
     do (all_buildings :: [BuildingRef]) <- liftM asChildren (getContents plane_ref)
-       portals <- filterM (liftM ((== building_behavior) . Just) . buildingBehavior) all_buildings
+       portals <- filterM (liftM ((== building_behavior_type) . Just) . buildingBehavior) all_buildings
        ideal_position <- if null portals
            then liftM2 (\x y -> Position (x,y)) (getRandomR (-40,40)) (getRandomR (-40,40))
            else do portal <- weightedPickM $ unweightedSet portals

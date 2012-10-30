@@ -380,7 +380,7 @@ getGame =
            Nothing -> redirect "/start"
 
 data MapData = MapData {
-    md_visible_terrain :: Map.Map Position TerrainPatch,
+    md_visible_terrain :: Map.Map Position Terrain,
     md_visible_objects :: Map.Map Position [VisibleObject],
     md_position_info :: (Facing,Position) }
 
@@ -494,19 +494,14 @@ instance Charcoded Species where
     codedRepresentation _ RedRecreant = ('r',Strong)
     codedRepresentation _ BlueRecreant = ('@',Strong)
 
-instance Charcoded TerrainPatch where
+instance Charcoded Terrain where
     codedRepresentation _ RockFace          = ('#',Rocky)
-    codedRepresentation _ Rubble            = ('.',Rocky)
-    codedRepresentation _ Ore               = ('.',Rocky)
     codedRepresentation _ RockyGround       = ('.',Rocky)
     codedRepresentation _ Dirt              = ('.',Dusty)
     codedRepresentation _ Grass             = ('.',Plants)
     codedRepresentation _ Sand              = ('.',Sandy)
-    codedRepresentation _ Desert            = ('.',Sandy)
     codedRepresentation _ Forest            = ('f',Plants)
-    codedRepresentation _ DeepForest        = ('f',Plants)
     codedRepresentation _ TerrainData.Water = ('~',Wet)
-    codedRepresentation _ DeepWater         = ('~',Gloomy)
     codedRepresentation _ Ice               = ('.',Icy)
     codedRepresentation _ Lava              = ('~',Molten)
     codedRepresentation _ Glass             = ('.',Gloomy)

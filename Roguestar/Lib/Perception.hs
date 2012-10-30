@@ -21,7 +21,6 @@ module Roguestar.Lib.Perception
      Roguestar.Lib.Perception.getCreatureFaction,
      whereAmI,
      Roguestar.Lib.Perception.whereIs,
-     localBiome,
      compass,
      depth,
      myHealth)
@@ -35,7 +34,6 @@ import Roguestar.Lib.Reference
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.Creature as Creature
 import Roguestar.Lib.PlaneVisibility
-import Roguestar.Lib.PlaneData
 import Data.Maybe
 import Data.List as List
 import Data.Map as Map
@@ -47,15 +45,10 @@ import Roguestar.Lib.BuildingData
 import Roguestar.Lib.Building
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.DetailedLocation
-import Roguestar.Lib.Building
 import Roguestar.Lib.SpeciesData
-import qualified Data.ByteString.Char8 as B
 import Roguestar.Lib.CreatureData
-import qualified Data.Set as Set
-import qualified Data.Map as Map
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
-import Roguestar.Lib.PersistantData
 import qualified Roguestar.Lib.DetailedTravel as DT
 
 newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT CreatureRef db a) }
@@ -90,7 +83,7 @@ whoAmI = DBPerception $ ask
 runPerception :: (DBReadable db) => CreatureRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
 
-visibleTerrain :: (DBReadable db) => DBPerception db [(Position,TerrainPatch)]
+visibleTerrain :: (DBReadable db) => DBPerception db [(Position,Terrain)]
 visibleTerrain =
     do plane_ref <- whatPlaneAmIOn
        faction <- myFaction
@@ -146,6 +139,7 @@ convertToVisibleObjectRecord ref | (Just tool_ref) <- coerceReference ref =
 convertToVisibleObjectRecord ref | (Just building_ref :: Maybe BuildingRef) <- coerceReference ref =
     do location <- DT.whereIs building_ref
        return $ VisibleBuilding building_ref (detail location) (detail location) (detail location)
+convertToVisibleObjectRecord _ | otherwise = error "convertToVisibleObjectRecord: Impossible case."
 
 stackVisibleObjects :: [VisibleObject] -> Map Position [VisibleObject]
 stackVisibleObjects = List.foldr insertVob Map.empty
@@ -165,7 +159,7 @@ visibleObjectPosition (VisibleBuilding { visible_building_occupies = multi_posit
 visibleObjectPosition vob = toMultiPosition $ visible_object_position vob
 
 visibleObjectSize :: VisibleObject -> Integer
-visibleObjectSize (VisibleTool { visible_tool = t } ) = 0
+visibleObjectSize (VisibleTool {} ) = 0
 visibleObjectSize _ = 1000000
 
 visibleObjects :: (DBReadable db) =>
@@ -204,11 +198,6 @@ whatPlaneAmIOn = liftM (planar_parent . identityDetail) $ (\x -> liftDB $ getPla
 whereIs :: (DBReadable db, ReferenceType a) =>
            Reference a -> DBPerception db (DetailedLocation (Child a))
 whereIs ref = liftM (fromMaybe (error "Perception.whereIs: not a child of its own location record") . fromLocation) $ liftDB $ DB.whereIs ref
-
-localBiome :: (DBReadable db) => DBPerception db Biome
-localBiome =
-    do plane_ref <- whatPlaneAmIOn
-       liftDB $ liftM plane_biome $ dbGetPlane plane_ref
 
 -- Let's look into re-writing this with A*:
 -- http://hackage.haskell.org/packages/archive/astar/0.2.1/doc/html/Data-Graph-AStar.html

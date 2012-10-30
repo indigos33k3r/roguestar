@@ -14,8 +14,7 @@ module Roguestar.Lib.Core.Plane
      terrainAt,
      setTerrainAt,
      whatIsOccupying,
-     isTerrainPassable,
-     getBiome)
+     isTerrainPassable)
     where
 
 import Prelude hiding (getContents)
@@ -30,7 +29,7 @@ import Roguestar.Lib.CreatureData (Creature)
 import Control.Monad
 import Control.Monad.Random as Random
 import Data.Maybe
-import Data.List
+import Data.List as List
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.FactionData
@@ -144,7 +143,7 @@ getCurrentPlane = runMaybeT $
 --
 pickRandomClearSite :: (DBReadable db) =>
     Integer -> Integer -> Integer ->
-    Position -> (TerrainPatch -> Bool) -> PlaneRef ->
+    Position -> (Terrain -> Bool) -> PlaneRef ->
     db Position
 pickRandomClearSite search_radius
                     object_clear
@@ -163,18 +162,18 @@ pickRandomClearSite search_radius
 
 pickRandomClearSite_withTimeout :: (DBReadable db) =>
     Maybe Integer -> Integer -> Integer -> Integer ->
-    Position -> (TerrainPatch -> Bool) -> PlaneRef ->
+    Position -> (Terrain -> Bool) -> PlaneRef ->
     db (Maybe Position)
 pickRandomClearSite_withTimeout (Just x) _ _ _ _ _ _ | x <= 0 = return Nothing
 pickRandomClearSite_withTimeout timeout search_radius object_clear terrain_clear (Position (start_x,start_y)) terrainPredicate plane_ref =
     do logDB log_plane DEBUG $ "Searching for clear site . . ."
-       xys <- liftM2 (\a b -> map Position $ zip a b)
+       xys <- liftM2 (\a b -> List.map Position $ zip a b)
            (mapM (\x -> liftM (+start_x) $ getRandomR (-x,x)) [1..search_radius])
            (mapM (\x -> liftM (+start_y) $ getRandomR (-x,x)) [1..search_radius])
        terrain <- liftM plane_terrain $ dbGetPlane plane_ref
-       clutter_locations <- liftM (map identityDetail . filterLocations (\(_ :: MultiPosition) -> True)) $ getContents plane_ref
+       clutter_locations <- liftM (List.map identityDetail . filterLocations (\(_ :: MultiPosition) -> True)) $ getContents plane_ref
        let terrainIsClear (Position (x,y)) =
-               all terrainPredicate $
+               all terrainPredicate $ List.map (\(Terrain t) -> t) $
                    concat [[gridAt terrain (x',y') |
                             x' <- [x-terrain_clear..x+terrain_clear]] |
                             y' <- [y-terrain_clear..y+terrain_clear]]
@@ -193,13 +192,15 @@ pickRandomClearSite_withTimeout timeout search_radius object_clear terrain_clear
                           terrainPredicate
                           plane_ref
 
-terrainAt :: (DBReadable db) => PlaneRef -> Position -> db TerrainPatch
+terrainAt :: (DBReadable db) => PlaneRef -> Position -> db Terrain
 terrainAt plane_ref (Position (x,y)) =
     do terrain <- liftM plane_terrain $ dbGetPlane plane_ref
-       return $ gridAt terrain (x,y)
+       return $ case (gridAt terrain (x,y)) of
+           Terrain t -> t
+           Biome _ -> error "terrainAt: What's this biome doing here?"
 
-setTerrainAt :: PlaneRef -> Position -> TerrainPatch -> DB ()
-setTerrainAt plane_ref (Position pos) patch = dbModPlane (\p -> p { plane_terrain = specificReplaceGrid pos patch $ plane_terrain p }) plane_ref
+setTerrainAt :: PlaneRef -> Position -> Terrain -> DB ()
+setTerrainAt plane_ref (Position pos) patch = dbModPlane (\p -> p { plane_terrain = specificReplaceGrid pos (Terrain patch) $ plane_terrain p }) plane_ref
 
 -- | Lists all of the entities that are on a specific spot, not including nested entities.
 -- Typically this is zero or one creatures, and zero or more tools.  Might be a building.
@@ -215,7 +216,5 @@ isTerrainPassable plane_ref creature_ref position =
            f = maybe False $ either (const True) (\(Child c) -> c /= creature_ref)
        (critters :: [PlanarLocation]) <- liftM (filter $ f . fromLocation . toLocation) $ whatIsOccupying plane_ref position
        terrain <- terrainAt plane_ref position
-       return $ not (terrain `elem` [RockFace,Forest,DeepForest]) && null critters
+       return $ not (terrain `elem` impassable_terrains) && null critters
 
-getBiome :: (DBReadable db) => PlaneRef -> db Biome
-getBiome = liftM plane_biome . dbGetPlane

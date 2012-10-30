@@ -13,19 +13,14 @@ import Roguestar.Lib.Facing
 -- |
 -- We multiply a creature's hide check by this number if it is standing on this terrain.
 --
-terrainHideMultiplier :: TerrainPatch -> Integer
+terrainHideMultiplier :: Terrain -> Integer
 terrainHideMultiplier RockFace = 3
-terrainHideMultiplier Rubble = 2
-terrainHideMultiplier (Ore {}) = 2
 terrainHideMultiplier RockyGround = 1
 terrainHideMultiplier Dirt = 0
 terrainHideMultiplier Grass = 1
 terrainHideMultiplier Sand = 1
-terrainHideMultiplier Desert = 1
 terrainHideMultiplier Forest = 2
-terrainHideMultiplier DeepForest = 2
 terrainHideMultiplier Water = 2
-terrainHideMultiplier DeepWater = 2
 terrainHideMultiplier Ice = 0
 terrainHideMultiplier Lava = 0  -- you definitely can't hide on lava
 terrainHideMultiplier Glass = 0
@@ -37,21 +32,16 @@ terrainHideMultiplier Upstairs = 0
 -- We cast a ray between the spotter and the hider.  This indicates to what extent each terrain type
 -- interferes with vision.
 --
-terrainOpacity :: TerrainPatch -> Integer
+terrainOpacity :: Terrain -> Integer
 terrainOpacity RockFace = 90
-terrainOpacity Rubble = 10
-terrainOpacity (Ore {}) = 10
 terrainOpacity RockyGround = 0
 terrainOpacity Dirt = 0
 terrainOpacity Grass = 5
 terrainOpacity Sand = 0
-terrainOpacity Desert = 0
 terrainOpacity Forest = 25
-terrainOpacity DeepForest = 50
 terrainOpacity Water = 0
-terrainOpacity DeepWater = 0
 terrainOpacity Ice = 0
-terrainOpacity Lava = 0
+terrainOpacity Lava = 10 -- lava makes smoke/heat distoration?  Makes sense.
 terrainOpacity Glass = 0
 terrainOpacity RecreantFactory = 0
 terrainOpacity Downstairs = 0

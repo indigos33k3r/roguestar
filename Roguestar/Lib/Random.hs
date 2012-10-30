@@ -5,6 +5,7 @@ module Roguestar.Lib.Random
      weightedSet,
      unweightedSet,
      append,
+     Roguestar.Lib.Random.map,
      fromWeightedSet,
      weightedPick,
      weightedPickM,
@@ -16,7 +17,7 @@ module Roguestar.Lib.Random
      rationalRoll)
     where
 
-import Data.List
+import Data.List as List
 import System.Random ()
 import Control.Monad.Random
 import Control.Monad
@@ -32,20 +33,23 @@ data WeightedSet a = WeightedSet {
 weightedSet :: [(Integer,a)] -> WeightedSet a
 weightedSet [] = error "Tried to pick from an empty list."
 weightedSet as = WeightedSet {
-    weighted_set_total = sum $ map fst as,
+    weighted_set_total = sum $ List.map fst as,
     weighted_set = Vector.fromList $ reverse $ sortBy (comparing fst) as }
 
 unweightedSet :: [a] -> WeightedSet a
 unweightedSet [] = error "Tried to pick from an empty list."
 unweightedSet as = WeightedSet {
     weighted_set_total = genericLength as,
-    weighted_set = Vector.fromList $ map (\x -> (1,x)) as }
+    weighted_set = Vector.fromList $ List.map (\x -> (1,x)) as }
 
 append :: WeightedSet a -> WeightedSet a -> WeightedSet a
 append a b = weightedSet $ (Vector.toList $ weighted_set a) ++ (Vector.toList $ weighted_set b)
 
+map :: (a -> b) -> WeightedSet a -> WeightedSet b
+map f s = WeightedSet (weighted_set_total s) $ Vector.map (\(x,y) -> (x,f y)) $ weighted_set s
+
 fromWeightedSet :: WeightedSet a -> [a]
-fromWeightedSet = map snd . Vector.toList . weighted_set
+fromWeightedSet = List.map snd . Vector.toList . weighted_set
 
 -- | Pick an element of a weighted list at random.  E.g. in "[(2,x),(3,y)]" "y" will be picked three times out of five while "x" will be picked 2 times out of five.
 weightedPick :: (RandomGen g) => WeightedSet a -> g -> (a,g)
@@ -69,11 +73,11 @@ linearRoll n = getRandomR (0,n)
 -- | fixedSumRoll using 'linearRoll', with optimizations.
 -- REVISIT: this can be improved significantly, but performance doesn't seem to be a material problem so far.
 fixedSumLinearRoll :: (MonadRandom m) => [Integer] -> Integer -> m [Integer]
-fixedSumLinearRoll xs a = fixedSumRoll (map (linearRoll . min a) xs) a
+fixedSumLinearRoll xs a = fixedSumRoll (List.map (linearRoll . min a) xs) a
 
 -- | Roll a sequence of random variables, such that the sum of the result is a fixed value.
 fixedSumRoll :: (MonadRandom m) => [m Integer] -> Integer -> m [Integer]
-fixedSumRoll rs a = 
+fixedSumRoll rs a =
     do xs <- sequence rs
        case sum xs == a of
            True -> return xs

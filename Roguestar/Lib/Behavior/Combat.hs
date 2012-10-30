@@ -20,6 +20,7 @@ import Roguestar.Lib.Behavior.DeviceActivation
 import Roguestar.Lib.Contact
 import Roguestar.Lib.Core.Plane as Plane
 import Roguestar.Lib.DetailedLocation
+import Data.List as List
 
 data AttackModel =
     RangedAttackModel CreatureRef ToolRef Device
@@ -93,7 +94,7 @@ resolveAttack attack_model face =
                                                     (ReloadSkill $ interactionMode attack_model)
                                                     (toPseudoDevice attack_model)
                                                     (attacker attack_model)
-       m_defender_ref <- liftM (listToMaybe . map asChild . mapLocations) $ findContacts (contactMode $ interactionMode attack_model) (attacker attack_model) face
+       m_defender_ref <- liftM (listToMaybe . List.map asChild . mapLocations) $ findContacts (contactMode $ interactionMode attack_model) (attacker attack_model) face
        case (dao_outcome_type device_activation,m_defender_ref) of
            (DeviceFailed, _) | Just tool_ref <- weapon attack_model ->
                return $ AttackMalfunction (attacker attack_model) tool_ref (dao_energy device_activation)

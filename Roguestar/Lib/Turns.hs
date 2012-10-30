@@ -26,6 +26,7 @@ import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.Logging
 import Roguestar.Lib.DetailedLocation
 import Control.Monad.Random
+import Data.List as List
 
 dbPerformPlayerTurn :: Behavior -> CreatureRef -> DB ()
 dbPerformPlayerTurn beh creature_ref =
@@ -48,7 +49,7 @@ dbFinishPlanarAITurns plane_ref =
        sweepDead plane_ref
        (all_creatures_on_plane :: [CreatureRef]) <- liftM asChildren $ getContents plane_ref
        any_players_left <- liftM (any (== Player)) $ mapM getCreatureFaction all_creatures_on_plane
-       next_turn <- dbNextTurn $ map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
+       next_turn <- dbNextTurn $ List.map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
        case next_turn of
            _ | not any_players_left ->
                do logDB log_turns INFO $ "dbFinishPlanarAITurns; Game over condition detected"
@@ -69,7 +70,7 @@ dbFinishPlanarAITurns plane_ref =
 planar_turn_frequency :: Integer
 planar_turn_frequency = 100
 
-monster_spawns :: [(TerrainPatch,Species)]
+monster_spawns :: [(Terrain,Species)]
 monster_spawns = [(RecreantFactory,RedRecreant)]
 
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
@@ -80,7 +81,7 @@ dbPerform1PlanarAITurn plane_ref =
        num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 3) $
            do (terrain_type,species) <- weightedPickM $ unweightedSet monster_spawns
-              _ <- spawnNPC terrain_type species plane_ref $ map detail $ player_locations
+              _ <- spawnNPC terrain_type species plane_ref $ List.map detail $ player_locations
               return ()
        dbAdvanceTime plane_ref (1%planar_turn_frequency)
 
@@ -88,7 +89,7 @@ dbPerform1PlanarAITurn plane_ref =
 -- Spawn a non-player creature on the specified terrain type (or fail if not finding that terrain type)
 -- and of the specified species, on the specified plane, near one of the specified positions
 -- (presumably the list of positions of all player characters).
-spawnNPC :: TerrainPatch -> Species -> PlaneRef -> [Position] -> DB Bool
+spawnNPC :: Terrain -> Species -> PlaneRef -> [Position] -> DB Bool
 spawnNPC terrain_type species plane_ref player_locations =
     do logDB log_turns INFO $ "spawnNPC; Spawning an NPC"
        p <- weightedPickM $ unweightedSet player_locations
@@ -109,7 +110,7 @@ dbPerform1CreatureAITurn creature_ref =
                    do f <- P.getCreatureFaction might_be_the_player_creature_ref
                       return $ f == Player
                isPlayer _ | otherwise = return False
-           (visible_player_locations :: [Position]) <- lift $ liftM (map P.visible_object_position) $ P.visibleObjects isPlayer
+           (visible_player_locations :: [Position]) <- lift $ liftM (List.map P.visible_object_position) $ P.visibleObjects isPlayer
            -- FIXME: what if there is more than one player
            player_position <- MaybeT $ return $ listToMaybe visible_player_locations
            (rand_x :: Integer) <- lift $ getRandomR (1,100)

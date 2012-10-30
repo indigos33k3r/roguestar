@@ -59,18 +59,18 @@ availablePickups :: (DBReadable db) => CreatureRef -> db [ToolRef]
 availablePickups creature_ref =
     do (Parent plane_ref :: Parent Plane, creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
        pickups <- liftM (mapLocations . filterLocations (==creature_position)) $ getContents plane_ref
-       return $ map (asChild . identityDetail) pickups
+       return $ List.map (asChild . identityDetail) pickups
 
 -- | List of tools that the specified creature may choose to wield.
 -- That is, they are either on the ground or in the creature's inventory.
 availableWields :: (DBReadable db) => CreatureRef -> db [ToolRef]
 availableWields creature_ref =
-    do carried_tools :: [ToolRef] <- liftM (map (asChild . identityDetail) . mapLocations) $ getContents creature_ref
+    do carried_tools :: [ToolRef] <- liftM (List.map (asChild . identityDetail) . mapLocations) $ getContents creature_ref
        pickups <- availablePickups creature_ref
        return $ List.union carried_tools pickups
 
 getWielded :: (DBReadable db) => CreatureRef -> db (Maybe ToolRef)
-getWielded = liftM (listToMaybe . map (asChild . detail) . filterLocations (\(Wielded {}) -> True)) . getContents
+getWielded = liftM (listToMaybe . List.map (asChild . detail) . filterLocations (\(Wielded {}) -> True)) . getContents
 
 -- | Safely delete tools.
 deleteTool :: ToolRef -> DB ()

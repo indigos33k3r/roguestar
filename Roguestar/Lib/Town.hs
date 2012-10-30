@@ -6,11 +6,12 @@ module Roguestar.Lib.Town
 import Roguestar.Lib.BuildingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Utility.SiteCriteria
+import Data.List as List
 
 -- | Create a town from a list of buildings.
 createTown :: PlaneRef -> [BuildingPrototype] -> DB [BuildingRef]
 createTown plane_ref = mapM $ \building_prototype ->
-    do let clear_need = minimum $ map abs $ uncurry (++) $ unzip $ buildingOccupies $ buildingproto_shape building_prototype
+    do let clear_need = maximum $ List.map abs $ uncurry (++) $ unzip $ buildingOccupies $ buildingproto_shape building_prototype
        p <- pickRandomSite (-100,100) (-100,100) 100 [areaClearForObjectPlacement clear_need, closeTo $ Position (0,0)] plane_ref
        let the_building = Building {
                               building_behavior = buildingproto_behavior building_prototype,

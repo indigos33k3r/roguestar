@@ -69,7 +69,6 @@ facingBehavior creature_ref face =
            _ | not (null who) -> return $ Attack face
            _ | not (null what) -> return $ ActivateBuilding face
            Forest -> return $ ClearTerrain face
-           DeepForest -> return $ ClearTerrain face
            RockFace -> return $ ClearTerrain face
            _ -> return $ Step face
        logDB log_behavior INFO ("facingBehavior is: " ++ show result)

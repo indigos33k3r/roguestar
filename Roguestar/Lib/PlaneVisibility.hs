@@ -14,7 +14,7 @@ import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 import Control.Monad
 import Roguestar.Lib.CreatureData
-import Data.List
+import Data.List as List
 import Roguestar.Lib.Grids
 import Roguestar.Lib.GridRayCaster
 import Roguestar.Lib.VisibilityData
@@ -34,8 +34,7 @@ dbGetSeersForFaction faction plane_ref =
 -- Returns a list of all terrain patches that are visible to any creature belonging
 -- to the specified faction on the specified plane.
 --
-dbGetVisibleTerrainForFaction :: (DBReadable db) => Faction -> PlaneRef ->
-                                                    db [(Position,TerrainPatch)]
+dbGetVisibleTerrainForFaction :: (DBReadable db) => Faction -> PlaneRef -> db [(Position,Terrain)]
 dbGetVisibleTerrainForFaction faction plane_ref =
     do critters <- dbGetSeersForFaction faction plane_ref
        liftM (nub . concat) $ mapRO dbGetVisibleTerrainForCreature critters
@@ -43,7 +42,7 @@ dbGetVisibleTerrainForFaction faction plane_ref =
 -- |
 -- Returns a list of all terrain patches that are visible to the specified creature.
 --
-dbGetVisibleTerrainForCreature :: (DBReadable db) => CreatureRef -> db [(Position,TerrainPatch)]
+dbGetVisibleTerrainForCreature :: (DBReadable db) => CreatureRef -> db [(Position,Terrain)]
 dbGetVisibleTerrainForCreature creature_ref =
     do loc <- liftM identityDetail $ getPlanarLocation creature_ref
        spot_check <- dbGetSpotCheck creature_ref
@@ -86,7 +85,7 @@ dbIsPlanarVisible creature_ref obj_ref =
                 \(Position (cx,cy),Position (ox,oy)) ->
                     do let delta_at = (ox-cx,oy-cy)
                        terrain <- liftM plane_terrain $ dbGetPlane (planar_parent c) -- falling through all other tests, cast a ray for visibility
-                       return $ castRay (cx,cy) (ox,oy) (spot_check - distanceCostForSight Here delta_at) (terrainOpacity . gridAt terrain)
+                       return $ castRay (cx,cy) (ox,oy) (spot_check - distanceCostForSight Here delta_at) (terrainOpacity . (\(Terrain t) -> t) . gridAt terrain)
 
 dbGetOpposedSpotCheck :: (DBReadable db) => CreatureRef -> Reference a -> db Integer
 dbGetOpposedSpotCheck creature_ref object_ref =
@@ -113,16 +112,16 @@ dbGetHideCheck _   | otherwise = return 1
 -- visibleTerrain (creature's location) (spot check) (the terrain map) gives
 -- a list of visible terrain patches from that location with that spot check.
 --
-visibleTerrain :: Position -> Integer -> TerrainGrid -> [(Position,TerrainPatch)]
+visibleTerrain :: Position -> Integer -> TerrainGrid -> [(Position,Terrain)]
 visibleTerrain (Position (creature_at@(creature_x,creature_y))) spot_check terrain =
     let max_range = maximumRangeForSpotCheck spot_check
-        in map (\(x,y) -> (Position (x,y),gridAt terrain (x,y))) $
+        in List.map (\(x,y) -> (Position (x,y),(\(Terrain t) -> t) $ gridAt terrain (x,y))) $
            castRays creature_at
                         [terrainPatchBrightnessForm creature_at spot_check (creature_x+x,creature_y+y)
                          | x <- [-max_range..max_range],
                          y <- [-max_range..max_range],
                          x^2+y^2 <= max_range^2]
-                        (terrainOpacity . gridAt terrain)
+                        (terrainOpacity . (\(Terrain t) -> t) . gridAt terrain)
 
 -- |
 -- terrainPatchBrightnessForm (creature's location) (spot check) (terrain patch's location)

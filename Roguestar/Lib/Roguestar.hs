@@ -13,7 +13,7 @@ module Roguestar.Lib.Roguestar
      getSnapshotPlayerState,
      rerollStartingSpecies,
      Creature(..),
-     TerrainPatch(..),
+     Terrain(..),
      Position(..),
      Facing(..),
      Roguestar.Lib.Roguestar.beginGame,

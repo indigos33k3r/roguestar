@@ -25,7 +25,7 @@ class SiteCriteria a where
 
 data SimpleSiteCriteria =
     TerrainClear { _terrain_clear_radius :: Integer,
-                   _terrain_clear_test :: TerrainPatch -> Bool } |
+                   _terrain_clear_test :: Terrain -> Bool } |
     ObjectClear { _object_clear_radius :: Integer } |
     AtDistanceFrom { _at_distance_from_center :: Position,
                      _at_distance :: Integer } |
@@ -60,7 +60,7 @@ areaClearForObjectPlacement :: Integer -> SimpleSiteCriteria
 areaClearForObjectPlacement radius = RequireAtLeast 0.999 $ [TerrainClear radius (not . (`elem` difficult_terrains)), ObjectClear radius]
 
 -- SiteCriteria that requires the found site to exactly match the specified type of terrain patch.
-onTerrainType :: TerrainPatch -> SimpleSiteCriteria
+onTerrainType :: Terrain -> SimpleSiteCriteria
 onTerrainType terrain = RequireAtLeast 0 $ TerrainClear 0 (== terrain)
 
 -- SiteCriteria that tries to get as close to the specified position as possible.

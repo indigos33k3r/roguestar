@@ -4,6 +4,7 @@ module Roguestar.Lib.Grids
     (Grid,
      gridAt,
      generateGrid,
+     interpolateGrid,
      arbitraryReplaceGrid,
      specificReplaceGrid,
      Blob(ConeBlob, UnitBlob))
@@ -43,9 +44,9 @@ seededGrid n = SeededGrid n
 
 seededLookup :: SeededGrid -> (Integer,Integer) -> Integer
 seededLookup (SeededGrid n) (x,y) = blurp $
-        ((x*809) `mod` max_int) +
-        ((y*233) `mod` max_int) +
-        (n `mod` max_int)
+        (blurp $ (x*809) `mod` max_int) +
+        (blurp $ (y*233) `mod` max_int) +
+        (blurp $ n `mod` max_int)
     where max_int = toInteger (maxBound :: Int)
 
 data Grid a = CompletelyRandomGrid {
@@ -53,17 +54,17 @@ data Grid a = CompletelyRandomGrid {
                 _grid_weights :: WeightedSet a }
             | InterpolatedGrid {
                 _grid_seed :: SeededGrid,
-                _grid_interpolation_weights :: Map (a,a) (WeightedSet a),
-                grid_next :: Grid a }
+                _grid_interpolation_weights :: Maybe (Map (a,a) (WeightedSet a)),
+                _grid_next :: Grid a }
             | ArbitraryReplacementGrid {
                 _grid_seed :: SeededGrid,
                 _grid_sources :: [(Double,a)],
                 _grid_replacement_weights :: WeightedSet a,
                 _grid_blob :: Blob,
-                grid_next :: Grid a }
+                _grid_next :: Grid a }
             | SpecificPlacementGrid {
                 _grid_replacements :: Map (Integer,Integer) a,
-                grid_next :: Grid a }
+                _grid_next :: Grid a }
             | CachedGrid (StorableCachedGrid a)
     deriving (Read,Show)
 
@@ -74,9 +75,12 @@ gridAt (InterpolatedGrid seeded interpolation_map grid) at@(x,y) =
         there = gridAt grid (x `div` 2 + 1,y `div` 2 + 1)
         there_x = gridAt grid (x `div` 2 + 1,y `div` 2)
         there_y = gridAt grid (x `div` 2,y `div` 2 + 1)
-        interpolate a1 a2 = fst $ weightedPick (interpolation_map ! (a1,a2)) (mkRNG $ seededLookup seeded at)
+        random_seed = seededLookup seeded at
+        interpolate a1 a2 = case interpolation_map of
+            Just interpolation_map' -> fst $ weightedPick (interpolation_map' ! (a1,a2)) $ mkRNG random_seed
+            Nothing -> if even random_seed then a1 else a2
         in case (even x,even y) of
-                                (True,True) -> here
+                                (True,True) -> (interpolate here here)
                                 (True,False) -> (interpolate here there_y)
                                 (False,True) -> (interpolate here there_x)
                                 (False,False) -> (interpolate here there)
@@ -102,12 +106,17 @@ cachedGridOf any_other_grid = CachedGrid $ storableCachedGrid any_other_grid
 -- indicates the recursion depth for the generator.  The
 -- Integer list is the random integer stream used to generate
 -- the map.
-generateGrid :: (Ord a) => WeightedSet a -> Map (a,a) (WeightedSet a) -> Integer -> [Integer] -> Grid a
-generateGrid weights _ 0 seeds = let seed = head seeds
-                                      in CompletelyRandomGrid (seededGrid seed) weights
-generateGrid weights interps n seeds = let seed = head seeds
-                                            in optimizeGrid $ InterpolatedGrid (seededGrid seed) interps $
-                                                              generateGrid weights interps (n-1) (tail seeds)
+generateGrid :: (Ord a) => WeightedSet a -> Maybe (Map (a,a) (WeightedSet a)) -> Integer -> [Integer] -> Grid a
+generateGrid weights _ 0 seeds = CompletelyRandomGrid (seededGrid $ head seeds) weights
+generateGrid weights interps n seeds = interpolateGrid interps (head seeds) $
+    generateGrid weights interps (n-1) (tail seeds)
+
+-- |
+-- Interpolate the elements of a grid with intermediate elements.
+-- This "expands" the grid by a factor of 2 in each dimension.
+--
+interpolateGrid :: (Ord a) => Maybe (Map (a,a) (WeightedSet a)) -> Integer -> Grid a -> Grid a
+interpolateGrid interps seed g = optimizeGrid $ InterpolatedGrid (seededGrid seed) interps g
 
 -- |
 -- Arbitrarily (randomly) replaces some elements of a grid with another.

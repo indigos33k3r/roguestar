@@ -95,7 +95,7 @@ data CreatureAbility =
    | DamageSkill CreatureInteractionMode
    | DamageReductionTrait CreatureInteractionMode
    | ReloadSkill CreatureInteractionMode
-   | TerrainAffinity TerrainPatch
+   | TerrainAffinity Terrain
    | HideSkill
    | SpotSkill
    | JumpSkill

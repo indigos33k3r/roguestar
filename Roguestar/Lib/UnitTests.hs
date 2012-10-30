@@ -14,7 +14,7 @@ import Control.Monad.Reader.Class
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Utility.SiteCriteria
-import Control.Monad.Random
+import Roguestar.Lib.Random as Random
 
 type UnitTest = WriterT (T.Text,All) IO ()
 
@@ -55,7 +55,7 @@ runWithRandomPlanes n test_name db_action = forM_ [1..n] $ \x ->
 
 runWithRandomPlane_ :: (PlaneRef -> DB Bool) -> DB Bool
 runWithRandomPlane_ dbAction =
-    do biome <- weightedPickM $ unweightedSet [minBound..maxBound]
+    do let biome = Random.weightedSet [(4,TemperateClearing),(1,TemperateForest)]
        plane_ref <- dbNewPlane "testPlane" (TerrainGenerationData 3 biome []) TheUniverse
        dbAction plane_ref
 

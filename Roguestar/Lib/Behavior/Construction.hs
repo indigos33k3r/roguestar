@@ -19,7 +19,7 @@ import Data.Maybe
 
 -- | Modifies terrain in the specified walking direction, returning
 -- True iff any terrain modification actually occured.
-modifyFacingTerrain :: (TerrainPatch -> TerrainPatch) -> Facing -> CreatureRef -> DB Bool
+modifyFacingTerrain :: (Terrain -> Terrain) -> Facing -> CreatureRef -> DB Bool
 modifyFacingTerrain f face creature_ref = liftM (fromMaybe False) $ runMaybeT $
     do (Parent plane_ref :: Parent Plane,position :: Position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
        let target_position = offsetPosition (facingToRelative face) position
@@ -29,9 +29,7 @@ modifyFacingTerrain f face creature_ref = liftM (fromMaybe False) $ runMaybeT $
        lift $ setTerrainAt plane_ref target_position new_terrain
        return True
 
-clearTerrain :: TerrainPatch -> TerrainPatch
-clearTerrain RockFace = Rubble
+clearTerrain :: Terrain -> Terrain
+clearTerrain RockFace = RockyGround
 clearTerrain Forest = Grass
-clearTerrain DeepForest = Grass
-clearTerrain Lava = Glass
 clearTerrain x = x
