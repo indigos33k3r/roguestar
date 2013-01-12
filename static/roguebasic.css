@@ -133,7 +133,7 @@ body {
 
 .inventoryitem {
     height: 3em;
-	overflow: hidden;
+    overflow: hidden;
     border-bottom: dotted;
     border-color: #444444;
     border-bottom-width: 1px;
@@ -150,7 +150,7 @@ body {
 
 .inventoryitem p {
     margin-left: 1in;
-	line-height: 3em;
+    line-height: 3em;
 }
 
 .inventoryitem * {
@@ -158,9 +158,9 @@ body {
 }
 
 .inventoryitem button {
-	height: 3em;
-	float: right;
-	margin: 0;
+    height: 3em;
+    float: right;
+    margin: 0;
     border: none;
     border-left: dotted;
     border-left-width: 1px;
@@ -253,9 +253,9 @@ h5 { font-size: 110% }
 h6 { font-size: 105% }
 
 a {
-	color: #E62117;
-	text-decoration: none;
-	font-weight: bold;
+    color: #E62117;
+    text-decoration: none;
+    font-weight: bold;
 }
 
 a:hover {
@@ -410,7 +410,7 @@ a:hover {
 /* Strong */
 .mapcontent span.B {
     font-weight: bold;
-    background-image: url('/static/glass-bead.png');
+    background-image: url('/static/glass/bead.svg');
 }
 
 /* Sandy */
@@ -461,15 +461,15 @@ a:hover {
 /* Warp-In Effect */
 .mapcontent span.warpin {
     color: #000000;
-    background-color: #FF55FF;
+    background-image: url('/static/glass/bead-warpin.svg');
 }
 
 .mapcontent span.damage {
     color: #000000;
-    background-color: #FF0000;
+    background-image: url('/static/glass/bead-danger.svg');
 }
 
 .mapcontent span.active {
     /* border-color: #444444; */
-    background-image: url('/static/glass-bead-bright.png');
+    background-image: url('/static/glass/bead-bright.svg');
 }

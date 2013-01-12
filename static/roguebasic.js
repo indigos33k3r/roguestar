@@ -49,7 +49,6 @@ function runAnimationThread() {
   animateViaCSS( '.A', 'color', roguestar_preferences.strong_magic_colors, date );
   animateViaCSS( '.a', 'color', roguestar_preferences.weak_magic_colors, date );
   animateViaCSS( '.w', 'color', roguestar_preferences.water_colors, date );
-  animateViaCSS( '.warpin', 'background-color', roguestar_preferences.strong_magic_colors, date );
 
   setTimeout( runAnimationThread, roguestar_preferences.animation_thread_interval );
 }

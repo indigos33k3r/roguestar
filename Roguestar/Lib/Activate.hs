@@ -25,16 +25,13 @@ resolveActivation creature_ref =
        case tool of
            DeviceTool {} -> throwError $ DBErrorFlag ToolIs_Innapropriate
            Sphere (ChromaliteSubstance c) ->
-               do x <- linearRoll $ chromalitePotency c
-                  return $ if x == 0 then ExpendTool tool_ref $ NoEffect
-                                     else Heal creature_ref x
+               do weightedPickM $ weightedSet [(1, ExpendTool tool_ref $ NoEffect),
+                                               (chromaliteValue c, Heal creature_ref $ chromaliteValue c)]
            Sphere (MaterialSubstance m) ->
-               do x <- linearRoll $ material_construction_value $ materialValue m
-                  return $ ExpendTool tool_ref $ Heal creature_ref x
+               do return $ ExpendTool tool_ref $ Heal creature_ref $ materialValue m
            Sphere (GasSubstance g) ->
-               do x <- linearRoll $ gasValue g
-                  return $ if x == 0 then ExpendTool tool_ref $ Heal creature_ref 1
-                                     else Heal creature_ref 1
+               do weightedPickM $ weightedSet [(1, ExpendTool tool_ref $ NoEffect),
+                                               (gasValue g, Heal creature_ref 1)]
 
 executeActivation :: ActivationOutcome -> DB ()
 executeActivation (NoEffect) = return ()

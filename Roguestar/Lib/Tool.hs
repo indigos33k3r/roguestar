@@ -8,7 +8,7 @@ module Roguestar.Lib.Tool
      availableWields,
      getWielded,
      deleteTool,
-     toolDurability)
+     toolValue)
     where
 
 import Prelude hiding (getContents)
@@ -77,12 +77,10 @@ deleteTool :: ToolRef -> DB ()
 deleteTool tool_ref = dbUnsafeDeleteObject tool_ref $
     (error "deleteTool: impossible case: tools shouldn't contain anything" :: forall m. (DBReadable m) => Reference () -> m Planar)
 
-toolDurability :: (DBReadable db) => ToolRef -> db Integer
-toolDurability tool_ref =
+toolValue :: (DBReadable db) => ToolRef -> db Integer
+toolValue tool_ref =
     do t <- dbGetTool tool_ref
        return $ case t of
-          DeviceTool _ d -> deviceDurability d
-          Sphere (MaterialSubstance m) -> material_construction_value (materialValue m) + 10
-          Sphere (GasSubstance {}) -> 10
-          Sphere (ChromaliteSubstance {}) -> 110
+          DeviceTool _ d -> deviceValue d
+          Sphere substance -> substanceValue substance
 

@@ -6,7 +6,8 @@ module Roguestar.Lib.Substances
      Chromalite(..),
      Solid(..),
      materialValue,
-     MaterialValue(..),
+     chromaliteValue,
+     gasValue,
      Substance(..),
      SubstanceType(toSubstance),
      coerceSubstance,
@@ -15,13 +16,9 @@ module Roguestar.Lib.Substances
      isChromalite,
      substances,
      prettySubstance,
-     gasValue,
-     chromaliteAlignment,
-     chromalitePotency,
      substanceValue)
     where
 
-import Roguestar.Lib.Alignment
 import Data.Maybe
 import qualified Data.Text as T
 
@@ -44,8 +41,8 @@ prettySubstance (ChromaliteSubstance x) = T.pack $ show x
 data Solid = MaterialSolid Material
            | ChromaliteSolid Chromalite
            deriving (Read,Show,Eq,Ord)
-             
-data Gas = 
+
+data Gas =
     Water
   | Hydrogen
   | Helium
@@ -61,8 +58,8 @@ data Gas =
   | Ammonia
   | Iodine
   | Chlorine deriving (Eq,Enum,Ord,Show,Read,Bounded)
-        
-data Material = 
+
+data Material =
     Aluminum
   | Titanium
   | Palladium
@@ -87,14 +84,7 @@ data Material =
   | Nickel
         deriving (Eq,Enum,Ord,Show,Read,Bounded)
 
---
--- Chromalite is an engineered, crystaline metamaterial capable of storing many times it's own rest mass energy.
--- Precisely how many times is indicated by the chromalitePotency function.
---
--- Because any accidental release of this energy would obviously be catastrophic, chromalite is itself intelligent
--- and capable of adapting to stressful situations to avoid any such accidental release.
---
-data Chromalite = 
+data Chromalite =
     Rutilium     -- red Chromalite
   | Crudnium     -- green Chromalite
   | Pteulanium   -- blue Chromalite
@@ -130,52 +120,47 @@ gasValue Xenon = 60
 gasValue Radon = 70
 gasValue Iodine = 100
 
-data MaterialValue = MaterialValue {
-    material_construction_value :: Integer, -- value of material for constructing buildings, pipes, casings for gadgets, etc
-    material_critical_value :: Integer,     -- value of material for critical purposes, such as miniature electronic components
-    material_scarcity :: Integer }          -- scarcity of material
+materialValue :: Material -> Integer
+materialValue Wood = 1
+materialValue Plastic = 3
+materialValue Lead = 5
+materialValue Carbon = 8
+materialValue Silicon = 9
+materialValue Iron = 11
+materialValue Zinc = 13
+materialValue Palladium = 15
+materialValue Nickel = 17
+materialValue Aluminum = 19
+materialValue Molybdenum = 22
+materialValue Copper = 23
+materialValue Silver = 25
+materialValue Cobalt = 28
+materialValue Titanium = 31
+materialValue Gold = 39
+materialValue Zirconium = 45
+materialValue Platinum = 48
+materialValue Thorium = 50
+materialValue Uranium = 80
+materialValue Plutonium = 90
+materialValue Diamond = 100
 
-materialValue :: Material -> MaterialValue
-materialValue Aluminum =    MaterialValue  50  20   6
-materialValue Titanium =    MaterialValue  70  15  15
-materialValue Palladium =   MaterialValue  30  30  65
-materialValue Molybdenum =  MaterialValue  18  55  40
-materialValue Lead =        MaterialValue  15   7  31
-materialValue Copper =      MaterialValue  40  40  18
-materialValue Iron =        MaterialValue  25  15  10
-materialValue Cobalt =      MaterialValue  30  35  30
-materialValue Zirconium =   MaterialValue  12  50  23
-materialValue Gold =        MaterialValue  20  35  83
-materialValue Silver =      MaterialValue  10  20  80
-materialValue Platinum =    MaterialValue  22  40  81
-materialValue Zinc =        MaterialValue  35  25  26
-materialValue Uranium =     MaterialValue   5  90  37
-materialValue Plutonium =   MaterialValue   1 100 100
-materialValue Thorium =     MaterialValue  20  80  33
-materialValue Diamond =     MaterialValue 100 100  90
-materialValue Carbon =      MaterialValue  60  20  20
-materialValue Wood =        MaterialValue  25   1   3
-materialValue Plastic =     MaterialValue  30  10   1
-materialValue Silicon =     MaterialValue  25  50   5
-materialValue Nickel =      MaterialValue  25  45  25
-
-chromaliteAlignment :: Chromalite -> Alignment
-chromaliteAlignment Rutilium = (Chaotic,Strategic)
-chromaliteAlignment Crudnium = (Neutral,Strategic)
-chromaliteAlignment Pteulanium = (Lawful,Strategic)
-chromaliteAlignment Caerulite = (Lawful,Tactical)
-chromaliteAlignment Ionidium = (Neutral,Tactical)
-chromaliteAlignment Aurite = (Chaotic,Tactical)
-chromaliteAlignment Argentate = (Lawful,Diplomatic)
-chromaliteAlignment Trabanate = (Neutral,Diplomatic)
-chromaliteAlignment Arumate = (Chaotic,Diplomatic)
-chromaliteAlignment Candonium = (Lawful,Indifferent)
-chromaliteAlignment Canitium = (Neutral,Indifferent)
-chromaliteAlignment Infuscanoid = (Chaotic,Indifferent)
-chromaliteAlignment Endurium = (Evil,Strategic)
-chromaliteAlignment Malignite = (Evil,Tactical)
-chromaliteAlignment Diabolite = (Evil,Diplomatic)
-chromaliteAlignment Bectonite = (Evil,Indifferent)
+chromaliteValue :: Chromalite -> Integer
+chromaliteValue Rutilium = 14
+chromaliteValue Crudnium = 16
+chromaliteValue Pteulanium = 18
+chromaliteValue Caerulite = 26
+chromaliteValue Ionidium = 29
+chromaliteValue Aurite = 32
+chromaliteValue Argentate = 36
+chromaliteValue Trabanate = 37
+chromaliteValue Arumate = 46
+chromaliteValue Candonium = 49
+chromaliteValue Canitium = 55
+chromaliteValue Infuscanoid = 65
+chromaliteValue Endurium = 75
+chromaliteValue Malignite = 85
+chromaliteValue Diabolite = 95
+chromaliteValue Bectonite = 100
 
 class SubstanceType a where
     toSubstance :: a -> Substance
@@ -196,15 +181,14 @@ isChromalite = isJust . (`asTypeOf` (undefined :: Maybe Chromalite)) . coerceSub
 substanceValue :: (SubstanceType a) => a -> Integer
 substanceValue a = case toSubstance a of
     GasSubstance x -> gasValue x + 10
-    MaterialSubstance x -> (nom + crit) * scarce
-        where MaterialValue nom crit scarce = materialValue x
-    ChromaliteSubstance x -> 1000 + 2 * chromalitePotency x ^ 2
+    MaterialSubstance x -> materialValue x * 10
+    ChromaliteSubstance x -> 1000 + chromaliteValue x * 100
 
 instance SubstanceType Gas where
     toSubstance = GasSubstance
     fromSubstance (GasSubstance x) = Just x
     fromSubstance _ = Nothing
-    
+
 instance SubstanceType Material where
     toSubstance x = MaterialSubstance x
     fromSubstance (MaterialSubstance x) = Just x
@@ -226,5 +210,3 @@ instance SubstanceType Solid where
     fromSubstance (ChromaliteSubstance x) = Just $ ChromaliteSolid x
     fromSubstance _ = Nothing
 
-chromalitePotency :: Chromalite -> Integer
-chromalitePotency = alignmentPotency . chromaliteAlignment

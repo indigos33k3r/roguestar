@@ -2,6 +2,7 @@
 module Roguestar.Lib.CreatureData
     (Creature(..),
      CreatureTrait(..),
+     CreatureSpecial(..),
      CreatureInteractionMode(..),
      CreatureAbility(..),
      CreatureEndo(..),
@@ -18,10 +19,13 @@ import Data.Maybe
 import Roguestar.Lib.FactionData
 import Data.Monoid
 import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.List as List
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.TerrainData
 
 data Creature = Creature { creature_traits :: Map.Map CreatureTrait Integer,
+                           creature_specials :: Set.Set CreatureSpecial,
                            creature_species :: Species,
                            creature_random_id :: Integer, -- random number attached to the creature, not unique
                            creature_damage :: Integer,
@@ -34,6 +38,7 @@ data Creature = Creature { creature_traits :: Map.Map CreatureTrait Integer,
 empty_creature :: Creature
 empty_creature = Creature {
     creature_traits = Map.empty,
+    creature_specials = Set.empty,
     creature_species = error "empty_creature: undefined creature_species",
     creature_random_id = error "empty_creature: undefined creature_random_id",
     creature_damage = 0,
@@ -80,6 +85,17 @@ instance CreatureEndo CreatureTrait where
 instance CreatureScore CreatureTrait where
     rawScore trait c = fromMaybe 0 $ Map.lookup trait (creature_traits c)
 
+data CreatureSpecial =
+     Hover
+   | Teleportation
+         deriving (Eq,Read,Show,Ord)
+
+instance CreatureEndo CreatureSpecial where
+    applyToCreature special c = c { creature_specials = Set.insert special $ creature_specials c }
+
+instance CreatureScore CreatureSpecial where
+    rawScore special c = if Set.member special (creature_specials c) then 1 else 0
+
 -- | Combat modes:
 -- Melee is armed close-quarters combat with bladed or blunt weapons
 -- Ranged is combat with projectile weapons
@@ -94,7 +110,6 @@ data CreatureAbility =
    | DefenseSkill CreatureInteractionMode
    | DamageSkill CreatureInteractionMode
    | DamageReductionTrait CreatureInteractionMode
-   | ReloadSkill CreatureInteractionMode
    | TerrainAffinity Terrain
    | HideSkill
    | SpotSkill
@@ -111,8 +126,8 @@ instance CreatureScore CharacterClass where
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
 figureAbility :: [CreatureTrait] -> Creature -> Integer
-figureAbility traits c = round $ (realToFrac x :: Double) ** (1.0 / realToFrac (length traits))
-    where x = product (map ((+1) . flip rawScore c) traits)
+figureAbility [] c     = 1
+figureAbility traits c = 1 + sum (map (flip rawScore c) traits) `div` List.genericLength traits
 
 creatureAbilityScore :: CreatureAbility -> Creature -> Integer
 creatureAbilityScore ToughnessTrait = figureAbility [Caution,Fortitude]
@@ -120,7 +135,6 @@ creatureAbilityScore (AttackSkill _) = figureAbility [Aggression,Dexterity]
 creatureAbilityScore (DefenseSkill _) = figureAbility [Caution,Dexterity]
 creatureAbilityScore (DamageSkill _) = figureAbility [Aggression,Bulk]
 creatureAbilityScore (DamageReductionTrait _) = figureAbility [Caution,Bulk]
-creatureAbilityScore (ReloadSkill _) = figureAbility [Aggression,Speed]
 creatureAbilityScore (TerrainAffinity _) = figureAbility []
 creatureAbilityScore HideSkill = figureAbility [Aggression,Perception]
 creatureAbilityScore SpotSkill = figureAbility [Caution,Perception]

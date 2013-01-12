@@ -2,8 +2,6 @@
 
 import Prelude
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS8
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT

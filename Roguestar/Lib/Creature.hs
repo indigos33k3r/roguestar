@@ -3,9 +3,8 @@
 module Roguestar.Lib.Creature
     (generateInitialPlayerCreature,
      newCreature,
-     Roll(..),
-     RollComponents(..),
-     rollCreatureAbilityScore,
+     getCreatureSpecial,
+     getCreatureAbilityScore,
      getCurrentCreature,
      getCreatureFaction,
      injureCreature,
@@ -30,6 +29,7 @@ import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.Logging
+import qualified Data.Set as Set
 
 -- |
 -- Generates a new Creature from the specified species.
@@ -58,32 +58,14 @@ newCreature faction species loc =
     do creature <- generateCreature faction species
        dbAddCreature creature loc
 
-data RollComponents = RollComponents {
-    component_base :: Integer,
-    component_other_situation_bonus :: Integer,
-    component_terrain_affinity_bonus :: Integer }
-        deriving (Show)
-data Roll = Roll {
-    roll_ideal :: Integer,
-    roll_actual :: Integer,
-    roll_ideal_components :: RollComponents,
-    roll_actual_components :: RollComponents,
-    roll_log :: Integer }
-        deriving (Show)
+getCreatureSpecial :: (DBReadable db) => CreatureSpecial -> CreatureRef -> db Bool
+getCreatureSpecial special creature_ref = liftM (Set.member special . creature_specials) $ dbGetCreature creature_ref
 
-rollCreatureAbilityScore :: (DBReadable db) => CreatureAbility -> Integer -> CreatureRef -> db Roll
-rollCreatureAbilityScore score other_ideal creature_ref =
-    do raw_ideal <- liftM (creatureAbilityScore score) $ dbGetCreature creature_ref
+getCreatureAbilityScore :: (DBReadable db) => CreatureAbility -> CreatureRef -> db Integer
+getCreatureAbilityScore ability creature_ref =
+    do raw_ideal <- liftM (creatureAbilityScore ability) $ dbGetCreature creature_ref
        terrain_ideal <- getTerrainAffinity creature_ref
-       let ideal = raw_ideal + other_ideal + terrain_ideal
-       actual <- linearRoll ideal
-       [raw_actual, other_actual, terrain_actual] <- fixedSumLinearRoll [raw_ideal, other_ideal, terrain_ideal] actual
-       logarithmic <- logRoll ideal
-       let result = Roll ideal (if raw_actual == 0 then 0 else actual)
-                        (RollComponents raw_ideal other_ideal terrain_ideal)
-                        (RollComponents raw_actual other_actual terrain_actual) logarithmic
-       logDB log_creature DEBUG $ "rollCreatureAbilityScore; result=" ++ show result
-       return result
+       return $ raw_ideal + terrain_ideal
 
 -- | Ability bonus based on being good at working on specific types of terrain.
 getTerrainAffinity :: (DBReadable db) => CreatureRef -> db Integer

@@ -2,7 +2,6 @@
 module Roguestar.Lib.HTML.Mustache (renderPage, roguestar_muconfig) where
 
 import Text.Hastache
-import Data.ByteString as BS
 import Data.Text.Lazy as T
 import Data.Aeson as Aeson
 import Data.Attoparsec.Number as AesonNumber

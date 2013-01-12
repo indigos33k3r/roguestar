@@ -120,10 +120,10 @@ createGame config game_state =
        return new_uuid
 
 retrieveGame :: BS.ByteString -> GameConfiguration -> GameState -> IO (Maybe Game)
-retrieveGame uuid config game_state =
+retrieveGame existing_uuid config game_state =
     do cleanupGameState config game_state
        atomically $
-           do m_g <- liftM (Map.lookup uuid) $ readTVar (game_state_gamelist game_state)
+           do m_g <- liftM (Map.lookup existing_uuid) $ readTVar (game_state_gamelist game_state)
               case m_g of
                   Just g -> writeTVar (game_last_touched g) (game_config_current_clock_time_seconds config)
                   Nothing -> return ()

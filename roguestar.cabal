@@ -99,7 +99,6 @@ library
                   Roguestar.Lib.Behavior.Make,
                   Roguestar.Lib.Activate,
                   Roguestar.Lib.Contact,
-                  Roguestar.Lib.Behavior.DeviceActivation,
                   Roguestar.Lib.Planet,
                   Roguestar.Lib.PlanetData,
                   Roguestar.Lib.Logging,

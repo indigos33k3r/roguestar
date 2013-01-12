@@ -124,14 +124,17 @@ data TeleportJumpOutcome =
 resolveTeleportJump :: (DBReadable db) => CreatureRef -> Facing -> db TeleportJumpOutcome
 resolveTeleportJump creature_ref face = liftM (fromMaybe TeleportJumpFailed) $ runMaybeT $
     do start_location <- lift $ DetailedTravel.whereIs creature_ref
-       jump_roll <- liftM roll_log $ lift $ rollCreatureAbilityScore JumpSkill 0 creature_ref
-       landing_position <- lift $ randomTeleportLanding jump_roll (asParent $ detail start_location) (detail start_location) $
-           offsetPosition (facingToRelative7 face) $ detail start_location
-       case () of
-           () | jump_roll <= 0 -> return TeleportJumpFailed
-           () | otherwise -> return $ TeleportJumpGood creature_ref $ Standing { standing_plane = asParent (detail start_location),
-                                                                                 standing_position = landing_position,
-                                                                                 standing_facing = face }
+       jump_roll <- lift $ getCreatureAbilityScore JumpSkill creature_ref
+       landing_position <- lift $ randomTeleportLanding (jump_roll `div` 5 + 1)
+                                                        (asParent $ detail start_location)
+                                                        (detail start_location) $
+                                                        offsetPosition (facingToRelative7 face) $ detail start_location
+       let good = TeleportJumpGood creature_ref $ Standing { standing_plane = asParent (detail start_location),
+                                                             standing_position = landing_position,
+                                                             standing_facing = face }
+           bad = TeleportJumpFailed
+       lift $ weightedPickM $ weightedSet [(jump_roll,good),
+                                           (5,bad)]
 
 -- | Execute a resolved teleport jump.
 executeTeleportJump :: TeleportJumpOutcome -> DB ()

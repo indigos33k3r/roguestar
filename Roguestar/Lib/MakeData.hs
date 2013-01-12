@@ -50,17 +50,17 @@ needsGas (PrepareMake _ _ _ Nothing) = True
 needsGas _ = False
 
 hasChromalite :: Tool -> Maybe Chromalite
-hasChromalite (DeviceTool _ d) = Just $ deviceChromalite d
+hasChromalite (DeviceTool _ d) = Just $ device_chromalite d
 hasChromalite (Sphere (ChromaliteSubstance s)) = Just s
 hasChromalite _ = Nothing
 
 hasMaterial :: Tool -> Maybe Material
-hasMaterial (DeviceTool _ d) = Just $ deviceMaterial d
+hasMaterial (DeviceTool _ d) = Just $ device_material d
 hasMaterial (Sphere (MaterialSubstance s)) = Just s
 hasMaterial _ = Nothing
 
 hasGas :: Tool -> Maybe Gas
-hasGas (DeviceTool _ d) = Just $ deviceGas d
+hasGas (DeviceTool _ d) = Just $ device_gas d
 hasGas (Sphere (GasSubstance s)) = Just s
 hasGas _ = Nothing
 

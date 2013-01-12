@@ -83,7 +83,7 @@ testSetPlayerState =
            do setPlayerState (GameOver PlayerIsVictorious)
               playerState
        case m_pstate of
-           Left err -> assert False "testSetPlayerState (failed in monad)"
+           Left _ -> assert False "testSetPlayerState (failed in monad)"
            Right (pstate,_) -> assertEqual pstate (GameOver PlayerIsVictorious) "testSetPlayerState"
 
 testLocal :: UnitTest
@@ -92,7 +92,7 @@ testLocal =
            do local id $ setPlayerState (GameOver PlayerIsVictorious)
               playerState
        case m_pstate of
-           Left err -> assert False "testLocal (failed in monad)"
+           Left _ -> assert False "testLocal (failed in monad)"
            Right (pstate,_) -> assertEqual pstate (SpeciesSelectionState Nothing) "testLocal"
 
 testPickRandomClearSite :: UnitTest

@@ -1,11 +1,11 @@
-{-# LANGUAGE PatternGuards, FlexibleContexts #-}
+{-# LANGUAGE PatternGuards, FlexibleContexts, ScopedTypeVariables #-}
 
 module Roguestar.Lib.Behavior.Combat
     (AttackModel,
      meleeAttackModel,
      rangedAttackModel,
-     resolveAttack,
-     executeAttack)
+     resolveAttackChain,
+     executeAttackChain)
     where
 
 import Roguestar.Lib.DB
@@ -16,9 +16,7 @@ import Roguestar.Lib.ToolData
 import Control.Monad.Error
 import Roguestar.Lib.Facing
 import Data.Maybe
-import Roguestar.Lib.Behavior.DeviceActivation
 import Roguestar.Lib.Contact
-import Roguestar.Lib.Core.Plane as Plane
 import Roguestar.Lib.DetailedLocation
 import Data.List as List
 
@@ -36,11 +34,6 @@ weapon :: AttackModel -> Maybe ToolRef
 weapon (RangedAttackModel _ weapon_ref _) = Just weapon_ref
 weapon (MeleeAttackModel _ weapon_ref _) = Just weapon_ref
 weapon (UnarmedAttackModel {}) = Nothing
-
-instance DeviceType AttackModel where
-    toPseudoDevice (RangedAttackModel _ _ d) = toPseudoDevice d
-    toPseudoDevice (MeleeAttackModel _ _ d) = toPseudoDevice d
-    toPseudoDevice (UnarmedAttackModel {}) = PseudoDevice 0 0 0 1
 
 interactionMode :: AttackModel -> CreatureInteractionMode
 interactionMode (RangedAttackModel {}) = Ranged
@@ -79,89 +72,130 @@ rangedAttackModel attacker_ref =
            True -> return attack_model
            _ -> throwError $ DBErrorFlag ToolIs_Innapropriate
 
+data WeaponActivationOutcome =
+    WeaponExplodes CreatureRef ToolRef Integer
+  | WeaponMalfunctions CreatureRef ToolRef Integer
+  | WeaponFunctions
+
 data AttackOutcome =
-    AttackMiss CreatureRef (Maybe ToolRef)
-  | AttackMalfunction CreatureRef ToolRef Integer
-  | AttackExplodes CreatureRef ToolRef Integer
-  | AttackHit CreatureRef (Maybe ToolRef) CreatureRef Integer
-  | AttackDisarm CreatureRef CreatureRef ToolRef
-  | AttackSunder CreatureRef ToolRef CreatureRef ToolRef
+    AttackMisses CreatureRef (Maybe ToolRef)
+  | AttackHits Integer
 
-resolveAttack :: (DBReadable db) => AttackModel -> Facing -> db AttackOutcome
-resolveAttack attack_model face =
-    do device_activation <- resolveDeviceActivation (AttackSkill $ interactionMode attack_model)
-                                                    (DamageSkill $ interactionMode attack_model)
-                                                    (ReloadSkill $ interactionMode attack_model)
-                                                    (toPseudoDevice attack_model)
-                                                    (attacker attack_model)
-       m_defender_ref <- liftM (listToMaybe . List.map asChild . mapLocations) $ findContacts (contactMode $ interactionMode attack_model) (attacker attack_model) face
-       case (dao_outcome_type device_activation,m_defender_ref) of
-           (DeviceFailed, _) | Just tool_ref <- weapon attack_model ->
-               return $ AttackMalfunction (attacker attack_model) tool_ref (dao_energy device_activation)
-           (DeviceCriticalFailed, _) | Just tool_ref <- weapon attack_model ->
-               return $ AttackExplodes (attacker attack_model) tool_ref (dao_energy device_activation)
-           (DeviceActivated, Just defender_ref) ->
-               do defense_outcome <- resolveDefense (interactionMode attack_model) defender_ref
-                  distance_squared <- liftM (fromMaybe 0) $ Plane.distanceBetweenSquared (attacker attack_model) defender_ref
-                  let isDisarmingBlow = dao_skill_roll device_activation > do_skill_roll defense_outcome + distance_squared &&
-                                        dao_energy device_activation > do_damage_reduction defense_outcome + do_disarm_bonus defense_outcome
-                  case () of
-                      () | dao_skill_roll device_activation <= do_skill_roll defense_outcome + distance_squared ->
-                           return $ AttackMiss (attacker attack_model) (weapon attack_model)
-                      () | isDisarmingBlow && interactionMode attack_model == Unarmed,
-                           Just defender_wield_ref <- do_defender_wield defense_outcome ->
-                               return $ AttackDisarm (attacker attack_model) defender_ref defender_wield_ref
-                      () | isDisarmingBlow && interactionMode attack_model == Melee,
-                           Just weapon_ref <- weapon attack_model,
-                           Just defender_wield_ref <- do_defender_wield defense_outcome ->
-                               return $ AttackSunder (attacker attack_model) weapon_ref defender_ref defender_wield_ref
-                      () -> return $ AttackHit (attacker attack_model) (weapon attack_model) defender_ref (max 0 $ dao_energy device_activation - do_damage_reduction defense_outcome)
-           _ -> return $ AttackMiss (attacker attack_model) (weapon attack_model)
+numberOfHits :: AttackOutcome -> Integer
+numberOfHits (AttackMisses {}) = 0
+numberOfHits (AttackHits n) = n
 
-data DefenseOutcome = DefenseOutcome {
-    do_defender_wield :: Maybe ToolRef,
-    do_skill_roll :: Integer,
-    do_damage_reduction :: Integer,
-    do_disarm_bonus :: Integer }
+data DamageOutcome =
+    DamageInflicted CreatureRef (Maybe ToolRef) CreatureRef Integer
+  | DamageDisarms CreatureRef CreatureRef ToolRef Integer
+  | DamageSunders CreatureRef ToolRef CreatureRef ToolRef Integer
 
-resolveDefense :: (DBReadable db) => CreatureInteractionMode -> CreatureRef -> db DefenseOutcome
-resolveDefense interaction_mode defender_ref =
-    do m_tool_ref <- getWielded defender_ref
-       m_tool <- maybe (return Nothing) (liftM Just . dbGetTool) m_tool_ref
-       disarm_bonus <- maybe (return 0) toolDurability m_tool_ref
-       let pdevice = case m_tool of
-               Just (DeviceTool Sword d) | interaction_mode `elem` [Melee,Unarmed] -> toPseudoDevice d
-               _ -> PseudoDevice 0 0 0 1
-       device_activation <- resolveDeviceActivation (DefenseSkill interaction_mode)
-                                                    (DamageReductionTrait interaction_mode)
-                                                    InventorySkill
-                                                    pdevice
-                                                    defender_ref
-       return $ case dao_outcome_type device_activation of
-          DeviceActivated -> DefenseOutcome m_tool_ref (dao_skill_roll device_activation) (dao_energy device_activation) disarm_bonus
-          DeviceFailed -> DefenseOutcome m_tool_ref 0 0 disarm_bonus
-          DeviceCriticalFailed -> DefenseOutcome m_tool_ref 0 0 0
+isDisarmingBlow :: DamageOutcome -> Bool
+isDisarmingBlow (DamageInflicted {}) = False
+isDisarmingBlow _ = True
 
-executeAttack :: AttackOutcome -> DB ()
-executeAttack (AttackMiss attacker_ref m_tool_ref) =
-    do dbPushSnapshot $ MissEvent attacker_ref m_tool_ref
-executeAttack (AttackHit attacker_ref m_tool_ref defender_ref damage) =
-    do injureCreature damage defender_ref
-       dbPushSnapshot $ AttackEvent attacker_ref m_tool_ref defender_ref
-executeAttack (AttackMalfunction attacker_ref tool_ref damage) =
+weighWeaponActivationOutcomes :: (DBReadable db) => AttackModel -> db (WeightedSet WeaponActivationOutcome)
+weighWeaponActivationOutcomes attack_model =
+    do attack_rating <- getCreatureAbilityScore (AttackSkill $ interactionMode attack_model) $ attacker attack_model
+       damage_rating <- getCreatureAbilityScore (DamageSkill $ interactionMode attack_model) $ attacker attack_model
+       case weapon attack_model of
+           Nothing -> return $ unweightedSet [WeaponFunctions]
+           Just weapon_ref ->
+               do device_weight <- toolValue weapon_ref
+                  return $ weightedSet
+                      [(max 0 device_weight - attack_rating - damage_rating,
+                        WeaponExplodes (attacker attack_model) weapon_ref device_weight),
+                       (device_weight, WeaponMalfunctions (attacker attack_model) weapon_ref 1),
+                       (attack_rating+damage_rating, WeaponFunctions)]
+
+weighAttackOutcomes :: (DBReadable db) => AttackModel -> CreatureRef -> db (WeightedSet AttackOutcome)
+weighAttackOutcomes attack_model defender =
+    do attack_rating <- getCreatureAbilityScore (AttackSkill $ interactionMode attack_model) $ attacker attack_model
+       defense_rating <- getCreatureAbilityScore (DefenseSkill $ interactionMode attack_model) $ defender
+       return $ weightedSet
+           [{- TODO: put a "riposte" counter attack if the flub by too much? -- not spending time on it now -}
+            (defense_rating, AttackMisses (attacker attack_model) (weapon attack_model)),
+            (attack_rating, AttackHits 1),
+            (max 0 $ attack_rating - defense_rating, AttackHits $ max 1 $ attack_rating `div` (max 1 defense_rating))]
+
+weighDamageOutcomes :: (DBReadable db) => AttackModel -> CreatureRef -> Maybe ToolRef -> db (WeightedSet DamageOutcome)
+weighDamageOutcomes attack_model defender m_shield =
+    do damage_rating <- getCreatureAbilityScore (DamageSkill $ interactionMode attack_model) $ attacker attack_model
+       damage_reduction_rating <- getCreatureAbilityScore (DamageReductionTrait $ interactionMode attack_model) $ defender
+       let damageInflicted = DamageInflicted (attacker attack_model) (weapon attack_model) defender
+       shield_weight <- maybe (return 0) toolValue m_shield
+       weapon_weight <- maybe (return 0) toolValue $ weapon attack_model
+       return $ weightedSet
+           [(damage_reduction_rating, damageInflicted $ max 1 $ damage_rating - damage_reduction_rating),
+            (damage_rating, damageInflicted damage_rating),
+            (max 0 $ damage_reduction_rating - damage_rating, damageInflicted 0),
+            (max 0 $ damage_rating - damage_reduction_rating,
+                case (weapon attack_model, m_shield) of
+                    (_       ,Nothing    ) -> damageInflicted $ damage_rating + weapon_weight
+                    (Nothing ,Just shield) -> DamageDisarms
+                                                  (attacker attack_model)
+                                                  defender
+                                                  shield
+                                                  (max 0 $ damage_rating - damage_reduction_rating - shield_weight)
+                    (Just weapon_ref, Just shield_ref) -> DamageSunders
+                                                          (attacker attack_model)
+                                                          weapon_ref
+                                                          defender
+                                                          shield_ref
+                                                          (max 0 $ damage_rating + weapon_weight - shield_weight))]
+
+data AttackChainOutcome = AttackChainOutcome {
+    _chain_weapon_outcome :: WeaponActivationOutcome,
+    _chain_attack_outcome :: AttackOutcome,
+    _chain_damage_outcome :: [DamageOutcome] }
+
+resolveAttackChain :: forall db. (DBReadable db) => AttackModel -> Either Facing CreatureRef -> db AttackChainOutcome
+resolveAttackChain attack_model e_face_defender =
+    do m_defender_ref <- case e_face_defender of
+           Right defender_ref -> return $ Just defender_ref
+           Left face -> liftM (listToMaybe . List.map asChild . mapLocations) $ findContacts (contactMode $ interactionMode attack_model) (attacker attack_model) face
+       weapon_outcome <- weightedPickM =<< weighWeaponActivationOutcomes attack_model
+       (attack_outcome, damage_outcome_list) <- case m_defender_ref of
+           Nothing -> return (AttackMisses (attacker attack_model) (weapon attack_model), [])
+           Just defender ->
+               do (attack_outcome :: AttackOutcome) <- weightedPickM =<< weighAttackOutcomes attack_model defender
+                  m_shield <- getWielded defender
+                  let figureDamage :: [DamageOutcome] -> Integer -> db [DamageOutcome]
+                      figureDamage outcomes _ =
+                          do damage_outcome <- weightedPickM =<< weighDamageOutcomes attack_model defender
+                                                   (if any isDisarmingBlow outcomes
+                                                    then Nothing else m_shield)
+                             return $ damage_outcome:outcomes
+                  damage_outcome_list <- foldM figureDamage [] [1..numberOfHits attack_outcome]
+                  return (attack_outcome, reverse $ damage_outcome_list)
+       return $ AttackChainOutcome weapon_outcome attack_outcome damage_outcome_list
+
+executeAttackChain :: AttackChainOutcome -> DB ()
+executeAttackChain (AttackChainOutcome (WeaponExplodes attacker_ref tool_ref damage) _ _) =
+    do injureCreature damage attacker_ref
+       dbPushSnapshot $ WeaponExplodesEvent attacker_ref tool_ref
+       deleteTool tool_ref
+executeAttackChain (AttackChainOutcome (WeaponMalfunctions attacker_ref tool_ref damage) _ _) =
     do injureCreature damage attacker_ref
        _ <- move tool_ref =<< dropTool tool_ref
        dbPushSnapshot $ WeaponOverheatsEvent attacker_ref tool_ref
        return ()
-executeAttack (AttackExplodes attacker_ref tool_ref damage) =
-    do injureCreature damage attacker_ref
-       dbPushSnapshot $ WeaponExplodesEvent attacker_ref tool_ref
-       deleteTool tool_ref
-executeAttack (AttackDisarm attacker_ref defender_ref dropped_tool) =
-    do dbPushSnapshot $ DisarmEvent attacker_ref defender_ref dropped_tool
+executeAttackChain (AttackChainOutcome _ (AttackMisses attacker_ref m_tool_ref) _) =
+    do dbPushSnapshot $ MissEvent attacker_ref m_tool_ref
+executeAttackChain (AttackChainOutcome _ _ damages) =
+    do mapM_ executeDamage damages
+
+executeDamage :: DamageOutcome -> DB ()
+executeDamage (DamageInflicted attacker_ref m_tool_ref defender_ref damage) =
+    do injureCreature damage defender_ref
+       dbPushSnapshot $ AttackEvent attacker_ref m_tool_ref defender_ref
+executeDamage (DamageDisarms attacker_ref defender_ref dropped_tool damage) =
+    do injureCreature damage defender_ref
+       dbPushSnapshot $ DisarmEvent attacker_ref defender_ref dropped_tool
        _ <- move dropped_tool =<< dropTool dropped_tool
        return ()
-executeAttack (AttackSunder attacker_ref weapon_ref defender_ref sundered_tool) =
-    do dbPushSnapshot $ SunderEvent attacker_ref weapon_ref defender_ref sundered_tool
+executeDamage (DamageSunders attacker_ref weapon_ref defender_ref sundered_tool damage) =
+    do injureCreature damage defender_ref
+       dbPushSnapshot $ SunderEvent attacker_ref weapon_ref defender_ref sundered_tool
        deleteTool sundered_tool
 

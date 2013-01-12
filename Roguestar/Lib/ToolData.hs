@@ -6,20 +6,11 @@ module Roguestar.Lib.ToolData
      toolName,
      fromSphere,
      sphere,
-     Device,
-     PseudoDevice(..),
+     Device(..),
      DeviceKind(..),
      DeviceFunction(..),
-     DeviceType(..),
      deviceName,
-     deviceOutput,
-     deviceAccuracy,
-     deviceSpeed,
-     deviceDurability,
-     deviceSize,
-     deviceChromalite,
-     deviceMaterial,
-     deviceGas,
+     deviceValue,
      improvised,
      phase_pistol,
      phaser,
@@ -75,30 +66,6 @@ data Device = Device {
    device_size :: Integer }
      deriving (Eq,Read,Show)
 
--- | Anything that operates like a device, but isn't.  For example, an unarmed attack.
-data PseudoDevice = PseudoDevice {
-    pdevice_accuracy :: Integer,
-    pdevice_output :: Integer,
-    pdevice_speed :: Integer,
-    pdevice_size :: Integer }
-
-class DeviceType d where
-    toPseudoDevice :: d -> PseudoDevice
-
-instance DeviceType Device where
-    toPseudoDevice d = let chromalite = chromalitePotency $ device_chromalite d
-                           gas = gasValue $ device_gas d
-                           material = material_critical_value $ materialValue $ device_material d
-                           size = device_size d
-        in PseudoDevice {
-               pdevice_accuracy = min chromalite material + chromalite,
-               pdevice_output = min chromalite gas + chromalite,
-               pdevice_speed = gas + material,
-               pdevice_size = size }
-
-instance DeviceType PseudoDevice where
-    toPseudoDevice = id
-
 device :: T.Text -> DeviceKind -> Chromalite -> Material -> Gas -> Tool
 device s dk c m g = DeviceTool func (Device s c m g size)
     where (func,size) = kindToFunction dk
@@ -124,26 +91,8 @@ kinetic_sabre = device "kinetic_sabre" Sabre Ionidium Aluminum Nitrogen
 deviceName :: Device -> T.Text
 deviceName = device_name
 
-deviceDurability :: Device -> Integer
-deviceDurability d = device_size d * (material_construction_value $ materialValue $ device_material d)
+deviceValue :: Device -> Integer
+deviceValue d = device_size d * (gasValue $ device_gas d) +
+                                (materialValue $ device_material d) +
+                                (chromaliteValue $ device_chromalite d)
 
-deviceOutput :: (DeviceType d) => d -> Integer
-deviceOutput = pdevice_output . toPseudoDevice
-
-deviceAccuracy :: (DeviceType d) => d -> Integer
-deviceAccuracy = pdevice_accuracy . toPseudoDevice
-
-deviceSpeed :: (DeviceType d) => d -> Integer
-deviceSpeed = pdevice_speed . toPseudoDevice
-
-deviceSize :: (DeviceType d) => d -> Integer
-deviceSize = pdevice_size . toPseudoDevice
-
-deviceChromalite :: Device -> Chromalite
-deviceChromalite = device_chromalite
-
-deviceMaterial :: Device -> Material
-deviceMaterial = device_material
-
-deviceGas :: Device -> Gas
-deviceGas = device_gas
