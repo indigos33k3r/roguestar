@@ -4,28 +4,18 @@ import Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
-import Data.Text.Read
 import Data.Text.Encoding
 import Control.Exception (SomeException)
 import qualified Control.Monad.CatchIO as CatchIO
 import Control.Monad.Trans
 import Control.Monad.State
 import Control.Applicative
-import Control.Monad.ST
-import Control.Concurrent.STM
-import Data.STRef
-import Data.Array.ST
-import Data.Array.IArray
-import Data.Array.Unboxed
 import Snap.Core
 import Snap.Snaplet
-import Snap.Snaplet.Heist
 import Snap.Util.FileServe
 import Snap.Http.Server.Config
 import Data.Lens.Template
 import Data.Maybe
-import Data.Ord
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Roguestar.Lib.Roguestar
@@ -34,19 +24,15 @@ import Roguestar.Lib.DBErrorFlag
 import Roguestar.Lib.Perception
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.ToolData
-import Roguestar.Lib.Substances as Substances
 import Roguestar.Lib.TerrainData as TerrainData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests
-import Roguestar.Lib.DBData (Reference,ToolRef,toUID)
 import Roguestar.Lib.HTML.Mustache
-import Data.UUID
 import qualified System.UUID.V4 as V4
 import GHC.Stats
 import Data.Aeson as Aeson
-import qualified Data.HashMap.Strict as HashMap
 import Text.Hastache
 
 data App = App {
@@ -57,7 +43,7 @@ makeLenses [''App]
 
 appInit :: SnapletInit App App
 appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
-    do globals <- liftIO makeGlobals
+    do the_globals <- liftIO makeGlobals
        addRoutes [("/start", start),
                   ("/play", play),
                   ("/static", static),
@@ -76,7 +62,7 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
        game <- liftIO $ createGameState config
        wrapSite (<|> handle404)
        wrapSite handle500
-       return $ App game globals
+       return $ App game the_globals
 
 makeGlobals :: IO Aeson.Value
 makeGlobals =
@@ -124,6 +110,7 @@ renderThemedPage filepath value =
        case theme of
            "default" -> writeLazyText =<< liftIO (renderPage filepath value)
            "json"    -> writeLBS $ Aeson.encode value
+           unrecognized_theme -> fail $ "Unrecognized theme " ++ (T.unpack $ decodeUtf8 unrecognized_theme)
 
 postFeedback :: Handler App App ()
 postFeedback = method POST $ ifTop $
@@ -147,7 +134,7 @@ play :: Handler App App ()
 play =
     do --resolveSnapshots
        g <- getGame
-       player_state <- oops $ liftIO $ getPlayerState g
+       player_state <- oops $ liftIO $ getSnapshotPlayerState g
        route [("",ifTop $ method GET $ displayGameState player_state),
               ("reroll",method POST $ reroll player_state),
               ("accept",method POST $ accept player_state),
@@ -190,7 +177,16 @@ getGameState (SpeciesSelectionState (Just creature)) =
               "species" .= show (creature_species creature)
               ]
            ]
-getGameState (PlayerCreatureTurn creature_ref) =
+getGameState (SnapshotEvent snapshot) = getGameStateWhileInPlay
+getGameState (PlayerCreatureTurn creature_ref) = getGameStateWhileInPlay
+getGameState (GameOver PlayerIsDead) =
+    do return $ object [
+           "player-death" .= True ]
+getGameState (GameOver PlayerIsVictorious) =
+    do return $ object [
+           "player-victory" .= True ]
+
+getGameStateWhileInPlay =
     do g <- getGame
        map_content <- generateMapContent
        player_stats <- createStatsBlock
@@ -202,12 +198,6 @@ getGameState (PlayerCreatureTurn creature_ref) =
            "messages" .= messages,
            "is-snapshot" .= is_snapshot,
            "controls" .= not is_snapshot ]]
-getGameState (GameOver PlayerIsDead) =
-    do return $ object [
-           "player-death" .= True ]
-getGameState (GameOver PlayerIsVictorious) =
-    do return $ object [
-           "player-victory" .= True ]
 
 displayGameState :: PlayerState -> Handler App App ()
 displayGameState player_state =
@@ -419,7 +409,7 @@ data StatsData = StatsData {
 createStatsBlock :: Handler App App [T.Text]
 createStatsBlock =
     do g <- getGame
-       stats <- oops $ liftIO $ perceive g $
+       stats <- oops $ liftIO $ perceiveSnapshot g $
            do health <- myHealth
               facing <- compass
               return $ StatsData {
