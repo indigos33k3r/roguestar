@@ -57,6 +57,7 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
                   ("/feedback-thanks", staticTemplate "static/feedback-thanks.mustache"),
                   ("/options", options),
                   ("/start", start),
+                  ("/version-history", staticTemplate "static/version-history.mustache"),
                   ("", staticTemplate "static/index.mustache")]
        config <- liftIO $ getConfiguration default_timeout
        game <- liftIO $ createGameState config

@@ -1,0 +1,20 @@
+#menu {
+    width: 1024px;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+#menu ul {
+    float: right;
+    width: 25%;
+}
+
+#menu li {
+    list-style: none;
+}
+
+#menu img {
+}
+
+
+

@@ -2,7 +2,7 @@
 body {
     padding: 0px;
     margin: 0px;
-    font-family: "Verdana", sans-serif;
+    font-family: "Ariel", sans-serif;
     background: #000000;
     color: #EEEEEE;
 }
@@ -11,62 +11,6 @@ body {
     width: 1028px;
     margin: auto;
     padding: 0;
-}
-
-#menu {
-    background: #111111;
-    border: ridge;
-    border-width: 2px;
-    border-color: #222222;
-    padding: 0;
-    margin: 0;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    width: 1024px;
-    background-image: url('/static/glass-vertical.png');
-    background-repeat: repeat-x;
-    background-position: center center;
-}
-
-#menu ul {
-    overflow: hidden;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-#menu ul li {
-    float: left;
-    display: inline;
-    white-space: nowrap;
-    border-right: ridge;
-    border-right-width: 2px;
-    border-right-color: #222222;
-    margin: 0;
-    padding: 0;
-    font-family: sans-serif;
-}
-
-#menu ul li a {
-    color: #EEEEEE;
-    padding: 1em;
-    margin: 0;
-}
-
-#menu ul li:hover {
-    background: #6D2E03;
-}
-
-#menu ul li a:hover {
-    text-decoration: none;
-}
-
-#menu ul li.right {
-    float: right;
-    border-right: none;
-    border-left: ridge;
-    border-left-width: 2px;
-    border-left-color: #222222;
 }
 
 #magicbox {
@@ -85,6 +29,10 @@ body {
     border-color: #AA0000;
     background-color: #000000;
     color: #FFFFFF;
+}
+
+.right-button {
+    float: right;
 }
 
 .help {
@@ -270,10 +218,11 @@ a:hover {
 }
 
 #documenttext {
+   overflow: hidden;
    padding-top: 1em;
    padding-bottom: 1em;
-   padding-left: 1in;
-   padding-right: 1.62in;
+   padding-left: 1em;
+   padding-right: 1em;
    margin: 0;
    margin-bottom: 1em;
    color: #BBBBBB;
@@ -287,6 +236,7 @@ a:hover {
     width: 500px;
     height: 500px;
     background: #000000;
+    
 }
 
 #gameplaybox-overlay {
