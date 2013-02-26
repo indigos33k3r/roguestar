@@ -23,10 +23,14 @@ import Roguestar.Lib.Utility.SiteCriteria
 homeBiome :: Species -> WeightedSet Biome
 homeBiome RedRecreant = weightedSet [(2,TemperateForest),(2,TemperateClearing),(1,RelaxingPond),(1,CraterInterior)]
 homeBiome BlueRecreant = weightedSet [(2,TemperateForest),(2,TemperateClearing),(1,RelaxingPond),(1,CraterInterior)]
+homeBiome Anachronid = weightedSet [(5,TropicalForest),(1,TropicalClearing)]
+homeBiome TabularMonstrosity = weightedSet [(3,BareMountain),(1,CraterInterior)]
 
 startingEquipmentBySpecies :: Species -> [Tool]
 startingEquipmentBySpecies RedRecreant = []
 startingEquipmentBySpecies BlueRecreant = []
+startingEquipmentBySpecies Anachronid = []
+startingEquipmentBySpecies TabularMonstrosity = []
 
 dbCreateStartingPlane :: Creature -> DB PlaneRef
 dbCreateStartingPlane creature =

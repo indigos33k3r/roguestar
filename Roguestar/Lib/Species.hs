@@ -25,3 +25,24 @@ speciesInfo RedRecreant = SpeciesData
     [Hover,
      Teleportation]
 speciesInfo BlueRecreant = speciesInfo RedRecreant
+speciesInfo Anachronid = SpeciesData
+    [(Aggression, 3),
+     (Bulk,       3),
+     (Caution,    3),
+     (Dexterity, 10),
+     (Fortitude,  5),
+     (Perception, 3),
+     (Speed,      8)]
+    [TemporalWeb]
+speciesInfo TabularMonstrosity = SpeciesData
+    [(Aggression, 1),
+     (Bulk,      15),
+     (Caution,    1),
+     (Dexterity,  1),
+     (Fortitude, 15),
+     (Perception, 1),
+     (Speed,      4)]
+    [Hover,
+     ComplexificationMesh]
+
+

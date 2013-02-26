@@ -181,7 +181,7 @@ rerollStartingSpecies g =
               writeTVar (game_message_text g) []
        poke g $
            do species <- weightedPickM $ unweightedSet all_species
-              generateInitialPlayerCreature BlueRecreant
+              generateInitialPlayerCreature species
               return species
 
 beginGame :: Game -> IO (Either DBError ())

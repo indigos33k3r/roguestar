@@ -26,7 +26,10 @@ import Control.Arrow (first,second)
 --
 data Biome = TemperateForest
            | TemperateClearing
+           | TropicalForest
+           | TropicalClearing
            | RelaxingPond
+           | BareMountain
            | CraterInterior
              deriving (Read,Show,Eq,Ord,Enum,Bounded)
 
@@ -128,6 +131,10 @@ terrainInterpFn :: (Biome,Biome) -> WeightedSet Terrain
 terrainInterpFn biomes = case biomes of
     (TemperateForest,_)             -> weightedSet [(2,Forest),(1,Grass),(1,Dirt)]
     (TemperateClearing,_)           -> weightedSet [(5,Grass),(3,Dirt)]
+    (TropicalForest,_)              -> weightedSet [(3,Forest),(1,Sand),(1,Water)]
+    (TropicalClearing,_)            -> weightedSet [(3,Grass),(2,Sand),(1,Water)]
+    (BareMountain,BareMountain)     -> weightedSet [(1,RockFace),(1,RockyGround)]
+    (BareMountain,_)                -> weightedSet [(1,RockyGround)]
     (RelaxingPond,RelaxingPond)     -> weightedSet [(10,Water),(1,RockyGround)]
     (RelaxingPond,_)                -> weightedSet [(2,Water),(1,Sand)]
     (CraterInterior,CraterInterior) -> weightedSet [(1,RockyGround)]

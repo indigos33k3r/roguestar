@@ -14,7 +14,7 @@ import Snap.Core
 import Snap.Snaplet
 import Snap.Util.FileServe
 import Snap.Http.Server.Config
-import Data.Lens.Template
+--import Data.Lens.Template
 import Data.Maybe
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -39,7 +39,7 @@ data App = App {
     _app_game_state :: GameState,
     _globals :: Aeson.Value }
 
-makeLenses [''App]
+--makeLenses [''App]
 
 appInit :: SnapletInit App App
 appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
@@ -56,7 +56,6 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
                   ("/feedback", postFeedback <|> staticTemplate "static/feedback.mustache"),
                   ("/feedback-thanks", staticTemplate "static/feedback-thanks.mustache"),
                   ("/options", options),
-                  ("/start", start),
                   ("/version-history", staticTemplate "static/version-history.mustache"),
                   ("", staticTemplate "static/index.mustache")]
        config <- liftIO $ getConfiguration default_timeout
@@ -147,26 +146,12 @@ play =
               --("wield",method POST $ wield),
               --("unwield",method POST $ unwield)]
 
-resolveAllSnapshots :: Handler App App ()
-resolveAllSnapshots =
-    do g <- getGame
-       b <- oops $ liftIO $ hasSnapshot g
-       case b of
-           True ->
-               do oops $ liftIO $ popSnapshot g
-                  resolveAllSnapshots
-           False ->
-               do return ()
-
 resolveOneSnapshot :: Handler App App ()
 resolveOneSnapshot =
     do g <- getGame
        b <- oops $ liftIO $ hasSnapshot g
        when b $ oops $ liftIO $ popSnapshot g
        replay
-
-routeRoguestar :: PlayerState -> [(BS.ByteString,PlayerState -> Handler App App ())] -> Handler App App ()
-routeRoguestar ps xs = route $ map (\(bs,f) -> (bs,f ps)) xs
 
 getGameState :: PlayerState -> Handler App App Aeson.Value
 getGameState (SpeciesSelectionState Nothing) =
@@ -178,8 +163,8 @@ getGameState (SpeciesSelectionState (Just creature)) =
               "species" .= show (creature_species creature)
               ]
            ]
-getGameState (SnapshotEvent snapshot) = getGameStateWhileInPlay
-getGameState (PlayerCreatureTurn creature_ref) = getGameStateWhileInPlay
+getGameState (SnapshotEvent _) = getGameStateWhileInPlay
+getGameState (PlayerCreatureTurn _) = getGameStateWhileInPlay
 getGameState (GameOver PlayerIsDead) =
     do return $ object [
            "player-death" .= True ]
@@ -187,6 +172,7 @@ getGameState (GameOver PlayerIsVictorious) =
     do return $ object [
            "player-victory" .= True ]
 
+getGameStateWhileInPlay :: Handler App App Aeson.Value
 getGameStateWhileInPlay =
     do g <- getGame
        map_content <- generateMapContent
@@ -205,12 +191,12 @@ displayGameState player_state =
     do game_state <- getGameState player_state
        renderThemedPage "static/play.mustache" game_state
 
+{-
 data Inventory = Inventory {
     inventory_wielded :: Maybe VisibleObject,
     inventory_carried :: [VisibleObject],
     inventory_ground :: [VisibleObject] }
 
-{-
 collectInventory :: Game -> Handler App App (Either DBError Inventory)
 collectInventory g = liftIO $ perceive g $
     do visible_objects <- liftM stackVisibleObjects $ visibleObjects (const $ return True)
@@ -265,6 +251,10 @@ accept _ = pass
 move :: Handler App App ()
 move = commitBehavior =<< moveBehavior
 
+-- |
+-- Determines the correct "Behavior" type for a direction (north/south/east/west) move.
+-- This information is either implicit (moving into an enemy is assumed to be attacking)
+-- or it can be explicit because the player set a movement type.
 moveBehavior :: Handler App App Behavior
 moveBehavior =
     do g <- getGame
@@ -273,15 +263,13 @@ moveBehavior =
        let facing = fromMaybe (error "Not a valid direction identifier.") $ stringToFacing direction
        action <- case mode of
                       _ | direction == "wait" -> return $ const Wait
-                      "normal" ->
-                          do result <- liftIO $ facingBehavior g facing
-                             case result of
-                                 Right x -> return $ const x
+                      "normal" -> liftM const $ oops $ liftIO $ facingBehavior g facing
                       "step" -> return Step
                       "attack" -> return Attack
                       "fire" -> return Fire
                       "jump" -> return Jump
                       "turn" -> return TurnInPlace
+                      other  -> fail $ "moveBehavior: Didn't recognize: " ++ T.unpack (decodeUtf8 other)
        return $ action facing
 
 {-
@@ -298,6 +286,10 @@ unwield :: Handler App App ()
 unwield = commitBehavior Unwield
 -}
 
+-- |
+-- GET:  Offers the player the various game modes they are allowed (such as the tutorial game).
+-- POST: Initializes all of the data structures and cookies to start a new game.
+--
 start :: Handler App App ()
 start = on_get <|> on_post
     where on_get = method GET $ renderThemedPage "static/start.mustache" (object [])
@@ -322,7 +314,7 @@ inventoryBehavior f =
 commitBehavior :: Behavior -> Handler App App ()
 commitBehavior behavior =
     do g <- getGame
-       result <- oops $ liftIO $ behave g behavior
+       _ <- oops $ liftIO $ behave g behavior
        replay
 
 replay :: Handler App App ()
@@ -369,9 +361,9 @@ getGame =
            Nothing -> redirect "/start"
 
 data MapData = MapData {
-    md_visible_terrain :: Map.Map Position Terrain,
-    md_visible_objects :: Map.Map Position [VisibleObject],
-    md_position_info :: (Facing,Position) }
+    _md_visible_terrain :: Map.Map Position Terrain,
+    _md_visible_objects :: Map.Map Position [VisibleObject],
+    _md_position_info :: (Facing,Position) }
 
 generateMapContent :: Handler App App Aeson.Value
 generateMapContent =
@@ -424,7 +416,7 @@ createStatsBlock =
            T.concat ["Compass: ",
                      T.pack $ show $ stats_compass stats]]
 
-data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | DeepWet | Molten | Gloomy | FaintMagic | StrongMagic | StrongDusty | WarpIn | Damage | Active
+data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | Molten | Gloomy | FaintMagic | StrongMagic | StrongDusty | WarpIn | Damage | Active | BlueIFF | RedIFF
 
 styleToCSS :: Style -> T.Text
 styleToCSS Empty = ""
@@ -443,6 +435,8 @@ styleToCSS StrongDusty = "B d"
 styleToCSS WarpIn = "B warpin"
 styleToCSS Damage = "B damage"
 styleToCSS Active = "B active"
+styleToCSS BlueIFF = "blue"
+styleToCSS RedIFF = "red"
 
 class Charcoded a where
     codedRepresentation :: PlayerState -> a -> (Char,Style)
@@ -452,7 +446,7 @@ class Charcoded a where
 
 instance Charcoded a => Charcoded (Maybe a) where
     codedRepresentation player_state (Just a) = codedRepresentation player_state a
-    codedRepresentation player_state Nothing = (' ',Empty)
+    codedRepresentation _            Nothing = (' ',Empty)
 
 instance Charcoded VisibleObject where
     codedRepresentation player_state (VisibleTool { visible_tool = t }) = codedRepresentation player_state t
@@ -480,8 +474,10 @@ instance Charcoded Tool where
     codedRepresentation _ (DeviceTool Sword _) = (')',Strong)
 
 instance Charcoded Species where
-    codedRepresentation _ RedRecreant = ('r',Strong)
-    codedRepresentation _ BlueRecreant = ('@',Strong)
+    codedRepresentation _ RedRecreant =        ('r',Strong)
+    codedRepresentation _ BlueRecreant =       ('r',Strong)
+    codedRepresentation _ Anachronid =         ('X',Strong)
+    codedRepresentation _ TabularMonstrosity = ('m',Strong)
 
 instance Charcoded Terrain where
     codedRepresentation _ RockFace          = ('#',Rocky)

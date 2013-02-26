@@ -88,6 +88,8 @@ instance CreatureScore CreatureTrait where
 data CreatureSpecial =
      Hover
    | Teleportation
+   | TemporalWeb
+   | ComplexificationMesh
          deriving (Eq,Read,Show,Ord)
 
 instance CreatureEndo CreatureSpecial where
@@ -126,7 +128,7 @@ instance CreatureScore CharacterClass where
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
 figureAbility :: [CreatureTrait] -> Creature -> Integer
-figureAbility [] c     = 1
+figureAbility []     _ = 1
 figureAbility traits c = 1 + sum (map (flip rawScore c) traits) `div` List.genericLength traits
 
 creatureAbilityScore :: CreatureAbility -> Creature -> Integer

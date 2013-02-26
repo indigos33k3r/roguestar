@@ -8,8 +8,10 @@ module Roguestar.Lib.SpeciesData
 data Species =
      BlueRecreant
    | RedRecreant
+   | Anachronid
+   | TabularMonstrosity
        deriving (Eq,Ord,Bounded,Enum,Read,Show)
 
 all_species :: [Species]
-all_species = [BlueRecreant,RedRecreant] -- [minBound..maxBound]
+all_species = [minBound..maxBound]
 
