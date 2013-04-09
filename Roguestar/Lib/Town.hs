@@ -3,7 +3,7 @@ module Roguestar.Lib.Town
     (createTown)
     where
 
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Utility.SiteCriteria
 import Data.List as List

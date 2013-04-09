@@ -43,8 +43,8 @@ import Control.Applicative
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.TerrainData
-import Roguestar.Lib.BuildingData
-import Roguestar.Lib.Building
+import Roguestar.Lib.Data.BuildingData
+import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.SpeciesData

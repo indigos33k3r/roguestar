@@ -9,7 +9,7 @@ module Roguestar.Lib.Reference
 
 import Roguestar.Lib.DBPrivate
 import Roguestar.Lib.PlaneData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.CreatureData
 

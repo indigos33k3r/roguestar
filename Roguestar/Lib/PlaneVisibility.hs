@@ -20,7 +20,7 @@ import Roguestar.Lib.GridRayCaster
 import Roguestar.Lib.VisibilityData
 import Roguestar.Lib.Facing
 import Data.Ratio
-import Roguestar.Lib.Building
+import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Position as Position
 import Control.Applicative
 import Roguestar.Lib.Reference

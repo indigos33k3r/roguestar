@@ -35,7 +35,7 @@ import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.DetailedLocation
 import qualified Data.ByteString.Char8 as B
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Logging
 import Control.Monad.Maybe
 import Control.Monad.Trans

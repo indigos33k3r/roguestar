@@ -19,7 +19,7 @@ module Roguestar.Lib.DetailedLocation
 
 import Roguestar.Lib.DBData
 import Roguestar.Lib.PlaneData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.Position

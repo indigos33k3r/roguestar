@@ -35,7 +35,7 @@ import Roguestar.Lib.DBPrivate
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.PlaneData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Control.Monad
 import Roguestar.Lib.Position
 import Roguestar.Lib.Reference

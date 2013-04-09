@@ -24,7 +24,7 @@ import Roguestar.Lib.Facing
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.PlaneData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.PlanetData
 import Roguestar.Lib.Position
 

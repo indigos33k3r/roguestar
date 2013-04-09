@@ -18,7 +18,7 @@ import Roguestar.Lib.Town
 import Data.List
 import Data.ByteString.Char8 as B
 import Roguestar.Lib.FactionData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 
 makePlanet :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => l -> PlanetInfo -> DB PlaneRef
 makePlanet plane_location planet_info =

@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 --Core
-module Roguestar.Lib.Building
+module Roguestar.Lib.Core.Building
     (buildingSize,
      buildingShape,
      buildingBehavior,
@@ -10,7 +10,7 @@ module Roguestar.Lib.Building
 
 import Prelude hiding (getContents)
 import Roguestar.Lib.DB
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Data.List
 import Roguestar.Lib.Facing
 import Data.Maybe

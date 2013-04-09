@@ -11,7 +11,7 @@ module Roguestar.Lib.PlanetData
 
 import Roguestar.Lib.PersistantData
 import Roguestar.Lib.TerrainData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import qualified Roguestar.Lib.Random as Random
 import Data.Ratio
 import qualified Data.ByteString.Char8 as B

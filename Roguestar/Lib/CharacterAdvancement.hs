@@ -13,6 +13,8 @@ import Roguestar.Lib.CreatureData
 import Roguestar.Lib.PowerUpData
 import Roguestar.Lib.PersistantData
 
+-- TODO: rename "bump" to more clear language, like "advance" or "advanceCharacterLevel".
+
 data CharacterBumpResult =
     CharacterAwarded  { character_points_awarded :: Integer,
                         character_new :: Creature }

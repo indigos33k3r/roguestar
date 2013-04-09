@@ -59,7 +59,7 @@ import Roguestar.Lib.DBData
 import Roguestar.Lib.Reference
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.PlaneData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.RNG
 import Data.Map as Map
 import Data.List as List

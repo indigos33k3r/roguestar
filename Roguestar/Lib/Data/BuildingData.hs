@@ -1,6 +1,6 @@
 
 -- Data
-module Roguestar.Lib.BuildingData
+module Roguestar.Lib.Data.BuildingData
     (Building(..),
      BuildingBehavior(..),
      BuildingShape(..),
@@ -47,9 +47,6 @@ buildingOccupies Anchor   = [(0,0)]
 --    XXX
 --
 buildingOccupies Portal = [(0,0),(3,0),(3,1),(3,-1),(-3,0),(-3,1),(-3,-1),(0,3),(-1,3),(1,3),(0,-3),(-1,-3),(1,-3)]
--- Cybergate: XXX
---           XX XX
---          XX   XX
 --          X     X
 buildingOccupies CyberGate = [(-3,-3),(-3,-2),(-2,-2),(-2,-1),(-1,-1),(-1,0),(0,0),(1,-1),(1,0),(2,-2),(2,-1),(3,-3),(3,-2)]
 

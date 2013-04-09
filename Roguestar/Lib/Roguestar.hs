@@ -41,7 +41,7 @@ import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Creature
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.BeginGame as BeginGame
+import Roguestar.Lib.World.BeginGame as BeginGame
 import Roguestar.Lib.Perception
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Facing

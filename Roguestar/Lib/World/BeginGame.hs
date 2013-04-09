@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Roguestar.Lib.BeginGame
+module Roguestar.Lib.World.BeginGame
     (beginGame)
     where
 
 -- World
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.CreatureData
-import Roguestar.Lib.BuildingData
+import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Facing
 import Roguestar.Lib.TerrainData

@@ -1,0 +1,5 @@
+
+The Core module contains descriptions and rules for the basic game elements: monsters, planes, buildings, and tools. This module doesn't really contain any game mechanics, just ways to manipulate the elements.
+
+The concept of a "plane" may require some explanation. A plane is a single layer of terrain, on which monsters, buildings, and tools may be placed. A single planet might consist of one surface plane with multiple below-ground dungeon planes.
+

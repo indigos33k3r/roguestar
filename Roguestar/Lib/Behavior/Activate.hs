@@ -1,5 +1,4 @@
--- Mechanics
-module Roguestar.Lib.Activate
+module Roguestar.Lib.Behavior.Activate
     (ActivationOutcome,
      resolveActivation,
      executeActivation)

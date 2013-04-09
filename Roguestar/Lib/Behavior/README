@@ -1,0 +1,4 @@
+
+The Behavior module contains rules for resolving various types of character behaviors, such as moving, attacking, or crafting an item.  Most behavior rules use a resolve-execute pattern.  In the resolve phase, we construct a probability table describing the possible outcomes.  In the execute phase, we randomly select a possibility from the table and cause it to happen.
+
+Some older code generates the outcome directly, without generating the probability table.  I would hope to upgrade the code to the newer style.
