@@ -14,7 +14,7 @@ import Control.Monad
 roguestar_muconfig :: MuConfig
 roguestar_muconfig = MuConfig {
     muEscapeFunc = htmlEscape,
-    muTemplateFileDir = Just "static/",
+    muTemplateFileDir = Just "static/templates/",
     muTemplateFileExt = Just ".mustache" }
 
 mkAesonContext :: (Monad m) => Aeson.Value -> MuContext m

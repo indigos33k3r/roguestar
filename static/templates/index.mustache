@@ -1,0 +1,27 @@
+{{> header}}
+
+<div id="documenttext" class="roguebox">
+
+{{#server-globals}}{{#failed-unit-tests}}
+<div class="horrible">
+<p>One or more unit tests failed:</p>
+<pre>
+{{text-content}}
+</pre>
+
+</div>
+{{/failed-unit-tests}}{{/server-globals}}
+
+<form action="/play" id="play-now-button">
+<button class="big-red-button">Play Now</button>
+</form>
+
+<div id="inspiring-quote">
+<p>Roguestar strives to offer fun, tactical, turn-based gameplay in a deadly world filled with goofy science-fiction monsters.</p>
+
+<p>You can play right now, in your web browser.</p>
+</div>
+
+</div>
+
+{{> footer}}

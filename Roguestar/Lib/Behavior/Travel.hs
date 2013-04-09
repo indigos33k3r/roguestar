@@ -45,7 +45,7 @@ walkCreature face (x',y') creature_ref =
                                         (standing_position standing)
        case () of
            () | not is_passable ->
-               do logDB log_travel INFO $ "Terrain not passable."
+               do logDB gameplay_log INFO $ "Terrain not passable."
                   return $ detail l
            () | otherwise ->
                return $ standing
@@ -80,13 +80,13 @@ resolveClimb creature_ref direction = liftM (fromMaybe ClimbFailed) $ runMaybeT 
                ClimbUp -> (Upstairs,Downstairs)
                ClimbDown -> (Downstairs,Upstairs)
        when (terrain_type /= expected_starting_terrain) $
-           do lift $ logDB log_travel WARNING $ "Not standing on correct stairway."
+           do lift $ logDB gameplay_log WARNING $ "Not standing on correct stairway."
               MaybeT $ return Nothing
-       lift $ logDB log_travel DEBUG $ "Stepping " ++ show direction ++ " from: " ++ show (plane_ref,pos)
+       lift $ logDB gameplay_log DEBUG $ "Stepping " ++ show direction ++ " from: " ++ show (plane_ref,pos)
        plane_destination <- MaybeT $ case direction of
                  ClimbDown -> getBeneath plane_ref
                  ClimbUp -> liftM (fmap asParent . fromLocation) $ DB.whereIs plane_ref
-       lift $ logDB log_travel DEBUG $ "Stepping " ++ show direction ++ " to: " ++ show plane_destination
+       lift $ logDB gameplay_log DEBUG $ "Stepping " ++ show direction ++ " to: " ++ show plane_destination
        pos' <- lift $ pickRandomClearSite 10 0 0 pos (== expected_landing_terrain) plane_destination
        return $ ClimbGood direction creature_ref $
            Standing { standing_plane = plane_destination,
@@ -119,7 +119,7 @@ data TeleportJumpOutcome =
   | TeleportJumpFailed
 
 -- |
--- Teleport jump a creature about 7 units in the specified direction.
+-- Teleport jump a creature about 5-7 units in the specified direction.
 --
 resolveTeleportJump :: (DBReadable db) => CreatureRef -> Facing -> db TeleportJumpOutcome
 resolveTeleportJump creature_ref face = liftM (fromMaybe TeleportJumpFailed) $ runMaybeT $
@@ -134,7 +134,7 @@ resolveTeleportJump creature_ref face = liftM (fromMaybe TeleportJumpFailed) $ r
                                                              standing_facing = face }
            bad = TeleportJumpFailed
        lift $ weightedPickM $ weightedSet [(jump_roll,good),
-                                           (5,bad)]
+                                           (1,bad)]
 
 -- | Execute a resolved teleport jump.
 executeTeleportJump :: TeleportJumpOutcome -> DB ()

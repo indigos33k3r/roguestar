@@ -166,7 +166,7 @@ pickRandomClearSite_withTimeout :: (DBReadable db) =>
     db (Maybe Position)
 pickRandomClearSite_withTimeout (Just x) _ _ _ _ _ _ | x <= 0 = return Nothing
 pickRandomClearSite_withTimeout timeout search_radius object_clear terrain_clear (Position (start_x,start_y)) terrainPredicate plane_ref =
-    do logDB log_plane DEBUG $ "Searching for clear site . . ."
+    do logDB gameplay_log DEBUG $ "Searching for clear site . . ."
        xys <- liftM2 (\a b -> List.map Position $ zip a b)
            (mapM (\x -> liftM (+start_x) $ getRandomR (-x,x)) [1..search_radius])
            (mapM (\x -> liftM (+start_y) $ getRandomR (-x,x)) [1..search_radius])
@@ -181,7 +181,7 @@ pickRandomClearSite_withTimeout timeout search_radius object_clear terrain_clear
        let m_result = find (\p -> terrainIsClear p && clutterIsClear p) xys
        case m_result of
            Just result ->
-               do logDB log_plane DEBUG "Found clear site."
+               do logDB gameplay_log DEBUG "Found clear site."
                   return $ Just result
            Nothing -> pickRandomClearSite_withTimeout
                           (fmap (subtract 1) timeout)

@@ -1,0 +1,64 @@
+{{> header}}
+
+<div id="documenttext" class="roguestar-tabs">
+<ul>
+<li><a href="#game">Game</a></li>
+<li><a href="#feedback">Feedback</a></li>
+<li><a href="#development">Development</a></li>
+<li><a href="#version-history">Version History</a></li>
+<li><a href="#server-status">Server Status</a></li>
+</ul>
+
+<div id="game">
+<form action="/start">
+<button type="submit" title="This will obliterate your current game, if any.">Start a New Game</button>
+</form>
+</div>
+
+<div id="feedback">
+{{> feedback}}
+</div>
+
+<div id="development">
+<div class="roguestar-accordion">
+<h1>Roguestar is 100% Free Software</h1>
+<div>
+<p>Whether you are an artist, web designer, or programmer -- or just learning! -- you can participate in the development of roguestar!  To get started, grab a copy of the source code at <a href="{{> sourcecontrol-link}}">Github</a></li>.</p>
+
+<p>Roguestar uses the following technologies:</p>
+
+<ul>
+<!-- Fixme!  Let's be a good neighbor. Add links to all of the tools we use. -->
+<li>HTML5, CSS and Javascript</li>
+<li>JQuery and JQuery UI</li> <!-- Fixme!  Add all of the javascript libraries we use. -->
+<li>less - The Dynamic Stylesheet Language</li>
+<li>Scalable Vector Graphics (SVG) - mostly created with Inkscape</li>
+<li>Haskell, including the Snap web server.</li> <!-- Fixme!  Add all of the haskell libraries we use. -->
+
+</ul>
+</div>
+
+<h1>LICENSE.txt</h1>
+<div>
+<pre>
+{{> license}}
+</pre>
+</div>
+
+</div>
+</div>
+
+<div id="version-history">
+{{> version-history}}
+</div>
+
+<div id="server-status">
+<p>
+<code>{{server-statistics}}</code>
+</p>
+
+<p>Current number of game sessions: {{{number-of-games}}}</p>
+</div>
+
+{{> footer}}
+

@@ -19,7 +19,7 @@ module Roguestar.Lib.Roguestar
      Roguestar.Lib.Roguestar.beginGame,
      perceive,
      perceiveSnapshot,
-     behave,
+     performBehavior,
      Roguestar.Lib.Roguestar.facingBehavior,
      Roguestar.Lib.Roguestar.hasSnapshot,
      popSnapshot,
@@ -193,15 +193,15 @@ perceive g f = peek g $
        runPerception player_creature f
 
 -- TODO: this should be moved into the Perception monad
-facingBehavior :: Game -> Facing -> IO (Either DBError Behavior)
+facingBehavior :: Game -> Facing -> IO (Either DBError FacingBehavior)
 facingBehavior g facing = peek g $
     do player_creature <- getPlayerCreature
        Behavior.facingBehavior player_creature facing
 
-behave :: Game -> Behavior -> IO (Either DBError ())
-behave g b = poke g $
+performBehavior :: Game -> Behavior -> IO (Either DBError ())
+performBehavior g b = poke g $
     do player_creature <- getPlayerCreature
-       dbPerformPlayerTurn b player_creature
+       performPlayerTurn b player_creature
 
 hasSnapshot :: Game -> IO (Either DBError Bool)
 hasSnapshot g = peek g DB.hasSnapshot

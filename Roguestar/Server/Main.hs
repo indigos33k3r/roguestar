@@ -30,6 +30,7 @@ import Roguestar.Lib.Facing
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests
 import Roguestar.Lib.HTML.Mustache
+import Roguestar.Lib.Behavior as Behavior
 import qualified System.UUID.V4 as V4
 import GHC.Stats
 import Data.Aeson as Aeson
@@ -47,17 +48,12 @@ appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
        addRoutes [("/start", start),
                   ("/play", play),
                   ("/static", static),
-                  ("/hidden", handle404),
-                  ("/fail", handle500 (do error "my brain exploded")),
-                  ("/help-actions", staticTemplate "static/help-actions.mustache"),
-                  ("/help-map", staticTemplate "static/help-map.mustache"),
-                  ("/help", staticTemplate "static/help.mustache"),
-                  ("/participate", staticTemplate "static/participate.mustache"),
-                  ("/feedback", postFeedback <|> staticTemplate "static/feedback.mustache"),
-                  ("/feedback-thanks", staticTemplate "static/feedback-thanks.mustache"),
+                  ("/fail404", handle404),
+                  ("/fail500", handle500 (do error "my brain exploded")),
+                  ("/feedback", postFeedback),
+                  ("/feedback-thanks", staticTemplate "static/templates/feedback-thanks.mustache"),
                   ("/options", options),
-                  ("/version-history", staticTemplate "static/version-history.mustache"),
-                  ("", staticTemplate "static/index.mustache")]
+                  ("", staticTemplate "static/templates/index.mustache")]
        config <- liftIO $ getConfiguration default_timeout
        game <- liftIO $ createGameState config
        wrapSite (<|> handle404)
@@ -91,10 +87,14 @@ getBasicState = gets _globals
 handle404 :: Handler App App ()
 handle404 =
     do modifyResponse $ setResponseCode 404
-       staticTemplate "static/404.mustache"
+       staticTemplate "static/templates/404.mustache"
 
+static_directory_config :: DirectoryConfig (Handler App App)
+static_directory_config = fancyDirectoryConfig
+
+-- | Serves the directory named "static".
 static :: Handler App App ()
-static = serveDirectory "./static/"
+static = serveDirectoryWith static_directory_config "./static/"
 
 staticTemplate :: FilePath -> Handler App App ()
 staticTemplate filepath = method GET $ ifTop $
@@ -128,7 +128,7 @@ options =
        let server_statistics = object [
                "server-statistics" .= show stats,
                "number-of-games"   .= number_of_games ]
-       renderThemedPage "static/options.mustache" server_statistics
+       renderThemedPage "static/templates/options.mustache" server_statistics
 
 play :: Handler App App ()
 play =
@@ -177,6 +177,7 @@ getGameStateWhileInPlay =
     do g <- getGame
        map_content <- generateMapContent
        player_stats <- createStatsBlock
+       valid_controls <- getValidControls
        messages <- liftM (reverse . take 5) $ liftIO $ getMessages g
        is_snapshot <- oops $ liftIO $ hasSnapshot g
        return $ object [ "play" .= object [
@@ -184,12 +185,12 @@ getGameStateWhileInPlay =
            "statsblock" .= player_stats,
            "messages" .= messages,
            "is-snapshot" .= is_snapshot,
-           "controls" .= not is_snapshot ]]
+           "controls" .= if is_snapshot then toJSON False else valid_controls ]]
 
 displayGameState :: PlayerState -> Handler App App ()
 displayGameState player_state =
     do game_state <- getGameState player_state
-       renderThemedPage "static/play.mustache" game_state
+       renderThemedPage "static/templates/play.mustache" game_state
 
 {-
 data Inventory = Inventory {
@@ -260,17 +261,19 @@ moveBehavior =
     do g <- getGame
        direction <- liftM (fromMaybe $ error "No direction identifier.") $ getPostParam "direction"
        mode <- liftM (fromMaybe $ error "No mode identifier.") $ getPostParam "mode"
-       let facing = fromMaybe (error "Not a valid direction identifier.") $ stringToFacing direction
-       action <- case mode of
-                      _ | direction == "wait" -> return $ const Wait
-                      "normal" -> liftM const $ oops $ liftIO $ facingBehavior g facing
+       case direction of
+           "wait" -> return Wait
+           _ ->
+               do let facing = fromMaybe (error "Not a valid direction identifier.") $ stringToFacing direction
+                  action <- case mode of
+                      "normal" -> oops $ liftIO $ Roguestar.Lib.Roguestar.facingBehavior g facing
                       "step" -> return Step
                       "attack" -> return Attack
                       "fire" -> return Fire
                       "jump" -> return Jump
                       "turn" -> return TurnInPlace
                       other  -> fail $ "moveBehavior: Didn't recognize: " ++ T.unpack (decodeUtf8 other)
-       return $ action facing
+                  return $ FacingBehavior action facing
 
 {-
 pickup :: Handler App App ()
@@ -292,7 +295,7 @@ unwield = commitBehavior Unwield
 --
 start :: Handler App App ()
 start = on_get <|> on_post
-    where on_get = method GET $ renderThemedPage "static/start.mustache" (object [])
+    where on_get = method GET $ renderThemedPage "static/templates/start.mustache" (object [])
           on_post = method POST $
               do game_state <- gets _app_game_state
                  config <- liftIO $ getConfiguration default_timeout
@@ -314,7 +317,7 @@ inventoryBehavior f =
 commitBehavior :: Behavior -> Handler App App ()
 commitBehavior behavior =
     do g <- getGame
-       _ <- oops $ liftIO $ behave g behavior
+       _ <- oops $ liftIO $ performBehavior g behavior
        replay
 
 replay :: Handler App App ()
@@ -416,7 +419,14 @@ createStatsBlock =
            T.concat ["Compass: ",
                      T.pack $ show $ stats_compass stats]]
 
-data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | Molten | Gloomy | FaintMagic | StrongMagic | StrongDusty | WarpIn | Damage | Active | BlueIFF | RedIFF
+getValidControls :: Handler App App Aeson.Value
+getValidControls =
+    do g <- getGame
+       can_teleport <- oops $ liftIO $ perceiveSnapshot g $ Roguestar.Lib.Perception.isBehaviorAvailable (FacingBehavior Jump Here)
+       return $ object [
+           "teleport" .= can_teleport ]
+
+data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | Molten | Gloomy | Magic | StrongMagic | StrongDusty | WarpIn | Damage | Active | BlueIFF | RedIFF
 
 styleToCSS :: Style -> T.Text
 styleToCSS Empty = ""
@@ -429,8 +439,8 @@ styleToCSS Sandy = "s"
 styleToCSS Wet = "w"
 styleToCSS Molten = "o"
 styleToCSS Gloomy = "g"
-styleToCSS FaintMagic = "a"
-styleToCSS StrongMagic = "B A"
+styleToCSS Magic = "a"
+styleToCSS StrongMagic = "B a"
 styleToCSS StrongDusty = "B d"
 styleToCSS WarpIn = "B warpin"
 styleToCSS Damage = "B damage"
@@ -490,13 +500,13 @@ instance Charcoded Terrain where
     codedRepresentation _ Ice               = ('.',Icy)
     codedRepresentation _ Lava              = ('~',Molten)
     codedRepresentation _ Glass             = ('.',Gloomy)
-    codedRepresentation _ RecreantFactory   = ('_',FaintMagic)
+    codedRepresentation _ RecreantFactory   = ('_',Magic)
     codedRepresentation _ Upstairs          = ('<',StrongDusty)
     codedRepresentation _ Downstairs        = ('>',StrongDusty)
 
 main :: IO ()
 main =
-    do initLogging WARNING
+    do initLogging DEBUG --WARNING
        config <- commandLineConfig emptyConfig
        serveSnaplet config appInit
 

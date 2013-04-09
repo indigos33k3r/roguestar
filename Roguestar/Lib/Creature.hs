@@ -37,10 +37,12 @@ import qualified Data.Set as Set
 generateCreature :: Faction -> Species -> DB Creature
 generateCreature faction species =
     do r <- getRandomR (1,1000000)
-       return $ applyToCreature (species_traits $ speciesInfo species) $  empty_creature {
-           creature_species = species,
-           creature_faction = faction,
-           creature_random_id = r }
+       return $ applyToCreature (species_specials $ speciesInfo species) $
+                applyToCreature (species_traits $ speciesInfo species) $
+           empty_creature {
+               creature_species = species,
+               creature_faction = faction,
+               creature_random_id = r }
 
 -- |
 -- During DBRaceSelectionState, generates a new Creature for the player character.
@@ -101,14 +103,14 @@ getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getCreatureHea
 
 deleteCreature :: CreatureRef -> DB ()
 deleteCreature creature_ref =
-    do logDB log_creature INFO $ "deleteCreature; creature=" ++ show (toUID creature_ref)
+    do logDB gameplay_log INFO $ "deleteCreature; creature=" ++ show (toUID creature_ref)
        planar <- liftM identityDetail $ getPlanarLocation creature_ref
        dbUnsafeDeleteObject creature_ref $ const $ return planar
 
 -- | Delete all dead creatures from the database.
 sweepDead :: Reference a -> DB ()
 sweepDead ref =
-    do logDB log_creature INFO "sweepDead; sweeping dead creatures"
+    do logDB gameplay_log INFO "sweepDead; sweeping dead creatures"
        worst_to_best_critters <- sortByRO (liftM creature_health . getCreatureHealth) =<< getDead ref
        flip mapM_ worst_to_best_critters $ \creature_ref ->
            do dbPushSnapshot (KilledEvent creature_ref)

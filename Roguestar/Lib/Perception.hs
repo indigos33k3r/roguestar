@@ -3,8 +3,9 @@
 --Utility
 -- | The Perception monad is a wrapper for roguestar's core
 -- monad that reveals only as much information as a character
--- legitimately has.  Thus, it is suitable for writing AI
--- routines as well as an API for the human player's client.
+-- legitimately has.  Thus, it is suitable for writingi "no-cheating"
+-- AIs as well as an API for the human player's client.
+--
 module Roguestar.Lib.Perception
     (DBPerception,
      whoAmI,
@@ -23,7 +24,8 @@ module Roguestar.Lib.Perception
      Roguestar.Lib.Perception.whereIs,
      compass,
      depth,
-     myHealth)
+     myHealth,
+     Roguestar.Lib.Perception.isBehaviorAvailable)
     where
 
 import Control.Monad.Reader
@@ -49,6 +51,7 @@ import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.CreatureData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
+import Roguestar.Lib.Behavior as Behavior
 import qualified Roguestar.Lib.DetailedTravel as DT
 
 newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT CreatureRef db a) }
@@ -141,6 +144,15 @@ convertToVisibleObjectRecord ref | (Just building_ref :: Maybe BuildingRef) <- c
        return $ VisibleBuilding building_ref (detail location) (detail location) (detail location)
 convertToVisibleObjectRecord _ | otherwise = error "convertToVisibleObjectRecord: Impossible case."
 
+-- |
+-- Takes a list of VisibleObjects and arranges them by their
+-- position in sorted order.
+--
+-- The sort order should put the most "important" object
+-- on top.  For example, if a creature and a tool
+-- both occupy a square, it is more important to display
+-- the creature than the tool.
+--
 stackVisibleObjects :: [VisibleObject] -> Map Position [VisibleObject]
 stackVisibleObjects = List.foldr insertVob Map.empty
     where insertVob :: VisibleObject -> Map Position [VisibleObject] -> Map Position [VisibleObject]
@@ -154,6 +166,9 @@ stackVisibleObjects = List.foldr insertVob Map.empty
             <|>
                   return [vob]
 
+-- |
+-- Get the position of a visible object.
+--
 visibleObjectPosition :: VisibleObject -> MultiPosition
 visibleObjectPosition (VisibleBuilding { visible_building_occupies = multi_position }) = multi_position
 visibleObjectPosition vob = toMultiPosition $ visible_object_position vob
@@ -213,13 +228,21 @@ compass =
                   sorted_signallers = sortBy (comparing $ Position.distanceBetweenSquared pos . multipositionOf) all_signallers
               return $ maybe Here (faceAt pos . detail) $ listToMaybe sorted_signallers
 
+-- |
+-- Depth of the current plane below the surface.
+--
 depth :: (DBReadable db) => DBPerception db Integer
 depth =
     do plane <- whatPlaneAmIOn
        liftDB $ planeDepth plane
-       
+
 myHealth :: (DBReadable db) => DBPerception db CreatureHealth
 myHealth =
     do creature_ref <- whoAmI
        liftDB $ getCreatureHealth creature_ref
+
+isBehaviorAvailable :: (DBReadable db) => Behavior -> DBPerception db Bool
+isBehaviorAvailable b =
+    do creature_ref <- whoAmI
+       liftDB $ Behavior.isBehaviorAvailable b creature_ref
 

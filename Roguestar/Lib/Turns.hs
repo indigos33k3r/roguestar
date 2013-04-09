@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards, ScopedTypeVariables #-}
 --Mechanics
 module Roguestar.Lib.Turns
-    (dbPerformPlayerTurn)
+    (performPlayerTurn)
     where
 
 import Prelude hiding (getContents)
@@ -28,13 +28,13 @@ import Roguestar.Lib.DetailedLocation
 import Control.Monad.Random
 import Data.List as List
 
-dbPerformPlayerTurn :: Behavior -> CreatureRef -> DB ()
-dbPerformPlayerTurn beh creature_ref =
-    do logDB log_turns INFO $ "dbPerformPlayerTurn; Beginning player action: " ++ show beh
-       dbBehave beh creature_ref
-       logDB log_turns INFO $ "dbPerformPlayerTurn; Doing AI turns:"
+performPlayerTurn :: Behavior -> CreatureRef -> DB ()
+performPlayerTurn beh creature_ref =
+    do logDB gameplay_log INFO $ "performPlayerTurn; Beginning player action: " ++ show beh
+       executeBehavior beh creature_ref
+       logDB gameplay_log INFO $ "performPlayerTurn; Doing AI turns:"
        dbFinishPendingAITurns
-       logDB log_turns INFO $ "dbPerformPlayerTurn; Finished all player and AI turns."
+       logDB gameplay_log INFO $ "performPlayerTurn; Finished all player and AI turns."
 
 dbFinishPendingAITurns :: DB ()
 dbFinishPendingAITurns =
@@ -45,14 +45,14 @@ dbFinishPendingAITurns =
 
 dbFinishPlanarAITurns :: PlaneRef -> DB ()
 dbFinishPlanarAITurns plane_ref =
-    do logDB log_turns INFO $ "Running turns for plane: id=" ++ show (toUID plane_ref)
+    do logDB gameplay_log INFO $ "Running turns for plane: id=" ++ show (toUID plane_ref)
        sweepDead plane_ref
        (all_creatures_on_plane :: [CreatureRef]) <- liftM asChildren $ getContents plane_ref
        any_players_left <- liftM (any (== Player)) $ mapM getCreatureFaction all_creatures_on_plane
        next_turn <- dbNextTurn $ List.map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
        case next_turn of
            _ | not any_players_left ->
-               do logDB log_turns INFO $ "dbFinishPlanarAITurns; Game over condition detected"
+               do logDB gameplay_log INFO $ "dbFinishPlanarAITurns; Game over condition detected"
                   setPlayerState $ GameOver PlayerIsDead
                   return ()
            ref | ref =:= plane_ref ->
@@ -67,15 +67,15 @@ dbFinishPlanarAITurns plane_ref =
                   return ()
            _ -> error "dbFinishPlanarAITurns: impossible case"
 
-planar_turn_frequency :: Integer
-planar_turn_frequency = 100
+planar_turn_interval :: Rational
+planar_turn_interval = 1%2
 
 monster_spawns :: [(Terrain,Species)]
 monster_spawns = [(RecreantFactory,RedRecreant)]
 
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
 dbPerform1PlanarAITurn plane_ref =
-    do logDB log_turns INFO $ "dbPerform1PlanarAITurn; Beginning planar AI turn (for the plane itself):"
+    do logDB gameplay_log INFO $ "dbPerform1PlanarAITurn; Beginning planar AI turn (for the plane itself):"
        (creature_locations :: [DetailedLocation (Child Creature)]) <- liftM mapLocations $ getContents plane_ref
        player_locations <- filterRO (liftM (== Player) . getCreatureFaction . asChild . detail) creature_locations
        num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . asChild . detail) creature_locations
@@ -83,15 +83,14 @@ dbPerform1PlanarAITurn plane_ref =
            do (terrain_type,species) <- weightedPickM $ unweightedSet monster_spawns
               _ <- spawnNPC terrain_type species plane_ref $ List.map detail $ player_locations
               return ()
-       dbAdvanceTime plane_ref (1%planar_turn_frequency)
+       dbAdvanceTime plane_ref planar_turn_interval
 
 -- |
 -- Spawn a non-player creature on the specified terrain type (or fail if not finding that terrain type)
--- and of the specified species, on the specified plane, near one of the specified positions
--- (presumably the list of positions of all player characters).
+--
 spawnNPC :: Terrain -> Species -> PlaneRef -> [Position] -> DB Bool
 spawnNPC terrain_type species plane_ref player_locations =
-    do logDB log_turns INFO $ "spawnNPC; Spawning an NPC"
+    do logDB gameplay_log INFO $ "spawnNPC; Spawning an NPC"
        p <- weightedPickM $ unweightedSet player_locations
        m_spawn_position <- pickRandomClearSite_withTimeout (Just 2) 7 0 0 p (== terrain_type) plane_ref
        case m_spawn_position of
@@ -103,8 +102,8 @@ spawnNPC terrain_type species plane_ref player_locations =
 
 dbPerform1CreatureAITurn :: CreatureRef -> DB ()
 dbPerform1CreatureAITurn creature_ref =
-    do logDB log_turns INFO $ "dbPerform1CreatureAITurn; Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
-       liftM (const ()) $ atomic (flip dbBehave creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
+    do logDB gameplay_log INFO $ "dbPerform1CreatureAITurn; Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
+       liftM (const ()) $ atomic (flip executeBehavior creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
         do let isPlayer :: forall db. (DBReadable db) => Reference () -> P.DBPerception db Bool
                isPlayer ref | (Just might_be_the_player_creature_ref) <- coerceReference ref =
                    do f <- P.getCreatureFaction might_be_the_player_creature_ref
@@ -119,8 +118,8 @@ dbPerform1CreatureAITurn creature_ref =
            let face_to_player = faceAt my_position player_position
            return $ case distanceBetweenChessboard my_position player_position of
                _ | rand_x < 5 -> Wait -- if AI gets stuck, this will make sure they waste time so the game doesn't hang
-               _ | rand_x < 20 -> Step rand_face
-               1 -> Attack face_to_player
+               _ | rand_x < 20 -> FacingBehavior Step rand_face
+               1 -> FacingBehavior Attack face_to_player
                -- x | x >= 10 -> Jump face_to_player  -- disable this until we can handle non-player teleporting sanely
-               _ -> Step face_to_player
+               _ -> FacingBehavior Step face_to_player
 

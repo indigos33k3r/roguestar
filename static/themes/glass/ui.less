@@ -1,0 +1,338 @@
+
+@red: #933;
+@green: #393;
+@darkgreen: #131;
+@blue: #339;
+@darkblue: #226;
+@orange: #930;
+@brown: 963;
+@yellow: #662;
+@magenta: #939;
+@cyan: #399;
+@black: #080808;
+@white: #ccc;
+
+@corner-roundness: 0.75em;
+
+.emphasized-text {
+    font-family: "Averia Sans Libre", sans-serif;
+    font-size: 14pt;
+}
+
+.tabbed-corners {
+    border-radius: @corner-roundness * 0.75;
+    -moz-border-radius: @corner-roundness * 0.75;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    -moz-border-radius-bottomright: 0;
+    -moz-border-radius-bottomleft: 0;
+}
+
+.radio-corners {
+    border-radius: @corner-roundness;
+    -moz-border-radius: @corner-roundness;
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    -moz-border-radius-bottomleft: 0;
+    -moz-border-radius-topleft: 0;
+}
+
+.accordion-corners {
+    border-radius: @corner-roundness * 0.75;
+    -moz-border-radius: @corner-roundness * 0.75;
+    border-bottom-right-radius: @corner-roundness * 0.25;
+    border-bottom-left-radius: @corner-roundness *0.25;
+    -moz-border-radius-bottomright: @corner-roundness *0.25;
+    -moz-border-radius-bottomleft: @corner-roundness *0.25;
+}
+
+.tooltip-corners {
+    border-radius: @corner-roundness*2;
+    -moz-border-radius: @corner-roundness*2;
+    border-top-left-radius: @corner-roundness;
+    border-top-right-radius: @corner-roundness;
+    -moz-border-radius-topleft: @corner-roundness;
+    -moz-border-radius-topright: @corner-roundness;
+}
+
+.rounded-corners {
+    border-radius: @corner-roundness;
+    -moz-border-radius: @corner-roundness;
+}
+
+.shiny {
+    background-image: url('shine.svg');
+    background-position: center;
+    background-repeat: repeat-x;
+    background-size: cover;
+}
+
+.half-shiny {
+    background-image: url('half-shine.svg');
+    background-position: center;
+    background-repeat: repeat-x;
+    background-size: cover;
+}
+
+.roguebox {
+    .rounded-corners;
+    background-color: @black;
+    border-width: 1px;
+    border-style: solid;
+    border-color: @darkgreen;
+}
+
+.button-border {
+    border-width: 2px;
+    border-style: outset;
+    border-color: @white;
+
+    &:hover:active {
+        border-style: inset;
+    }
+}
+
+.tabbed-border {
+    .button-border;
+    border-bottom: none;
+
+    &:hover:active {
+        border-bottom: none;
+    }
+}
+
+.button-coloration {
+    color: @white;
+    background-color: @darkblue;
+
+    &:hover {
+        background-color: @blue;
+        &:active {
+            background-color: @orange;
+        }
+    }
+
+    &a {
+        color: @white;
+    }
+}
+
+body {
+    font-family: "Oxygen", sans-serif;
+    font-size: 12pt;
+    background: black;
+    color: @white;
+}
+
+img {
+    border: 0;
+}
+
+a {
+    color: @green;
+    .emphasized-text;
+    text-decoration: none;
+}
+
+p a {
+   color: @green;
+   .emphasized-text;
+   text-decoration: underline;
+}
+
+a:hover {
+    color: @white;
+}
+
+button {
+    .rounded-corners;
+    .emphasized-text;
+    .shiny;
+    .button-border;
+    .button-coloration;
+    padding: @corner-roundness * 0.75;
+}
+
+input[type="radio"] {
+    display: none;
+}
+
+input[type="radio"] + label {
+    display: block;
+    .radio-corners;
+    .emphasized-text;
+    .shiny;
+    .button-coloration;
+    .button-border;
+    padding: 0;
+    padding-right: @corner-roundness * 0.75;
+    margin: 5px;
+    height: 21px;
+    width: 200px;
+    line-height: 21px;
+}
+
+input[type="radio"]:checked + label {
+    border-style: inset;
+    background-color: @orange;
+}
+
+form textarea {
+    .tabbed-corners;
+    .emphasized-text;
+    border-color: @darkgreen;
+    border-style: solid;
+    border-width: 2px;
+    color: @white;
+    background-color: @black;
+}
+
+.left-image {
+    float: left;
+    margin: 1em;
+}
+
+#main {
+    width: 1028px;
+    margin: auto;
+    padding: 0;
+}
+
+.horrible {
+    padding: 1cm;
+    border: solid;
+    border-width: 1cm;
+    border-color: @red;
+    background-color: #000000;
+    color: @green;
+}
+
+#documenttext {
+   overflow: hidden;
+   margin: 0;
+   margin-bottom: 1em;
+
+   p, h1, h2, h3, h4, h5, h6, form {
+       margin: 0.5cm;
+   }
+}
+
+h1, h2, h3, h4, h5, h6 {
+    .emphasized-text;
+    font-size: 150%;
+    padding: 0;
+}
+
+#menu {
+    .roguebox;
+    width: 1000px;
+    padding: 12px;
+    margin-top: @corner-roundness;
+    margin-bottom: @corner-roundness;
+    overflow: hidden;
+}
+
+#menu ul {
+    float: right;
+    padding: 0;
+    margin: 0;
+    margin-right: 1em;
+}
+
+#menu ul li {
+    text-align: right;
+    list-style: none;
+}
+
+#menu img {
+    margin: 0;
+    padding: 0;
+}
+
+#inspiring-quote {
+    padding: 1in;
+}
+
+#play-now-button {
+    padding: 1in;
+    float: right;
+    line-height: 500%;
+}
+
+.big-red-button {
+    font-size: 125%;
+    padding: 2em;
+}
+
+.ui-tabs .ui-tabs-hide {
+    display: none;
+}
+
+.ui-tabs {
+    .roguebox;
+}
+
+.ui-tabs .ui-tabs-nav {
+    .tabbed-corners;
+    .half-shiny;
+    padding: @corner-roundness / 2;
+    padding-top: @corner-roundness / 4;
+    padding-bottom: 0;
+    background-color: @darkgreen;
+    margin: 0;
+}
+
+.ui-tabs .ui-tabs-nav li {
+    list-style: none;
+    display: inline-block;
+}
+
+.ui-tabs .ui-tabs-nav a {
+    display: block;
+    .tabbed-border;
+    .tabbed-corners;
+    .button-coloration;
+    .shiny;
+    padding: @corner-roundness;
+    padding-bottom: @corner-roundness / 2;
+    padding-top: @corner-roundness / 2;
+}
+
+.ui-tabs .ui-tabs-nav li.ui-state-active a {
+    background-color: @orange;
+}
+
+.ui-tabs div {
+    margin: 1em;
+}
+
+.ui-accordion .ui-accordion-header {
+    .emphasized-text;
+    .accordion-corners;
+    .button-coloration;
+    .shiny;
+    padding: @corner-roundness * 0.75;
+    padding-bottom: @corner-roundness * 0.25;
+    padding-top: @corner-roundness * 0.25;
+}
+
+.ui-accordion .ui-accordion-header-active {
+    background-color: @orange;
+
+    &:hover {
+        background-color: @orange;
+    }
+}
+
+.tooltip-box {
+    width: 4.5in;
+    padding: 1em;
+    border-style: solid;
+    border-width: 2px;
+    color: @white;
+    border-color: @orange;
+    background-color: @darkblue;
+    .half-shiny;
+    .tooltip-corners;
+}
+

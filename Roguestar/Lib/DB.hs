@@ -81,14 +81,14 @@ import System.IO.Unsafe
 import Roguestar.Lib.Logging
 import Control.Monad.ST
 import Data.STRef
-import qualified Data.Vector.Unboxed as Vector
-import qualified System.Random.MWC as MWC
-import Data.Word
+--import qualified Data.Vector.Unboxed as Vector
+--import qualified System.Random.MWC as MWC
+--import Data.Word
 
 data DBContext s = DBContext {
     db_info    :: STRef s DB_BaseType,
-    db_rng     :: STRef s RNG,
-    db_mwc_rng :: STRef s (MWC.GenST s) }
+    db_rng     :: STRef s RNG {-,
+    db_mwc_rng :: STRef s (MWC.GenST s) -} }  --mwc-rng tentatively removed from the program
 
 data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
@@ -109,13 +109,13 @@ data DB a = DB { internalRunDB :: forall s. DBContext s -> ST s (Either DBError 
 runDB :: DB a -> DB_BaseType -> IO (Either DBError (a,DB_BaseType))
 runDB dbAction database =
     do rng <- randomIO
-       (seed :: Vector.Vector Word32) <- MWC.withSystemRandom . MWC.asGenIO $ \gen ->
-                   MWC.uniformVector gen 2
+       --(seed :: Vector.Vector Word32) <- MWC.withSystemRandom . MWC.asGenIO $ \gen ->
+       --            MWC.uniformVector gen 2
        return $ runST $
-           do mwc_rng_ref <- newSTRef =<< MWC.initialize seed
+           do -- mwc_rng_ref <- newSTRef =<< MWC.initialize seed
               data_ref <- newSTRef database
               rng_ref <- newSTRef rng
-              result <- internalRunDB dbAction (DBContext data_ref rng_ref mwc_rng_ref)
+              result <- internalRunDB dbAction (DBContext data_ref rng_ref {- mwc_rng_ref -})
               database' <- readSTRef data_ref
               return $ case result of
                   Left err -> Left err
@@ -178,8 +178,8 @@ dbRandom rgen = DB $ \context ->
 class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,MonadRandom db,Applicative db) => DBReadable db where
     dbSimulate :: DB a -> db a
     dbPeepSnapshot :: (DBReadable db) => (forall m. DBReadable m => m a) -> db (Maybe a)
-    uniform :: (Int,Int) -> db Int
-    uniformVector :: Int -> (Int,Int) -> db (Vector.Vector Int)
+--    uniform :: (Int,Int) -> db Int
+--    uniformVector :: Int -> (Int,Int) -> db (Vector.Vector Int)
 
 instance DBReadable DB where
     dbSimulate = local id
@@ -189,15 +189,17 @@ instance DBReadable DB where
                Just snapshot ->
                    do liftM Just $ local (const snapshot) $ dbSimulate actionM
                Nothing ->  return Nothing
-    uniform range = DB $ \context ->
+{-    uniform range = DB $ \context ->
         do gen <- readSTRef (db_mwc_rng context)
            liftM Right $ MWC.uniformR range gen
     uniformVector n (a,b) = DB $ \ context ->
         do gen <- readSTRef (db_mwc_rng context)
-           liftM (Right . Vector.map ((+a) . (`mod` (b-a)))) $ MWC.uniformVector gen n
+           liftM (Right . Vector.map ((+a) . (`mod` (b-a)))) $ MWC.uniformVector gen n -}
 
 logDB :: (DBReadable db) => String -> Priority -> String -> db ()
-logDB l p s = return $! unsafePerformIO $ logM l p $ l ++ ": " ++ s
+logDB l p s = unsafePerformIO $
+    do logM l p $ l ++ ": " ++ s
+       return $ return ()
 
 ro :: (DBReadable db) => (forall m. DBReadable m => m a) -> db a
 ro db = dbSimulate db
@@ -426,7 +428,7 @@ dbModBuilding = dbModObjectComposable dbGetBuilding dbPutBuilding
 -- | A low-level set location instruction.  Merely guarantees the consistency of the location graph.
 setLocation :: Location -> DB ()
 setLocation loc =
-    do logDB log_database DEBUG $ "setting location: " ++ show loc
+    do logDB gameplay_log DEBUG $ "setting location: " ++ show loc
        case loc of
            IsWielded _ (Wielded c) -> dbUnwieldCreature c
            IsSubsequent _ (Subsequent s v) -> shuntPlane (\subseq -> subsequent_via subseq == v) s
@@ -524,7 +526,7 @@ dbAdvanceTime ref t = dbSetTimeCoordinate ref =<< (return . (advanceTime t)) =<<
 dbNextTurn :: (DBReadable db,ReferenceType a) => [Reference a] -> db (Reference a)
 dbNextTurn [] = error "dbNextTurn: empty list"
 dbNextTurn refs =
-    do logDB log_database INFO $ "Determining whose turn is next among: " ++ (show $ List.map toUID refs) 
+    do logDB gameplay_log INFO $ "Determining whose turn is next among: " ++ (show $ List.map toUID refs) 
        asks (\db -> fst $ minimumBy (comparing snd) $
                    List.map (\r -> (r,fromMaybe (error "dbNextTurn: missing time coordinate") $
                                       Map.lookup (genericReference r) (db_time_coordinates db))) refs)
