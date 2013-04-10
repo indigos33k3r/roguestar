@@ -14,10 +14,10 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
 import Control.Monad.Error
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Data.Maybe
 import Roguestar.Lib.Utility.Contact
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Data.List as List
 
 data AttackModel =

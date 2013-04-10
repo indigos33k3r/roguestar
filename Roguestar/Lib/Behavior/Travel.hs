@@ -12,7 +12,7 @@ module Roguestar.Lib.Behavior.Travel
     where
 
 import Control.Monad.Maybe
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.DB as DB
 import Roguestar.Lib.Core.Plane
 import Data.Maybe
@@ -26,8 +26,8 @@ import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Logging
 import Roguestar.Lib.TravelData
-import Roguestar.Lib.DetailedLocation
-import Roguestar.Lib.DetailedTravel as DetailedTravel
+import Roguestar.Lib.Utility.DetailedLocation
+import Roguestar.Lib.Utility.DetailedTravel as DetailedTravel
 
 walkMonster :: (DBReadable db) => Facing ->
                                    (Integer,Integer) ->

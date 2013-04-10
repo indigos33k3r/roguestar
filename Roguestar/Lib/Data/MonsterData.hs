@@ -16,7 +16,7 @@ module Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PersistantData
 import Data.Ratio
 import Data.Maybe
-import Roguestar.Lib.FactionData
+import Roguestar.Lib.Data.FactionData
 import Data.Monoid
 import qualified Data.Map as Map
 import qualified Data.Set as Set

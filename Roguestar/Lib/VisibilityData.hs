@@ -8,7 +8,7 @@ module Roguestar.Lib.VisibilityData
 
 import Roguestar.Lib.TerrainData
 import Data.List
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 
 -- |
 -- We multiply a creature's hide check by this number if it is standing on this terrain.

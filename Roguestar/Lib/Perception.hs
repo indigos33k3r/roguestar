@@ -33,26 +33,26 @@ import Control.Monad.Random
 import Data.Ord
 import Roguestar.Lib.DB as DB
 import Roguestar.Lib.Reference
-import Roguestar.Lib.FactionData
+import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Core.Monster as Monster
 import Roguestar.Lib.PlaneVisibility
 import Data.Maybe
 import Data.List as List
 import Data.Map as Map
 import Control.Applicative
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.Behavior as Behavior
-import qualified Roguestar.Lib.DetailedTravel as DT
+import qualified Roguestar.Lib.Utility.DetailedTravel as DT
 
 newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT MonsterRef db a) }
 

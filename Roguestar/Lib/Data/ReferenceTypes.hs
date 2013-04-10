@@ -1,5 +1,4 @@
---Data
-module Roguestar.Lib.DBPrivate
+module Roguestar.Lib.Data.ReferenceTypes
     (Reference(..),
      unsafeReference,
      toUID,
@@ -20,7 +19,7 @@ module Roguestar.Lib.DBPrivate
     where
 
 import Roguestar.Lib.HierarchicalDatabase
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.PlaneData

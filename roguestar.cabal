@@ -58,7 +58,6 @@ library
                   streams >= 0.8.2
   other-modules:  Roguestar.Lib.TravelData,
                   Roguestar.Lib.VisibilityData,
-                  Roguestar.Lib.FactionData,
                   Roguestar.Lib.PlaneData,
                   Roguestar.Lib.Grids,
                   Roguestar.Lib.Perception,
@@ -74,15 +73,12 @@ library
                   Roguestar.Lib.HierarchicalDatabase,
                   Roguestar.Lib.Behavior.Travel,
                   Roguestar.Lib.ToolData,
-                  Roguestar.Lib.Facing,
-                  Roguestar.Lib.DBPrivate,
                   Roguestar.Lib.RNG,
                   Roguestar.Lib.Species,
                   Roguestar.Lib.Position,
                   Roguestar.Lib.TerrainData,
                   Roguestar.Lib.Behavior.Combat,
                   Roguestar.Lib.Tests,
-                  Roguestar.Lib.DBData,
                   Roguestar.Lib.GridRayCaster,
                   Roguestar.Lib.World.BeginGame,
                   Roguestar.Lib.SpeciesData,
@@ -103,8 +99,12 @@ library
                   Roguestar.Lib.PowerUpData,
                   Roguestar.Lib.Data.BuildingData,
                   Roguestar.Lib.Data.CharacterData,
+                  Roguestar.Lib.Data.FacingData,
+                  Roguestar.Lib.Data.FactionData,
+                  Roguestar.Lib.Data.LocationData,
                   Roguestar.Lib.Data.MonsterData,
                   Roguestar.Lib.Data.PlayerState,
+                  Roguestar.Lib.Data.ReferenceTypes,
                   Roguestar.Lib.HTML.Mustache
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all

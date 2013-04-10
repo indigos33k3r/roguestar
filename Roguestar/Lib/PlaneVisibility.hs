@@ -7,7 +7,7 @@ module Roguestar.Lib.PlaneVisibility
     where
 
 import Prelude hiding (getContents)
-import Roguestar.Lib.FactionData
+import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.DB
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Core.Plane
@@ -18,13 +18,13 @@ import Data.List as List
 import Roguestar.Lib.Grids
 import Roguestar.Lib.GridRayCaster
 import Roguestar.Lib.VisibilityData
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Data.Ratio
 import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Position as Position
 import Control.Applicative
 import Roguestar.Lib.Reference
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 
 dbGetSeersForFaction :: (DBReadable db) => Faction -> PlaneRef -> db [MonsterRef]
 dbGetSeersForFaction faction plane_ref =

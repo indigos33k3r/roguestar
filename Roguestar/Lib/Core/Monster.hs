@@ -20,14 +20,14 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.DB
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Species
-import Roguestar.Lib.FactionData
+import Roguestar.Lib.Data.FactionData
 import Control.Monad.Error
 import Control.Monad.Random
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Position
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Data.PlayerState
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.Logging
 import qualified Data.Set as Set
 

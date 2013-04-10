@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies, EmptyDataDecls, ScopedTypeVariables, PatternGuards, FlexibleContexts #-}
 --Core
-module Roguestar.Lib.DetailedLocation
+module Roguestar.Lib.Utility.DetailedLocation
     (DetailedLocation,
      PlaneLocation,
      BuildingLocation,
@@ -17,7 +17,7 @@ module Roguestar.Lib.DetailedLocation
      LocationAssignmentTable)
     where
 
-import Roguestar.Lib.DBData
+import Roguestar.Lib.Data.LocationData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.ToolData
@@ -26,7 +26,7 @@ import Roguestar.Lib.Position
 import Data.Maybe
 import Control.Monad
 import Roguestar.Lib.Reference
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 
 type PlaneLocation = DetailedLocation (Child Plane)
 type BuildingLocation = DetailedLocation (Child Building)

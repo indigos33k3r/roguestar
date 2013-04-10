@@ -48,14 +48,14 @@ module Roguestar.Lib.DB
      peepOldestSnapshot,
      popOldestSnapshot,
      hasSnapshot,
-     module Roguestar.Lib.DBData,
-     module Roguestar.Lib.DBErrorFlag,
+     module Roguestar.Lib.Data.LocationData,
+     module Roguestar.Lib.Data.ErrorData,
      module Roguestar.Lib.Random)
     where
 
 import Prelude hiding (getContents)
-import Roguestar.Lib.DBPrivate
-import Roguestar.Lib.DBData
+import Roguestar.Lib.Data.ReferenceTypes
+import Roguestar.Lib.Data.LocationData
 import Roguestar.Lib.Reference
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PlaneData
@@ -75,7 +75,7 @@ import Data.Ord
 import Control.Monad.Random as Random
 import Roguestar.Lib.Random
 import Roguestar.Lib.Data.PlayerState
-import Roguestar.Lib.DBErrorFlag
+import Roguestar.Lib.Data.ErrorData
 import Control.Parallel.Strategies
 import System.IO.Unsafe
 import Roguestar.Lib.Logging

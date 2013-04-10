@@ -20,13 +20,13 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import Roguestar.Lib.Roguestar
 import Roguestar.Lib.Data.PlayerState
-import Roguestar.Lib.DBErrorFlag
+import Roguestar.Lib.Data.ErrorData
 import Roguestar.Lib.Perception
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.TerrainData as TerrainData
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests
 import Roguestar.Lib.HTML.Mustache

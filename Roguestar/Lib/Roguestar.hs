@@ -44,14 +44,14 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.World.BeginGame as BeginGame
 import Roguestar.Lib.Perception
 import Roguestar.Lib.TerrainData
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Behavior as Behavior
 import Roguestar.Lib.Turns
 import Roguestar.Lib.Core.Plane
 import Data.Text as T
 import System.Time
 import Control.Concurrent
-import Roguestar.Lib.FactionData
+import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.PlaneVisibility
 
 -- Session timeout information.

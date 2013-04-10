@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 --Data
-module Roguestar.Lib.Facing
+module Roguestar.Lib.Data.FacingData
     (Facing(..),
      facingToRelative,
      facingToRelative7,

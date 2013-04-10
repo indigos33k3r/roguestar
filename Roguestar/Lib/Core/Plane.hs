@@ -32,8 +32,8 @@ import Data.Maybe
 import Data.List as List
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Data.PlayerState
-import Roguestar.Lib.FactionData
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Data.FactionData
+import Roguestar.Lib.Utility.DetailedLocation
 import qualified Data.ByteString.Char8 as B
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Logging

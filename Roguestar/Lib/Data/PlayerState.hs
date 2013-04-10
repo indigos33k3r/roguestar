@@ -5,7 +5,7 @@ module Roguestar.Lib.Data.PlayerState
      GameOverReason(..))
     where
 
-import Roguestar.Lib.DBData
+import Roguestar.Lib.Data.LocationData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.TravelData
 import Roguestar.Lib.PersistantData

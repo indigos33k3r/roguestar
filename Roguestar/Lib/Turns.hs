@@ -9,14 +9,14 @@ import Control.Monad.Maybe
 import Control.Monad.Trans
 import Roguestar.Lib.DB
 import Roguestar.Lib.Reference
-import Roguestar.Lib.FactionData
+import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Data.MonsterData (Monster)
 import Roguestar.Lib.Core.Plane
 import Control.Monad
 import Roguestar.Lib.Core.Monster
 import Data.Ratio
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.TerrainData
 import Data.Maybe
 import Roguestar.Lib.Behavior
@@ -24,7 +24,7 @@ import qualified Roguestar.Lib.Perception as P
 import Roguestar.Lib.Position
 import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.Logging
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Control.Monad.Random
 import Data.List as List
 

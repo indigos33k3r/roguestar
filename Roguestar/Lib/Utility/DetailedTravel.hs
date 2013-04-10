@@ -1,13 +1,12 @@
 {-# LANGUAGE TypeFamilies #-}
---Core
-module Roguestar.Lib.DetailedTravel
-    (Roguestar.Lib.DetailedTravel.whereIs,
-     Roguestar.Lib.DetailedTravel.getContents)
+module Roguestar.Lib.Utility.DetailedTravel
+    (Roguestar.Lib.Utility.DetailedTravel.whereIs,
+     Roguestar.Lib.Utility.DetailedTravel.getContents)
     where
 
 import Prelude hiding (getContents)
 import Roguestar.Lib.DB as DB
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Control.Monad
 import Data.Maybe
 import Roguestar.Lib.Reference

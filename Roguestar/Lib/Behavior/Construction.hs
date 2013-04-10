@@ -10,7 +10,7 @@ import Roguestar.Lib.DB
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.TerrainData
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Control.Monad
 import Control.Monad.Maybe
 import Control.Monad.Trans

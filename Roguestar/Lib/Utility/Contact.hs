@@ -8,14 +8,14 @@ module Roguestar.Lib.Utility.Contact
 
 import Prelude hiding (getContents)
 import Roguestar.Lib.Position as Position
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.MonsterData
 import Control.Monad
 import Roguestar.Lib.PlaneData
 import Data.Ord
 import Data.List as List
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 
 -- | 'Touch' contacts are on the same or facing square as the subject.
 -- 'Line' contacts are on any point starting on the same square and anywhere directly along a line traced in the

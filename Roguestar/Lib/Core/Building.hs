@@ -12,7 +12,7 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.BuildingData
 import Data.List
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Data.Maybe
 import Control.Monad.Maybe
 import Control.Monad.Random
@@ -23,7 +23,7 @@ import Roguestar.Lib.TerrainData
 import Control.Monad.Error
 import Roguestar.Lib.PowerUpData
 import Roguestar.Lib.Behavior.CharacterAdvancement
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.Data.PlayerState
 
 -- | The total occupied surface area of a building.

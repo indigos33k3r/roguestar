@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, PatternGuards, TypeFamilies #-}
 --Data
-module Roguestar.Lib.DBData
+module Roguestar.Lib.Data.LocationData
     (Reference,
      toUID,
      genericReference,
@@ -30,8 +30,8 @@ module Roguestar.Lib.DBData
      shuntToTheUniverse)
     where
 
-import Roguestar.Lib.Facing
-import Roguestar.Lib.DBPrivate
+import Roguestar.Lib.Data.FacingData
+import Roguestar.Lib.Data.ReferenceTypes
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PlaneData

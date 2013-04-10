@@ -7,7 +7,7 @@ module Roguestar.Lib.Reference
      (=/=))
     where
 
-import Roguestar.Lib.DBPrivate
+import Roguestar.Lib.Data.ReferenceTypes
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.ToolData

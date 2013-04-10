@@ -1,5 +1,5 @@
 --Data
-module Roguestar.Lib.DBErrorFlag
+module Roguestar.Lib.Data.ErrorData
     (DBError(..),
      ErrorFlag(..))
     where

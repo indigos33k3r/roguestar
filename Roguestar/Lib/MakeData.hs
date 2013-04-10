@@ -14,7 +14,7 @@ module Roguestar.Lib.MakeData
      MakeWith(..))
     where
 
-import Roguestar.Lib.DBData
+import Roguestar.Lib.Data.LocationData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.Substances
 

@@ -14,7 +14,7 @@ module Roguestar.Lib.Tool
 import Prelude hiding (getContents)
 import Roguestar.Lib.DB
 import Roguestar.Lib.Reference
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Control.Monad.Error
 import Data.Maybe
 import Data.List as List

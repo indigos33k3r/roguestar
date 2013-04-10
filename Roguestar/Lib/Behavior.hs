@@ -13,7 +13,7 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.DB
 import Roguestar.Lib.Logging
 import Roguestar.Lib.Position
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Data.Ratio
 import Roguestar.Lib.Tool
 import Control.Monad.Error
@@ -31,7 +31,7 @@ import Roguestar.Lib.Behavior.Make
 import Roguestar.Lib.Behavior.Construction
 import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Reference
-import Roguestar.Lib.DetailedLocation
+import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.PlaneData
 
 data FacingBehavior =

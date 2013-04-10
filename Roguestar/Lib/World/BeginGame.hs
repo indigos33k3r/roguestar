@@ -8,7 +8,7 @@ import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.DB
-import Roguestar.Lib.Facing
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.TerrainData
 import Roguestar.Lib.ToolData
 import Control.Monad
