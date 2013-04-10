@@ -18,5 +18,5 @@ run:
 	./dist/build/roguestar-server/roguestar-server +RTS -xc -p -s 2> ./log/stdout.log
 
 check: clean
-	cabal-dev configure --ghc-options="-O0"
+	cabal-dev configure --ghc-options="-O0" --disable-library-profiling --disable-executable-profiling
 	cabal-dev build

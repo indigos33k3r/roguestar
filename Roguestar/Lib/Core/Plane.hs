@@ -25,7 +25,7 @@ import Roguestar.Lib.TerrainData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.PlanetData
 import Roguestar.Lib.ToolData (Tool)
-import Roguestar.Lib.Data.MonsterData (Creature)
+import Roguestar.Lib.Data.MonsterData (Monster)
 import Control.Monad
 import Control.Monad.Random as Random
 import Data.Maybe
@@ -66,7 +66,7 @@ planeDepth this_plane =
 
 class AlwaysHasIndirectPlanarLocation a
 instance AlwaysHasIndirectPlanarLocation Tool
-instance AlwaysHasIndirectPlanarLocation Creature
+instance AlwaysHasIndirectPlanarLocation Monster
 instance AlwaysHasIndirectPlanarLocation Building
 
 -- |
@@ -210,9 +210,9 @@ whatIsOccupying plane_ref position =
 
 -- | Answers True iff a creature may walk or swim or drop objects at the position.
 -- Lava is considered passable, but trees are not.
-isTerrainPassable :: (DBReadable db) => PlaneRef -> CreatureRef -> Position -> db Bool
+isTerrainPassable :: (DBReadable db) => PlaneRef -> MonsterRef -> Position -> db Bool
 isTerrainPassable plane_ref creature_ref position =
-    do let f :: Maybe (Either (Child Building) (Child Creature)) -> Bool
+    do let f :: Maybe (Either (Child Building) (Child Monster)) -> Bool
            f = maybe False $ either (const True) (\(Child c) -> c /= creature_ref)
        (critters :: [PlanarLocation]) <- liftM (filter $ f . fromLocation . toLocation) $ whatIsOccupying plane_ref position
        terrain <- terrainAt plane_ref position

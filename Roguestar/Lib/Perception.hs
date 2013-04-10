@@ -12,14 +12,14 @@ module Roguestar.Lib.Perception
      runPerception,
      VisibleObject(..),
      isVisibleTool,
-     isVisibleCreature,
+     isVisibleMonster,
      isVisibleBuilding,
      stackVisibleObjects,
      visibleObjects,
      visibleTerrain,
      myFaction,
      myInventory,
-     Roguestar.Lib.Perception.getCreatureFaction,
+     Roguestar.Lib.Perception.getMonsterFaction,
      whereAmI,
      Roguestar.Lib.Perception.whereIs,
      compass,
@@ -34,7 +34,7 @@ import Data.Ord
 import Roguestar.Lib.DB as DB
 import Roguestar.Lib.Reference
 import Roguestar.Lib.FactionData
-import Roguestar.Lib.Core.Monster as Creature
+import Roguestar.Lib.Core.Monster as Monster
 import Roguestar.Lib.PlaneVisibility
 import Data.Maybe
 import Data.List as List
@@ -54,7 +54,7 @@ import Roguestar.Lib.ToolData
 import Roguestar.Lib.Behavior as Behavior
 import qualified Roguestar.Lib.DetailedTravel as DT
 
-newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT CreatureRef db a) }
+newtype (DBReadable db) => DBPerception db a = DBPerception { fromPerception :: (ReaderT MonsterRef db a) }
 
 instance (DBReadable db) => Monad (DBPerception db) where
     (DBPerception a) >>= m = DBPerception $ a >>= (\x -> case m x of {(DBPerception b) -> b})
@@ -77,13 +77,13 @@ liftDB actionM = DBPerception $ lift actionM
 -- A run of DBPerception is tied to the creature doing the percieving.  'whoAmI' answers that creature.
 -- We will call this creature "me" or "I".
 --
-whoAmI :: (DBReadable db) => DBPerception db CreatureRef
+whoAmI :: (DBReadable db) => DBPerception db MonsterRef
 whoAmI = DBPerception $ ask
 
 -- |
 -- Run a DBPerception from the point-of-view of the given creature.
 --
-runPerception :: (DBReadable db) => CreatureRef -> (forall m. DBReadable m => DBPerception m a) -> db a
+runPerception :: (DBReadable db) => MonsterRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
 
 visibleTerrain :: (DBReadable db) => DBPerception db [(Position,Terrain)]
@@ -97,10 +97,10 @@ data VisibleObject =
        visible_tool_ref :: ToolRef,
        visible_tool :: Tool,
        visible_object_position :: Position }
-  | VisibleCreature {
-       visible_creature_ref :: CreatureRef,
+  | VisibleMonster {
+       visible_creature_ref :: MonsterRef,
        visible_creature_species :: Species,
-       visible_creature_traits :: Map.Map CreatureTrait Integer,
+       visible_creature_traits :: Map.Map MonsterTrait Integer,
        visible_creature_wielding :: Maybe VisibleObject,
        visible_object_position :: Position,
        visible_creature_faction :: Faction }
@@ -114,9 +114,9 @@ isVisibleTool :: VisibleObject -> Bool
 isVisibleTool (VisibleTool {}) = True
 isVisibleTool _ = False
 
-isVisibleCreature :: VisibleObject -> Bool
-isVisibleCreature (VisibleCreature {}) = True
-isVisibleCreature _ = False
+isVisibleMonster :: VisibleObject -> Bool
+isVisibleMonster (VisibleMonster {}) = True
+isVisibleMonster _ = False
 
 isVisibleBuilding :: VisibleObject -> Bool
 isVisibleBuilding (VisibleBuilding {}) = True
@@ -124,9 +124,9 @@ isVisibleBuilding _ = False
 
 convertToVisibleObjectRecord :: (DBReadable db) => Reference a -> db VisibleObject
 convertToVisibleObjectRecord ref | (Just creature_ref) <- coerceReference ref =
-    do species <- liftM creature_species $ dbGetCreature creature_ref
-       traits <- liftM creature_traits $ dbGetCreature creature_ref
-       faction <- Creature.getCreatureFaction creature_ref
+    do species <- liftM creature_species $ dbGetMonster creature_ref
+       traits <- liftM creature_traits $ dbGetMonster creature_ref
+       faction <- Monster.getMonsterFaction creature_ref
        m_tool_ref <- getWielded creature_ref
        position <- liftM detail $ DT.whereIs creature_ref
        m_wielded <- case m_tool_ref of
@@ -134,7 +134,7 @@ convertToVisibleObjectRecord ref | (Just creature_ref) <- coerceReference ref =
                do tool <- dbGetTool tool_ref
                   return $ Just $ VisibleTool tool_ref tool position
            Nothing -> return Nothing
-       return $ VisibleCreature creature_ref species traits m_wielded position faction
+       return $ VisibleMonster creature_ref species traits m_wielded position faction
 convertToVisibleObjectRecord ref | (Just tool_ref) <- coerceReference ref =
     do tool <- dbGetTool tool_ref
        position <- liftM detail $ getPlanarLocation tool_ref
@@ -199,10 +199,10 @@ myInventory =
        liftDB $ mapRO convertToVisibleObjectRecord $ sortBy (comparing toUID) $ (asChildren result :: [ToolRef])
 
 myFaction :: (DBReadable db) => DBPerception db Faction
-myFaction = Roguestar.Lib.Perception.getCreatureFaction =<< whoAmI
+myFaction = Roguestar.Lib.Perception.getMonsterFaction =<< whoAmI
 
-getCreatureFaction :: (DBReadable db) => CreatureRef -> DBPerception db Faction
-getCreatureFaction creature_ref = liftDB $ Creature.getCreatureFaction creature_ref
+getMonsterFaction :: (DBReadable db) => MonsterRef -> DBPerception db Faction
+getMonsterFaction creature_ref = liftDB $ Monster.getMonsterFaction creature_ref
 
 whereAmI :: (DBReadable db) => DBPerception db (Facing,Position)
 whereAmI = liftM detail $ Roguestar.Lib.Perception.whereIs =<< whoAmI
@@ -236,10 +236,10 @@ depth =
     do plane <- whatPlaneAmIOn
        liftDB $ planeDepth plane
 
-myHealth :: (DBReadable db) => DBPerception db CreatureHealth
+myHealth :: (DBReadable db) => DBPerception db MonsterHealth
 myHealth =
     do creature_ref <- whoAmI
-       liftDB $ getCreatureHealth creature_ref
+       liftDB $ getMonsterHealth creature_ref
 
 isBehaviorAvailable :: (DBReadable db) => Behavior -> DBPerception db Bool
 isBehaviorAvailable b =

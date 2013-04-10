@@ -164,7 +164,7 @@ getGameState (SpeciesSelectionState (Just creature)) =
               ]
            ]
 getGameState (SnapshotEvent _) = getGameStateWhileInPlay
-getGameState (PlayerCreatureTurn _) = getGameStateWhileInPlay
+getGameState (PlayerMonsterTurn _) = getGameStateWhileInPlay
 getGameState (GameOver PlayerIsDead) =
     do return $ object [
            "player-death" .= True ]
@@ -206,7 +206,7 @@ collectInventory g = liftIO $ perceive g $
        my_inventory <- myInventory
        return $ Inventory {
            inventory_wielded =
-               do me <- List.find isVisibleCreature $ fromMaybe [] vobs_at_my_position
+               do me <- List.find isVisibleMonster $ fromMaybe [] vobs_at_my_position
                   visible_creature_wielding me,
            inventory_ground = filter isVisibleTool $ fromMaybe [] vobs_at_my_position,
            inventory_carried = my_inventory }
@@ -399,7 +399,7 @@ generateMapContent_ player_state (width,height) (MapData visible_terrain visible
                      in rendered_json
 
 data StatsData = StatsData {
-    stats_health :: CreatureHealth,
+    stats_health :: MonsterHealth,
     stats_compass :: Facing }
 
 createStatsBlock :: Handler App App [T.Text]
@@ -461,21 +461,21 @@ instance Charcoded a => Charcoded (Maybe a) where
 instance Charcoded VisibleObject where
     codedRepresentation player_state (VisibleTool { visible_tool = t }) = codedRepresentation player_state t
     codedRepresentation player_state@(SnapshotEvent (TeleportEvent { teleport_event_creature = teleport_c }))
-                                     (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     (VisibleMonster { visible_creature_ref = this_c, visible_creature_species = s }) |
                                      teleport_c == this_c =
                                      (fst $ codedRepresentation player_state s, WarpIn)
     codedRepresentation player_state@(SnapshotEvent (SpawnEvent { spawn_event_creature = spawn_c }))
-                                     (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     (VisibleMonster { visible_creature_ref = this_c, visible_creature_species = s }) |
                                      spawn_c == this_c =
                                      (fst $ codedRepresentation player_state s, WarpIn)
     codedRepresentation player_state@(SnapshotEvent (AttackEvent { attack_event_target_creature = target_c }))
-                                     (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+                                     (VisibleMonster { visible_creature_ref = this_c, visible_creature_species = s }) |
                                      target_c == this_c =
                                      (fst $ codedRepresentation player_state s, Damage)
-    codedRepresentation player_state (VisibleCreature { visible_creature_ref = this_c, visible_creature_species = s }) |
+    codedRepresentation player_state (VisibleMonster { visible_creature_ref = this_c, visible_creature_species = s }) |
                                      subjectOf player_state == Just this_c =
                                      (fst $ codedRepresentation player_state s, Active)
-    codedRepresentation player_state (VisibleCreature { visible_creature_species = s }) = codedRepresentation player_state s
+    codedRepresentation player_state (VisibleMonster { visible_creature_species = s }) = codedRepresentation player_state s
     codedRepresentation _            (VisibleBuilding{}) = ('#',StrongMagic)
 
 instance Charcoded Tool where

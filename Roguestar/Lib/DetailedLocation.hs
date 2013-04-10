@@ -4,7 +4,7 @@ module Roguestar.Lib.DetailedLocation
     (DetailedLocation,
      PlaneLocation,
      BuildingLocation,
-     CreatureLocation,
+     MonsterLocation,
      ToolLocation,
      CarriedLocation,
      PlanarLocation,
@@ -30,9 +30,9 @@ import Roguestar.Lib.Facing
 
 type PlaneLocation = DetailedLocation (Child Plane)
 type BuildingLocation = DetailedLocation (Child Building)
-type CreatureLocation = DetailedLocation (Child Creature)
+type MonsterLocation = DetailedLocation (Child Monster)
 type ToolLocation = DetailedLocation (Child Tool)
-type CarriedLocation = DetailedLocation (Parent Creature)
+type CarriedLocation = DetailedLocation (Parent Monster)
 type PlanarLocation = DetailedLocation Planar
 
 data DetailedLocation a = DetailedLocation { dl_location :: Location }
@@ -99,14 +99,14 @@ type instance LocationAssignmentTable Planar           Position                 
 type instance LocationAssignmentTable Planar           (Parent Plane, MultiPosition) = Supported
 type instance LocationAssignmentTable Planar           (Parent Plane, Position)      = Supported
 type instance LocationAssignmentTable (Child a)        (Child a)                     = Supported
-type instance LocationAssignmentTable (Child Creature) Standing                      = Supported
-type instance LocationAssignmentTable (Child Creature) (Parent Plane)                = Supported
-type instance LocationAssignmentTable (Child Creature) Position                      = Supported
-type instance LocationAssignmentTable (Child Creature) MultiPosition                 = Supported
-type instance LocationAssignmentTable (Child Creature) Planar                        = Supported
-type instance LocationAssignmentTable (Child Creature) Facing                        = Supported
-type instance LocationAssignmentTable (Child Creature) (Facing,Position)             = Supported
-type instance LocationAssignmentTable (Child Creature) (Position,Facing)             = Supported
+type instance LocationAssignmentTable (Child Monster) Standing                      = Supported
+type instance LocationAssignmentTable (Child Monster) (Parent Plane)                = Supported
+type instance LocationAssignmentTable (Child Monster) Position                      = Supported
+type instance LocationAssignmentTable (Child Monster) MultiPosition                 = Supported
+type instance LocationAssignmentTable (Child Monster) Planar                        = Supported
+type instance LocationAssignmentTable (Child Monster) Facing                        = Supported
+type instance LocationAssignmentTable (Child Monster) (Facing,Position)             = Supported
+type instance LocationAssignmentTable (Child Monster) (Position,Facing)             = Supported
 type instance LocationAssignmentTable (Child Building) (Parent Plane)                = Supported
 type instance LocationAssignmentTable (Child Building) Position                      = Supported
 type instance LocationAssignmentTable (Child Building) MultiPosition                 = Supported
@@ -114,7 +114,7 @@ type instance LocationAssignmentTable (Child Building) BuildingShape            
 type instance LocationAssignmentTable Beneath          (Child Plane)                 = Supported
 type instance LocationAssignmentTable Subsequent       (Child Plane)                 = Supported
 type instance LocationAssignmentTable Standing         Planar                        = Supported
-type instance LocationAssignmentTable Standing         (Child Creature)              = Supported
+type instance LocationAssignmentTable Standing         (Child Monster)              = Supported
 type instance LocationAssignmentTable Standing         (Parent Plane)                = Supported
 type instance LocationAssignmentTable Standing         Position                      = Supported
 type instance LocationAssignmentTable Standing         MultiPosition                 = Supported

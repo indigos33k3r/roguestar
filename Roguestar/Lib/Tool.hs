@@ -24,7 +24,7 @@ import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 
 pickupTool :: (DBReadable db) =>
-                CreatureRef ->
+                MonsterRef ->
                 ToolRef ->
                 db (Inventory)
 pickupTool creature_ref tool_ref =
@@ -55,7 +55,7 @@ dropTool tool_ref =
     do tool_location <- liftM identityDetail $ getPlanarLocation tool_ref
        return $ Dropped (planar_parent tool_location) (planar_position tool_location)
 
-availablePickups :: (DBReadable db) => CreatureRef -> db [ToolRef]
+availablePickups :: (DBReadable db) => MonsterRef -> db [ToolRef]
 availablePickups creature_ref =
     do (Parent plane_ref :: Parent Plane, creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
        pickups <- liftM (mapLocations . filterLocations (==creature_position)) $ getContents plane_ref
@@ -63,13 +63,13 @@ availablePickups creature_ref =
 
 -- | List of tools that the specified creature may choose to wield.
 -- That is, they are either on the ground or in the creature's inventory.
-availableWields :: (DBReadable db) => CreatureRef -> db [ToolRef]
+availableWields :: (DBReadable db) => MonsterRef -> db [ToolRef]
 availableWields creature_ref =
     do carried_tools :: [ToolRef] <- liftM (List.map (asChild . identityDetail) . mapLocations) $ getContents creature_ref
        pickups <- availablePickups creature_ref
        return $ List.union carried_tools pickups
 
-getWielded :: (DBReadable db) => CreatureRef -> db (Maybe ToolRef)
+getWielded :: (DBReadable db) => MonsterRef -> db (Maybe ToolRef)
 getWielded = liftM (listToMaybe . List.map (asChild . detail) . filterLocations (\(Wielded {}) -> True)) . getContents
 
 -- | Safely delete tools.

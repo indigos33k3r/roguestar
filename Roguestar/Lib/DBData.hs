@@ -4,7 +4,7 @@ module Roguestar.Lib.DBData
     (Reference,
      toUID,
      genericReference,
-     CreatureRef,
+     MonsterRef,
      PlaneRef,
      ToolRef,
      BuildingRef,
@@ -172,7 +172,7 @@ class LocationConstructor l where
     constructLocation :: Reference (ReferenceTypeOf l) -> l -> Maybe Location -> Location
 
 instance LocationConstructor Standing where
-    type ReferenceTypeOf Standing = Creature
+    type ReferenceTypeOf Standing = Monster
     constructLocation a l _ = IsStanding a l
 
 instance LocationConstructor Dropped where

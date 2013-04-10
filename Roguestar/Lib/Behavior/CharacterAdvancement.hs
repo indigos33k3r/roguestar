@@ -16,25 +16,25 @@ import Roguestar.Lib.PersistantData
 
 data CharacterBumpResult =
     CharacterAwarded  { character_points_awarded :: Integer,
-                        character_new :: Creature }
+                        character_new :: Monster }
   | CharacterAdvanced { character_new_level :: Integer,
-                        character_new :: Creature }
+                        character_new :: Monster }
   | CharacterForced   { character_new_character_class :: CharacterClass,
-                        character_new :: Creature }
+                        character_new :: Monster }
 
 -- |
 -- Increases the character score by the set amount.
 -- If the score is high enough that the character can advance to the next level,
 -- this function will apply that advancement.
 --
-bumpCharacter :: PowerUpData -> Creature -> CharacterBumpResult
+bumpCharacter :: PowerUpData -> Monster -> CharacterBumpResult
 bumpCharacter (ForceCharacter character_class) c =
         if CharacterClass character_class `elem` Map.keys (creature_traits c)
             then bumpCharacter (AwardCharacter $ characterFitness new_character - characterFitness c) c
             else CharacterForced {
                 character_new_character_class = character_class,
                 character_new = new_character }
-    where new_character = applyToCreature character_class c
+    where new_character = applyToMonster character_class c
 bumpCharacter (AwardCharacter n) c =
         if fitness_gain >= bumped_score
             then CharacterAdvanced {
@@ -45,7 +45,7 @@ bumpCharacter (AwardCharacter n) c =
                 character_new = c { creature_points = bumped_score } }
     where bumped_score = creature_points c + n
           fitness_gain = characterFitness new_character - characterFitness c
-          new_character = applyToCreature (Map.keys $ creature_traits c) c
+          new_character = applyToMonster (Map.keys $ creature_traits c) c
 
 newCharacterClass :: CharacterBumpResult -> Maybe CharacterClass
 newCharacterClass (CharacterForced character_class _) = Just character_class
@@ -61,12 +61,12 @@ newCharacterLevel _ = Nothing
 -- A rather arbitrary (non-representative of game balance)
 -- measure of Character power.
 --
-characterLevel :: Creature -> Integer
+characterLevel :: Monster -> Integer
 characterLevel = maximum . Map.elems . creature_traits
 
 -- |
 -- Answers the estimated fitness (powerfulness) of the Character.
 --
-characterFitness :: Creature -> Integer
+characterFitness :: Monster -> Integer
 characterFitness c = sum $ (Map.elems $ creature_traits c)
 

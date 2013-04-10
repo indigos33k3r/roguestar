@@ -32,7 +32,7 @@ startingEquipmentBySpecies BlueRecreant = []
 startingEquipmentBySpecies Anachronid = []
 startingEquipmentBySpecies TabularMonstrosity = []
 
-dbCreateStartingPlane :: Creature -> DB PlaneRef
+dbCreateStartingPlane :: Monster -> DB PlaneRef
 dbCreateStartingPlane creature =
     do seed <- getRandom
        dbNewPlane "belhaven" (TerrainGenerationData {
@@ -51,13 +51,13 @@ beginGame =
            _ -> throwError $ DBError "Tried to begin a game, but no species/creature has been selected."
        plane_ref <- dbCreateStartingPlane creature
        landing_site <- pickRandomSite (-150,150) (-150,150) 150 [areaClearForObjectPlacement 0, atDistanceFrom (Position (0,0)) 100] plane_ref
-       creature_ref <- dbAddCreature creature (Standing plane_ref landing_site Here)
-       setPlayerCreature creature_ref
+       creature_ref <- dbAddMonster creature (Standing plane_ref landing_site Here)
+       setPlayerMonster creature_ref
        _ <- createTown plane_ref [basic_stargate]
        let starting_equip = startingEquipmentBySpecies (creature_species creature)
        forM_ starting_equip $ \tool -> dbAddTool tool (Inventory creature_ref)
        -- (_,end_of_nonaligned_first_series) <- makePlanets (Subsequent plane_ref NonAlignedRegion) =<< generatePlanetInfo nonaligned_first_series_planets
        -- _ <- makePlanets (Subsequent end_of_nonaligned_first_series NonAlignedRegion) =<< generatePlanetInfo nonaligned_second_series_planets
        -- _ <- makePlanets (Subsequent end_of_nonaligned_first_series CyborgRegion) =<< generatePlanetInfo cyborg_planets
-       setPlayerState $ PlayerCreatureTurn creature_ref
+       setPlayerState $ PlayerMonsterTurn creature_ref
 

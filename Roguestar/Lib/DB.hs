@@ -13,26 +13,26 @@ module Roguestar.Lib.DB
      DBReadable(..),
      playerState,
      setPlayerState,
-     getPlayerCreature,
-     setPlayerCreature,
+     getPlayerMonster,
+     setPlayerMonster,
      SnapshotEvent(..),
      initial_db,
      DB_BaseType(db_error_flag),
      dbActionCount,
-     dbAddCreature,
+     dbAddMonster,
      dbAddPlane,
      dbAddTool,
      dbAddBuilding,
      dbUnsafeDeleteObject,
-     dbGetCreature,
+     dbGetMonster,
      dbGetPlane,
      dbGetTool,
      dbGetBuilding,
-     dbModCreature,
+     dbModMonster,
      dbModPlane,
      dbModTool,
      dbModBuilding,
-     dbUnwieldCreature,
+     dbUnwieldMonster,
      dbVerify,
      dbGetAncestors,
      whereIs,
@@ -92,8 +92,8 @@ data DBContext s = DBContext {
 
 data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
-                                 db_creatures :: Map CreatureRef Creature,
-                                 db_player_creature :: Maybe CreatureRef,
+                                 db_creatures :: Map MonsterRef Monster,
+                                 db_player_creature :: Maybe MonsterRef,
                                  db_planes :: Map PlaneRef Plane,
                                  db_tools :: Map ToolRef Tool,
                                  db_buildings :: Map BuildingRef Building,
@@ -251,11 +251,11 @@ playerState = asks db_player_state
 setPlayerState :: PlayerState -> DB ()
 setPlayerState player_state = modify (\db -> db { db_player_state = player_state })
 
-getPlayerCreature :: (DBReadable m) => m CreatureRef
-getPlayerCreature = liftM (fromMaybe $ error "No player creature selected yet.") $ asks db_player_creature
+getPlayerMonster :: (DBReadable m) => m MonsterRef
+getPlayerMonster = liftM (fromMaybe $ error "No player creature selected yet.") $ asks db_player_creature
 
-setPlayerCreature :: CreatureRef -> DB ()
-setPlayerCreature creature_ref = modify (\db -> db { db_player_creature = Just creature_ref })
+setPlayerMonster :: MonsterRef -> DB ()
+setPlayerMonster creature_ref = modify (\db -> db { db_player_creature = Just creature_ref })
 
 dbActionCount :: (DBReadable db) => db Integer
 dbActionCount = asks db_action_count
@@ -284,10 +284,10 @@ dbAddObjectComposable constructReferenceAction updateObjectAction constructLocat
        return ref
 
 -- |
--- Adds a new Creature to the database.
+-- Adds a new Monster to the database.
 --
-dbAddCreature :: (LocationConstructor l, ReferenceTypeOf l ~ Creature) => Creature -> l -> DB CreatureRef
-dbAddCreature = dbAddObjectComposable CreatureRef dbPutCreature (\r l -> constructLocation r l Nothing)
+dbAddMonster :: (LocationConstructor l, ReferenceTypeOf l ~ Monster) => Monster -> l -> DB MonsterRef
+dbAddMonster = dbAddObjectComposable MonsterRef dbPutMonster (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Plane to the database.
@@ -336,10 +336,10 @@ dbPutObjectComposable get_map_fn put_map_fn key thing =
     modify (\db -> put_map_fn (Map.insert key thing $ get_map_fn db) db)
 
 -- |
--- Puts a Creature under an arbitrary CreatureRef.
+-- Puts a Monster under an arbitrary MonsterRef.
 --
-dbPutCreature :: CreatureRef -> Creature -> DB ()
-dbPutCreature = dbPutObjectComposable db_creatures (\x db_base_type ->
+dbPutMonster :: MonsterRef -> Monster -> DB ()
+dbPutMonster = dbPutObjectComposable db_creatures (\x db_base_type ->
      db_base_type { db_creatures = x })
 
 -- |
@@ -371,10 +371,10 @@ dbGetObjectComposable type_info get_fn ref =
     asks (fromMaybe (error $ "dbGetObjectComposable: Nothing.  UID was " ++ show (toUID ref) ++ ", type info was " ++ type_info) . Map.lookup ref . get_fn)
 
 -- |
--- Gets a Creature from a CreatureRef
+-- Gets a Monster from a MonsterRef
 --
-dbGetCreature :: (DBReadable m) => CreatureRef -> m Creature
-dbGetCreature = dbGetObjectComposable "CreatureRef" db_creatures
+dbGetMonster :: (DBReadable m) => MonsterRef -> m Monster
+dbGetMonster = dbGetObjectComposable "MonsterRef" db_creatures
 
 -- |
 -- Gets a Plane from a PlaneRef
@@ -408,10 +408,10 @@ dbModPlane :: (Plane -> Plane) -> PlaneRef -> DB ()
 dbModPlane = dbModObjectComposable dbGetPlane dbPutPlane
 
 -- |
--- Modifies a Creature based on a PlaneRef.
+-- Modifies a Monster based on a PlaneRef.
 --
-dbModCreature :: (Creature -> Creature) -> CreatureRef -> DB ()
-dbModCreature = dbModObjectComposable dbGetCreature dbPutCreature
+dbModMonster :: (Monster -> Monster) -> MonsterRef -> DB ()
+dbModMonster = dbModObjectComposable dbGetMonster dbPutMonster
 
 -- |
 -- Modifies a Tool based on a PlaneRef.
@@ -430,7 +430,7 @@ setLocation :: Location -> DB ()
 setLocation loc =
     do logDB gameplay_log DEBUG $ "setting location: " ++ show loc
        case loc of
-           IsWielded _ (Wielded c) -> dbUnwieldCreature c
+           IsWielded _ (Wielded c) -> dbUnwieldMonster c
            IsSubsequent _ (Subsequent s v) -> shuntPlane (\subseq -> subsequent_via subseq == v) s
            IsBeneath _ (Beneath b) -> shuntPlane (\(Beneath {}) -> True) b
            _ -> return ()
@@ -449,8 +449,8 @@ shuntPlane f p =
 -- |
 -- Shunt any wielded objects into inventory.
 --
-dbUnwieldCreature :: CreatureRef -> DB ()
-dbUnwieldCreature c = mapM_ (maybe (return ()) setLocation . returnToInventory) =<< getContents c
+dbUnwieldMonster :: MonsterRef -> DB ()
+dbUnwieldMonster c = mapM_ (maybe (return ()) setLocation . returnToInventory) =<< getContents c
 
 -- |
 -- Moves an object, returning the location of the object before and after

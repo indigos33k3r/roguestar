@@ -1,8 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Roguestar.Lib.Behavior.Travel
-    (stepCreature,
-     turnCreature,
+    (stepMonster,
+     turnMonster,
      ClimbOutcome,
      resolveClimb,
      executeClimb,
@@ -29,11 +29,11 @@ import Roguestar.Lib.TravelData
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.DetailedTravel as DetailedTravel
 
-walkCreature :: (DBReadable db) => Facing ->
+walkMonster :: (DBReadable db) => Facing ->
                                    (Integer,Integer) ->
-                                   CreatureRef ->
+                                   MonsterRef ->
                                    db Standing
-walkCreature face (x',y') creature_ref =
+walkMonster face (x',y') creature_ref =
     do l <- DetailedTravel.whereIs creature_ref
        let (Parent plane_ref) = detail l
            Position (x,y) = detail l
@@ -50,24 +50,24 @@ walkCreature face (x',y') creature_ref =
            () | otherwise ->
                return $ standing
 
-stepCreature :: (DBReadable db) => Facing -> CreatureRef -> db Standing
-stepCreature face = walkCreature face (facingToRelative face)
+stepMonster :: (DBReadable db) => Facing -> MonsterRef -> db Standing
+stepMonster face = walkMonster face (facingToRelative face)
 
-turnCreature :: (DBReadable db) => Facing -> CreatureRef -> db Standing
-turnCreature face = walkCreature face (0,0)
+turnMonster :: (DBReadable db) => Facing -> MonsterRef -> db Standing
+turnMonster face = walkMonster face (0,0)
 
 --------------------------------------------------------------------------------
 --      Travel between planes.
 --------------------------------------------------------------------------------
 
 data ClimbOutcome =
-    ClimbGood ClimbDirection CreatureRef Standing
+    ClimbGood ClimbDirection MonsterRef Standing
   | ClimbFailed
 
 -- |
 -- Climb up or down between Planes.
 --
-resolveClimb :: (DBReadable db) => CreatureRef ->
+resolveClimb :: (DBReadable db) => MonsterRef ->
                                    ClimbDirection ->
                                    db ClimbOutcome
 resolveClimb creature_ref direction = liftM (fromMaybe ClimbFailed) $ runMaybeT $
@@ -115,16 +115,16 @@ randomTeleportLanding retries plane_ref source_destination goal_destination =
        return $ minimumBy (comparing $ \p -> Position.distanceBetweenSquared goal_destination p ^ 2 * Position.distanceBetweenSquared source_destination p) landings
 
 data TeleportJumpOutcome =
-    TeleportJumpGood CreatureRef Standing
+    TeleportJumpGood MonsterRef Standing
   | TeleportJumpFailed
 
 -- |
 -- Teleport jump a creature about 5-7 units in the specified direction.
 --
-resolveTeleportJump :: (DBReadable db) => CreatureRef -> Facing -> db TeleportJumpOutcome
+resolveTeleportJump :: (DBReadable db) => MonsterRef -> Facing -> db TeleportJumpOutcome
 resolveTeleportJump creature_ref face = liftM (fromMaybe TeleportJumpFailed) $ runMaybeT $
     do start_location <- lift $ DetailedTravel.whereIs creature_ref
-       jump_roll <- lift $ getCreatureAbilityScore JumpSkill creature_ref
+       jump_roll <- lift $ getMonsterAbilityScore JumpSkill creature_ref
        landing_position <- lift $ randomTeleportLanding (jump_roll `div` 5 + 1)
                                                         (asParent $ detail start_location)
                                                         (detail start_location) $

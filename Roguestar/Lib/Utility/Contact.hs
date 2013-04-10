@@ -29,7 +29,7 @@ class ContactModeType a where
 instance ContactModeType ContactMode where
     contactMode = id
 
-instance ContactModeType CreatureInteractionMode where
+instance ContactModeType MonsterInteractionMode where
     contactMode Unarmed = Touch
     contactMode Melee = Touch
     contactMode Ranged = Line

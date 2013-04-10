@@ -12,7 +12,7 @@ module Roguestar.Lib.Roguestar
      getPlayerState,
      getSnapshotPlayerState,
      rerollStartingSpecies,
-     Creature(..),
+     Monster(..),
      Terrain(..),
      Position(..),
      Facing(..),
@@ -181,7 +181,7 @@ rerollStartingSpecies g =
               writeTVar (game_message_text g) []
        poke g $
            do species <- weightedPickM $ unweightedSet all_species
-              generateInitialPlayerCreature species
+              generateInitialPlayerMonster species
               return species
 
 beginGame :: Game -> IO (Either DBError ())
@@ -189,18 +189,18 @@ beginGame g = poke g $ BeginGame.beginGame
 
 perceive :: Game -> (forall m. DBReadable m => DBPerception m a) -> IO (Either DBError a)
 perceive g f = peek g $
-    do player_creature <- getPlayerCreature
+    do player_creature <- getPlayerMonster
        runPerception player_creature f
 
 -- TODO: this should be moved into the Perception monad
 facingBehavior :: Game -> Facing -> IO (Either DBError FacingBehavior)
 facingBehavior g facing = peek g $
-    do player_creature <- getPlayerCreature
+    do player_creature <- getPlayerMonster
        Behavior.facingBehavior player_creature facing
 
 performBehavior :: Game -> Behavior -> IO (Either DBError ())
 performBehavior g b = poke g $
-    do player_creature <- getPlayerCreature
+    do player_creature <- getPlayerMonster
        performPlayerTurn b player_creature
 
 hasSnapshot :: Game -> IO (Either DBError Bool)
@@ -208,7 +208,7 @@ hasSnapshot g = peek g DB.hasSnapshot
 
 perceiveSnapshot :: Game -> (forall m. DBReadable m => DBPerception m a) -> IO (Either DBError a)
 perceiveSnapshot g f = peek g $ peepOldestSnapshot $
-    do player_creature <- getPlayerCreature
+    do player_creature <- getPlayerMonster
        runPerception player_creature f
 
 getSnapshotPlayerState :: Game -> IO (Either DBError PlayerState)
@@ -244,9 +244,9 @@ unpackMessages =
     do player_state <- playerState
        case player_state of
            SpeciesSelectionState {} -> return []
-           PlayerCreatureTurn {} -> return []
+           PlayerMonsterTurn {} -> return []
            SnapshotEvent evt ->
-               do player_creature <- getPlayerCreature
+               do player_creature <- getPlayerMonster
                   runPerception player_creature $ unpackMessages_ evt
            GameOver PlayerIsDead -> return ["You have been destroyed."]
            GameOver PlayerIsVictorious -> return ["You have transcended your programming!"]

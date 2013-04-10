@@ -13,7 +13,7 @@ module Roguestar.Lib.DBPrivate
      TheUniverse(..),
      Subsequent(..),
      Beneath(..),
-     CreatureRef,
+     MonsterRef,
      ToolRef,
      PlaneRef,
      BuildingRef)
@@ -42,7 +42,7 @@ import Roguestar.Lib.Position
 --
 data TheUniverse = TheUniverse deriving (Read,Show,Eq,Ord)
 
-type CreatureRef = Reference Creature
+type MonsterRef = Reference Monster
 type ToolRef = Reference Tool
 type PlaneRef = Reference Plane
 type BuildingRef = Reference Building
@@ -50,7 +50,7 @@ type BuildingRef = Reference Building
 -- |
 -- A typesafe reference to any entity.
 --
-data Reference a = CreatureRef { uid:: Integer }
+data Reference a = MonsterRef { uid:: Integer }
                  | PlaneRef { uid :: Integer }
                  | ToolRef { uid :: Integer }
                  | BuildingRef { uid :: Integer }
@@ -58,7 +58,7 @@ data Reference a = CreatureRef { uid:: Integer }
                        deriving (Eq,Ord,Read,Show)
 
 unsafeReference :: Reference a -> Reference b
-unsafeReference (CreatureRef x) = CreatureRef x
+unsafeReference (MonsterRef x) = MonsterRef x
 unsafeReference (PlaneRef x) = PlaneRef x
 unsafeReference (ToolRef x) = ToolRef x
 unsafeReference (BuildingRef x) = BuildingRef x
@@ -69,7 +69,7 @@ toUID (UniverseRef) = 0
 toUID a = uid a
 
 -- |
--- The location of a Creature standing on a Plane.
+-- The location of a Monster standing on a Plane.
 --
 data Standing =
     Standing { standing_plane :: PlaneRef,
@@ -98,14 +98,14 @@ data Constructed =
 -- The location of a tool carried by a creature.
 --
 data Inventory =
-    Inventory { inventory_creature :: CreatureRef }
+    Inventory { inventory_creature :: MonsterRef }
     deriving (Read,Show,Eq,Ord)
 
 -- |
 -- The location of a weapon wielded in the hand of a creature.
 --
 data Wielded =
-    Wielded { wielded_creature :: CreatureRef }
+    Wielded { wielded_creature :: MonsterRef }
     deriving (Read,Show,Eq,Ord)
 
 -- |
@@ -130,7 +130,7 @@ data Beneath =
 -- Up to roguestar 0.6, Locations were typed.  As of 0.7 locations are untyped, but I added DetailedLocations.
 --
 data Location =
-     IsStanding CreatureRef Standing
+     IsStanding MonsterRef Standing
    | IsDropped ToolRef Dropped
    | InInventory ToolRef Inventory
    | IsWielded ToolRef Wielded

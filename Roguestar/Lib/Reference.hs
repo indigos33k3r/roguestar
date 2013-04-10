@@ -36,8 +36,8 @@ instance ReferenceType Tool where
     coerceReference (ToolRef ref) = Just $ ToolRef ref
     coerceReference _ = Nothing
 
-instance ReferenceType Creature where
-    coerceReference (CreatureRef ref) = Just $ CreatureRef ref
+instance ReferenceType Monster where
+    coerceReference (MonsterRef ref) = Just $ MonsterRef ref
     coerceReference _ = Nothing
 
 instance ReferenceType Building where

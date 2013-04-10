@@ -1,17 +1,17 @@
 {-# LANGUAGE TypeFamilies, PatternGuards #-}
 --Core
 module Roguestar.Lib.Core.Monster
-    (generateInitialPlayerCreature,
-     newCreature,
-     getCreatureSpecial,
-     getCreatureAbilityScore,
-     getCurrentCreature,
-     getCreatureFaction,
-     injureCreature,
-     healCreature,
-     getCreatureHealth,
+    (generateInitialPlayerMonster,
+     newMonster,
+     getMonsterSpecial,
+     getMonsterAbilityScore,
+     getCurrentMonster,
+     getMonsterFaction,
+     injureMonster,
+     healMonster,
+     getMonsterHealth,
      getDead,
-     deleteCreature,
+     deleteMonster,
      sweepDead)
     where
 
@@ -32,78 +32,78 @@ import Roguestar.Lib.Logging
 import qualified Data.Set as Set
 
 -- |
--- Generates a new Creature from the specified species.
+-- Generates a new Monster from the specified species.
 --
-generateCreature :: Faction -> Species -> DB Creature
-generateCreature faction species =
+generateMonster :: Faction -> Species -> DB Monster
+generateMonster faction species =
     do r <- getRandomR (1,1000000)
-       return $ applyToCreature (species_specials $ speciesInfo species) $
-                applyToCreature (species_traits $ speciesInfo species) $
+       return $ applyToMonster (species_specials $ speciesInfo species) $
+                applyToMonster (species_traits $ speciesInfo species) $
            empty_creature {
                creature_species = species,
                creature_faction = faction,
                creature_random_id = r }
 
 -- |
--- During DBRaceSelectionState, generates a new Creature for the player character.
+-- During DBRaceSelectionState, generates a new Monster for the player character.
 --
-generateInitialPlayerCreature :: Species -> DB ()
-generateInitialPlayerCreature species =
-    do newc <- generateCreature Player species
+generateInitialPlayerMonster :: Species -> DB ()
+generateInitialPlayerMonster species =
+    do newc <- generateMonster Player species
        setPlayerState $ SpeciesSelectionState $ Just newc
 
 -- |
--- Generates a new Creature from the specified Species and adds it to the database.
+-- Generates a new Monster from the specified Species and adds it to the database.
 --
-newCreature :: (LocationConstructor l, ReferenceTypeOf l ~ Creature) => Faction -> Species -> l -> DB CreatureRef
-newCreature faction species loc =
-    do creature <- generateCreature faction species
-       dbAddCreature creature loc
+newMonster :: (LocationConstructor l, ReferenceTypeOf l ~ Monster) => Faction -> Species -> l -> DB MonsterRef
+newMonster faction species loc =
+    do creature <- generateMonster faction species
+       dbAddMonster creature loc
 
-getCreatureSpecial :: (DBReadable db) => CreatureSpecial -> CreatureRef -> db Bool
-getCreatureSpecial special creature_ref = liftM (Set.member special . creature_specials) $ dbGetCreature creature_ref
+getMonsterSpecial :: (DBReadable db) => MonsterSpecial -> MonsterRef -> db Bool
+getMonsterSpecial special creature_ref = liftM (Set.member special . creature_specials) $ dbGetMonster creature_ref
 
-getCreatureAbilityScore :: (DBReadable db) => CreatureAbility -> CreatureRef -> db Integer
-getCreatureAbilityScore ability creature_ref =
-    do raw_ideal <- liftM (creatureAbilityScore ability) $ dbGetCreature creature_ref
+getMonsterAbilityScore :: (DBReadable db) => MonsterAbility -> MonsterRef -> db Integer
+getMonsterAbilityScore ability creature_ref =
+    do raw_ideal <- liftM (creatureAbilityScore ability) $ dbGetMonster creature_ref
        terrain_ideal <- getTerrainAffinity creature_ref
        return $ raw_ideal + terrain_ideal
 
 -- | Ability bonus based on being good at working on specific types of terrain.
-getTerrainAffinity :: (DBReadable db) => CreatureRef -> db Integer
+getTerrainAffinity :: (DBReadable db) => MonsterRef -> db Integer
 getTerrainAffinity creature_ref =
     do (Parent plane_ref,pos) <- liftM detail $ getPlanarLocation creature_ref
        terrain_affinity_points <- liftM sum $ forM [minBound..maxBound] $ \face ->
                do t <- terrainAt plane_ref $ offsetPosition (facingToRelative face) pos
-                  liftM (creatureAbilityScore $ TerrainAffinity t) $ dbGetCreature creature_ref
+                  liftM (creatureAbilityScore $ TerrainAffinity t) $ dbGetMonster creature_ref
        return $ terrain_affinity_points `div` 4
 
 -- | Get the current creature, if it belongs to the specified faction, based on the current playerState.
-getCurrentCreature :: (DBReadable db) => Faction -> db (Maybe CreatureRef)
-getCurrentCreature faction =
+getCurrentMonster :: (DBReadable db) => Faction -> db (Maybe MonsterRef)
+getCurrentMonster faction =
     do m_who <- liftM subjectOf $ playerState
-       is_one_of_us <- maybe (return False) (liftM (== faction) . getCreatureFaction) m_who
+       is_one_of_us <- maybe (return False) (liftM (== faction) . getMonsterFaction) m_who
        return $ if is_one_of_us then m_who else Nothing
 
-getCreatureFaction :: (DBReadable db) => CreatureRef -> db Faction
-getCreatureFaction = liftM creature_faction . dbGetCreature
+getMonsterFaction :: (DBReadable db) => MonsterRef -> db Faction
+getMonsterFaction = liftM creature_faction . dbGetMonster
 
-injureCreature :: Integer -> CreatureRef -> DB ()
-injureCreature x = dbModCreature $ \c -> c { creature_damage = max 0 $ creature_damage c + x }
+injureMonster :: Integer -> MonsterRef -> DB ()
+injureMonster x = dbModMonster $ \c -> c { creature_damage = max 0 $ creature_damage c + x }
 
-healCreature :: Integer -> CreatureRef -> DB ()
-healCreature = injureCreature . negate
+healMonster :: Integer -> MonsterRef -> DB ()
+healMonster = injureMonster . negate
 
 -- | Health as a fraction of 1.
-getCreatureHealth :: (DBReadable db) => CreatureRef -> db CreatureHealth
-getCreatureHealth creature_ref = liftM creatureHealth $ dbGetCreature creature_ref
+getMonsterHealth :: (DBReadable db) => MonsterRef -> db MonsterHealth
+getMonsterHealth creature_ref = liftM creatureHealth $ dbGetMonster creature_ref
 
-getDead :: (DBReadable db) => Reference a -> db [CreatureRef]
-getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getCreatureHealth) =<< liftM asChildren (getContents parent_ref)
+getDead :: (DBReadable db) => Reference a -> db [MonsterRef]
+getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getMonsterHealth) =<< liftM asChildren (getContents parent_ref)
 
-deleteCreature :: CreatureRef -> DB ()
-deleteCreature creature_ref =
-    do logDB gameplay_log INFO $ "deleteCreature; creature=" ++ show (toUID creature_ref)
+deleteMonster :: MonsterRef -> DB ()
+deleteMonster creature_ref =
+    do logDB gameplay_log INFO $ "deleteMonster; creature=" ++ show (toUID creature_ref)
        planar <- liftM identityDetail $ getPlanarLocation creature_ref
        dbUnsafeDeleteObject creature_ref $ const $ return planar
 
@@ -111,7 +111,7 @@ deleteCreature creature_ref =
 sweepDead :: Reference a -> DB ()
 sweepDead ref =
     do logDB gameplay_log INFO "sweepDead; sweeping dead creatures"
-       worst_to_best_critters <- sortByRO (liftM creature_health . getCreatureHealth) =<< getDead ref
+       worst_to_best_critters <- sortByRO (liftM creature_health . getMonsterHealth) =<< getDead ref
        flip mapM_ worst_to_best_critters $ \creature_ref ->
            do dbPushSnapshot (KilledEvent creature_ref)
-              deleteCreature creature_ref
+              deleteMonster creature_ref

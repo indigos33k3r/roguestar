@@ -11,7 +11,7 @@ import Roguestar.Lib.DB
 import Roguestar.Lib.Reference
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.Data.MonsterData (Creature)
+import Roguestar.Lib.Data.MonsterData (Monster)
 import Roguestar.Lib.Core.Plane
 import Control.Monad
 import Roguestar.Lib.Core.Monster
@@ -28,7 +28,7 @@ import Roguestar.Lib.DetailedLocation
 import Control.Monad.Random
 import Data.List as List
 
-performPlayerTurn :: Behavior -> CreatureRef -> DB ()
+performPlayerTurn :: Behavior -> MonsterRef -> DB ()
 performPlayerTurn beh creature_ref =
     do logDB gameplay_log INFO $ "performPlayerTurn; Beginning player action: " ++ show beh
        executeBehavior beh creature_ref
@@ -47,8 +47,8 @@ dbFinishPlanarAITurns :: PlaneRef -> DB ()
 dbFinishPlanarAITurns plane_ref =
     do logDB gameplay_log INFO $ "Running turns for plane: id=" ++ show (toUID plane_ref)
        sweepDead plane_ref
-       (all_creatures_on_plane :: [CreatureRef]) <- liftM asChildren $ getContents plane_ref
-       any_players_left <- liftM (any (== Player)) $ mapM getCreatureFaction all_creatures_on_plane
+       (all_creatures_on_plane :: [MonsterRef]) <- liftM asChildren $ getContents plane_ref
+       any_players_left <- liftM (any (== Player)) $ mapM getMonsterFaction all_creatures_on_plane
        next_turn <- dbNextTurn $ List.map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
        case next_turn of
            _ | not any_players_left ->
@@ -59,11 +59,11 @@ dbFinishPlanarAITurns plane_ref =
                do dbPerform1PlanarAITurn plane_ref
                   dbFinishPlanarAITurns plane_ref
            ref | Just creature_ref <- coerceReference ref ->
-               do faction <- getCreatureFaction creature_ref
+               do faction <- getMonsterFaction creature_ref
                   if (faction /= Player)
-                      then do dbPerform1CreatureAITurn creature_ref
+                      then do dbPerform1MonsterAITurn creature_ref
                               dbFinishPlanarAITurns plane_ref
-                      else setPlayerState (PlayerCreatureTurn creature_ref)
+                      else setPlayerState (PlayerMonsterTurn creature_ref)
                   return ()
            _ -> error "dbFinishPlanarAITurns: impossible case"
 
@@ -76,9 +76,9 @@ monster_spawns = [(RecreantFactory,RedRecreant)]
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
 dbPerform1PlanarAITurn plane_ref =
     do logDB gameplay_log INFO $ "dbPerform1PlanarAITurn; Beginning planar AI turn (for the plane itself):"
-       (creature_locations :: [DetailedLocation (Child Creature)]) <- liftM mapLocations $ getContents plane_ref
-       player_locations <- filterRO (liftM (== Player) . getCreatureFaction . asChild . detail) creature_locations
-       num_npcs <- liftM length $ filterRO (liftM (/= Player) . getCreatureFaction . asChild . detail) creature_locations
+       (creature_locations :: [DetailedLocation (Child Monster)]) <- liftM mapLocations $ getContents plane_ref
+       player_locations <- filterRO (liftM (== Player) . getMonsterFaction . asChild . detail) creature_locations
+       num_npcs <- liftM length $ filterRO (liftM (/= Player) . getMonsterFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 3) $
            do (terrain_type,species) <- weightedPickM $ unweightedSet monster_spawns
               _ <- spawnNPC terrain_type species plane_ref $ List.map detail $ player_locations
@@ -96,17 +96,17 @@ spawnNPC terrain_type species plane_ref player_locations =
        case m_spawn_position of
            Nothing -> return False
            Just spawn_position ->
-               do new_creature <- newCreature Monsters species (Standing plane_ref spawn_position Here)
+               do new_creature <- newMonster Monsters species (Standing plane_ref spawn_position Here)
                   dbPushSnapshot (SpawnEvent new_creature)
                   return True
 
-dbPerform1CreatureAITurn :: CreatureRef -> DB ()
-dbPerform1CreatureAITurn creature_ref =
-    do logDB gameplay_log INFO $ "dbPerform1CreatureAITurn; Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
+dbPerform1MonsterAITurn :: MonsterRef -> DB ()
+dbPerform1MonsterAITurn creature_ref =
+    do logDB gameplay_log INFO $ "dbPerform1MonsterAITurn; Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
        liftM (const ()) $ atomic (flip executeBehavior creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
         do let isPlayer :: forall db. (DBReadable db) => Reference () -> P.DBPerception db Bool
                isPlayer ref | (Just might_be_the_player_creature_ref) <- coerceReference ref =
-                   do f <- P.getCreatureFaction might_be_the_player_creature_ref
+                   do f <- P.getMonsterFaction might_be_the_player_creature_ref
                       return $ f == Player
                isPlayer _ | otherwise = return False
            (visible_player_locations :: [Position]) <- lift $ liftM (List.map P.visible_object_position) $ P.visibleObjects isPlayer

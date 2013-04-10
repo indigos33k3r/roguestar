@@ -1,13 +1,13 @@
 --Data
 module Roguestar.Lib.Data.MonsterData
-    (Creature(..),
-     CreatureTrait(..),
-     CreatureSpecial(..),
-     CreatureInteractionMode(..),
-     CreatureAbility(..),
-     CreatureEndo(..),
-     CreatureScore(..),
-     CreatureHealth(..),
+    (Monster(..),
+     MonsterTrait(..),
+     MonsterSpecial(..),
+     MonsterInteractionMode(..),
+     MonsterAbility(..),
+     MonsterEndo(..),
+     MonsterScore(..),
+     MonsterHealth(..),
      creatureHealth,
      creatureAbilityScore,
      empty_creature)
@@ -24,8 +24,8 @@ import Data.List as List
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.TerrainData
 
-data Creature = Creature { creature_traits :: Map.Map CreatureTrait Integer,
-                           creature_specials :: Set.Set CreatureSpecial,
+data Monster = Monster { creature_traits :: Map.Map MonsterTrait Integer,
+                           creature_specials :: Set.Set MonsterSpecial,
                            creature_species :: Species,
                            creature_random_id :: Integer, -- random number attached to the creature, not unique
                            creature_damage :: Integer,
@@ -33,10 +33,10 @@ data Creature = Creature { creature_traits :: Map.Map CreatureTrait Integer,
                            creature_points :: Integer }
                                 deriving (Read,Show,Eq)
 
--- | Creature having no attributes and undefined 'creature_species', 'creature_random_id', and 'creature_faction'
+-- | Monster having no attributes and undefined 'creature_species', 'creature_random_id', and 'creature_faction'
 --
-empty_creature :: Creature
-empty_creature = Creature {
+empty_creature :: Monster
+empty_creature = Monster {
     creature_traits = Map.empty,
     creature_specials = Set.empty,
     creature_species = error "empty_creature: undefined creature_species",
@@ -45,30 +45,30 @@ empty_creature = Creature {
     creature_faction = error "empty_creature: undefined creature_faction",
     creature_points = 0 }
 
--- | Endomorphisms over a 'Creature'.  These are types that contribute some feature to a 'Creature',
--- so that 'Creature's can be defined concisely by those properties.
-class CreatureEndo a where
-    applyToCreature :: a -> Creature -> Creature
+-- | Endomorphisms over a 'Monster'.  These are types that contribute some feature to a 'Monster',
+-- so that 'Monster's can be defined concisely by those properties.
+class MonsterEndo a where
+    applyToMonster :: a -> Monster -> Monster
 
--- | Primitive numeric properties of a Creature.
-class CreatureScore s where
-    rawScore :: s -> Creature -> Integer
+-- | Primitive numeric properties of a Monster.
+class MonsterScore s where
+    rawScore :: s -> Monster -> Integer
 
-instance (CreatureEndo a,Integral i) => CreatureEndo (a,i) where
-    applyToCreature (_,i) | i <= 0 = id
-    applyToCreature (a,i) = applyToCreature (a,toInteger i - 1) . applyToCreature a
+instance (MonsterEndo a,Integral i) => MonsterEndo (a,i) where
+    applyToMonster (_,i) | i <= 0 = id
+    applyToMonster (a,i) = applyToMonster (a,toInteger i - 1) . applyToMonster a
 
-instance (CreatureEndo a) => CreatureEndo [a] where
-    applyToCreature = appEndo . mconcat . map (Endo . applyToCreature)
+instance (MonsterEndo a) => MonsterEndo [a] where
+    applyToMonster = appEndo . mconcat . map (Endo . applyToMonster)
 
-data CreatureHealth = CreatureHealth {
+data MonsterHealth = MonsterHealth {
     creature_absolute_health :: Integer,
     creature_absolute_damage :: Integer,
     creature_health :: Rational,
     creature_max_health :: Integer }
 
 -- | The seven aptitudes.
-data CreatureTrait =
+data MonsterTrait =
      Aggression
    | Bulk
    | Caution
@@ -79,23 +79,23 @@ data CreatureTrait =
    | CharacterClass CharacterClass
          deriving (Eq,Read,Show,Ord)
 
-instance CreatureEndo CreatureTrait where
-    applyToCreature trait c = c { creature_traits = Map.insertWith (+) trait 1 $ creature_traits c }
+instance MonsterEndo MonsterTrait where
+    applyToMonster trait c = c { creature_traits = Map.insertWith (+) trait 1 $ creature_traits c }
 
-instance CreatureScore CreatureTrait where
+instance MonsterScore MonsterTrait where
     rawScore trait c = fromMaybe 0 $ Map.lookup trait (creature_traits c)
 
-data CreatureSpecial =
+data MonsterSpecial =
      Hover
    | Teleportation
    | TemporalWeb
    | ComplexificationMesh
          deriving (Eq,Read,Show,Ord)
 
-instance CreatureEndo CreatureSpecial where
-    applyToCreature special c = c { creature_specials = Set.insert special $ creature_specials c }
+instance MonsterEndo MonsterSpecial where
+    applyToMonster special c = c { creature_specials = Set.insert special $ creature_specials c }
 
-instance CreatureScore CreatureSpecial where
+instance MonsterScore MonsterSpecial where
     rawScore special c = if Set.member special (creature_specials c) then 1 else 0
 
 -- | Combat modes:
@@ -103,15 +103,15 @@ instance CreatureScore CreatureSpecial where
 -- Ranged is combat with projectile weapons
 -- Unarmed is close-quarters hand-to-hand
 -- Splash represts diffuse damage caused by things like explosions or falling into lava.
-data CreatureInteractionMode = Melee | Ranged | Unarmed | Splash
+data MonsterInteractionMode = Melee | Ranged | Unarmed | Splash
     deriving (Eq,Read,Show,Ord)
 
-data CreatureAbility =
+data MonsterAbility =
      ToughnessTrait
-   | AttackSkill CreatureInteractionMode
-   | DefenseSkill CreatureInteractionMode
-   | DamageSkill CreatureInteractionMode
-   | DamageReductionTrait CreatureInteractionMode
+   | AttackSkill MonsterInteractionMode
+   | DefenseSkill MonsterInteractionMode
+   | DamageSkill MonsterInteractionMode
+   | DamageReductionTrait MonsterInteractionMode
    | TerrainAffinity Terrain
    | HideSkill
    | SpotSkill
@@ -119,19 +119,19 @@ data CreatureAbility =
    | InventorySkill
          deriving (Eq,Read,Show,Ord)
 
-instance CreatureEndo CharacterClass where
-    applyToCreature character_class = applyToCreature (CharacterClass character_class)
+instance MonsterEndo CharacterClass where
+    applyToMonster character_class = applyToMonster (CharacterClass character_class)
 
-instance CreatureScore CharacterClass where
+instance MonsterScore CharacterClass where
     rawScore character_class = rawScore (CharacterClass character_class)
 
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
-figureAbility :: [CreatureTrait] -> Creature -> Integer
+figureAbility :: [MonsterTrait] -> Monster -> Integer
 figureAbility []     _ = 1
 figureAbility traits c = 1 + sum (map (flip rawScore c) traits) `div` List.genericLength traits
 
-creatureAbilityScore :: CreatureAbility -> Creature -> Integer
+creatureAbilityScore :: MonsterAbility -> Monster -> Integer
 creatureAbilityScore ToughnessTrait = figureAbility [Caution,Fortitude]
 creatureAbilityScore (AttackSkill _) = figureAbility [Aggression,Dexterity]
 creatureAbilityScore (DefenseSkill _) = figureAbility [Caution,Dexterity]
@@ -145,11 +145,11 @@ creatureAbilityScore InventorySkill = figureAbility [Fortitude]
 
 -- |
 -- Answers the health/injury/maximum health of this creature.
-creatureHealth :: Creature -> CreatureHealth
+creatureHealth :: Monster -> MonsterHealth
 creatureHealth c = case () of
                        () | creature_max_health result <= 0 -> error "creatureHealth: creature_max_health <= 0"
                        () | otherwise -> result
-    where result = CreatureHealth {
+    where result = MonsterHealth {
         creature_health = creature_absolute_health result % creature_max_health result,
         creature_absolute_health = creature_max_health result - creature_absolute_damage result,
         creature_absolute_damage = creature_damage c,

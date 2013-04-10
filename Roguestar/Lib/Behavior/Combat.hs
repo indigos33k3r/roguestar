@@ -21,11 +21,11 @@ import Roguestar.Lib.DetailedLocation
 import Data.List as List
 
 data AttackModel =
-    RangedAttackModel CreatureRef ToolRef Device
-  | MeleeAttackModel CreatureRef ToolRef Device
-  | UnarmedAttackModel CreatureRef
+    RangedAttackModel MonsterRef ToolRef Device
+  | MeleeAttackModel MonsterRef ToolRef Device
+  | UnarmedAttackModel MonsterRef
 
-attacker :: AttackModel -> CreatureRef
+attacker :: AttackModel -> MonsterRef
 attacker (RangedAttackModel attacker_ref _ _) = attacker_ref
 attacker (MeleeAttackModel attacker_ref _ _) = attacker_ref
 attacker (UnarmedAttackModel attacker_ref) = attacker_ref
@@ -35,14 +35,14 @@ weapon (RangedAttackModel _ weapon_ref _) = Just weapon_ref
 weapon (MeleeAttackModel _ weapon_ref _) = Just weapon_ref
 weapon (UnarmedAttackModel {}) = Nothing
 
-interactionMode :: AttackModel -> CreatureInteractionMode
+interactionMode :: AttackModel -> MonsterInteractionMode
 interactionMode (RangedAttackModel {}) = Ranged
 interactionMode (MeleeAttackModel {}) = Melee
 interactionMode (UnarmedAttackModel {}) = Unarmed
 
 -- | Get the attack model for a creature, based on whatever tool the creature is holding.
 -- This will fail if the creature is holding anything other than a weapon.
-attackModel :: (DBReadable db) => CreatureRef -> db AttackModel
+attackModel :: (DBReadable db) => MonsterRef -> db AttackModel
 attackModel attacker_ref =
     do m_tool_ref <- getWielded attacker_ref
        case m_tool_ref of
@@ -56,7 +56,7 @@ attackModel attacker_ref =
 
 -- | Get an appropriate melee attack model for a creature, based on whatever tool the creature is holding.
 -- This will fail if the creature is holding anything other than a suitable melee weapon (allows unarmed strike).
-meleeAttackModel :: (DBReadable db) => CreatureRef -> db AttackModel
+meleeAttackModel :: (DBReadable db) => MonsterRef -> db AttackModel
 meleeAttackModel attacker_ref =
     do attack_model <- attackModel attacker_ref
        case interactionMode attack_model `elem` [Melee,Unarmed] of
@@ -65,7 +65,7 @@ meleeAttackModel attacker_ref =
 
 -- | Get an appropriate ranged attack model for a creature, based on whatever tool the creature is holding.
 -- This will fail if the creature is holding anything other than a suitable ranged or splash weapon.
-rangedAttackModel :: (DBReadable db) => CreatureRef -> db AttackModel
+rangedAttackModel :: (DBReadable db) => MonsterRef -> db AttackModel
 rangedAttackModel attacker_ref =
     do attack_model <- attackModel attacker_ref
        case interactionMode attack_model `elem` [Ranged,Splash] of
@@ -73,12 +73,12 @@ rangedAttackModel attacker_ref =
            _ -> throwError $ DBErrorFlag ToolIs_Innapropriate
 
 data WeaponActivationOutcome =
-    WeaponExplodes CreatureRef ToolRef Integer
-  | WeaponMalfunctions CreatureRef ToolRef Integer
+    WeaponExplodes MonsterRef ToolRef Integer
+  | WeaponMalfunctions MonsterRef ToolRef Integer
   | WeaponFunctions
 
 data AttackOutcome =
-    AttackMisses CreatureRef (Maybe ToolRef)
+    AttackMisses MonsterRef (Maybe ToolRef)
   | AttackHits Integer
 
 numberOfHits :: AttackOutcome -> Integer
@@ -86,9 +86,9 @@ numberOfHits (AttackMisses {}) = 0
 numberOfHits (AttackHits n) = n
 
 data DamageOutcome =
-    DamageInflicted CreatureRef (Maybe ToolRef) CreatureRef Integer
-  | DamageDisarms CreatureRef CreatureRef ToolRef Integer
-  | DamageSunders CreatureRef ToolRef CreatureRef ToolRef Integer
+    DamageInflicted MonsterRef (Maybe ToolRef) MonsterRef Integer
+  | DamageDisarms MonsterRef MonsterRef ToolRef Integer
+  | DamageSunders MonsterRef ToolRef MonsterRef ToolRef Integer
 
 isDisarmingBlow :: DamageOutcome -> Bool
 isDisarmingBlow (DamageInflicted {}) = False
@@ -96,8 +96,8 @@ isDisarmingBlow _ = True
 
 weighWeaponActivationOutcomes :: (DBReadable db) => AttackModel -> db (WeightedSet WeaponActivationOutcome)
 weighWeaponActivationOutcomes attack_model =
-    do attack_rating <- getCreatureAbilityScore (AttackSkill $ interactionMode attack_model) $ attacker attack_model
-       damage_rating <- getCreatureAbilityScore (DamageSkill $ interactionMode attack_model) $ attacker attack_model
+    do attack_rating <- getMonsterAbilityScore (AttackSkill $ interactionMode attack_model) $ attacker attack_model
+       damage_rating <- getMonsterAbilityScore (DamageSkill $ interactionMode attack_model) $ attacker attack_model
        case weapon attack_model of
            Nothing -> return $ unweightedSet [WeaponFunctions]
            Just weapon_ref ->
@@ -108,20 +108,20 @@ weighWeaponActivationOutcomes attack_model =
                        (device_weight, WeaponMalfunctions (attacker attack_model) weapon_ref 1),
                        (attack_rating+damage_rating, WeaponFunctions)]
 
-weighAttackOutcomes :: (DBReadable db) => AttackModel -> CreatureRef -> db (WeightedSet AttackOutcome)
+weighAttackOutcomes :: (DBReadable db) => AttackModel -> MonsterRef -> db (WeightedSet AttackOutcome)
 weighAttackOutcomes attack_model defender =
-    do attack_rating <- getCreatureAbilityScore (AttackSkill $ interactionMode attack_model) $ attacker attack_model
-       defense_rating <- getCreatureAbilityScore (DefenseSkill $ interactionMode attack_model) $ defender
+    do attack_rating <- getMonsterAbilityScore (AttackSkill $ interactionMode attack_model) $ attacker attack_model
+       defense_rating <- getMonsterAbilityScore (DefenseSkill $ interactionMode attack_model) $ defender
        return $ weightedSet
            [{- TODO: put a "riposte" counter attack if the flub by too much? -- not spending time on it now -}
             (defense_rating, AttackMisses (attacker attack_model) (weapon attack_model)),
             (attack_rating, AttackHits 1),
             (max 0 $ attack_rating - defense_rating, AttackHits $ max 1 $ attack_rating `div` (max 1 defense_rating))]
 
-weighDamageOutcomes :: (DBReadable db) => AttackModel -> CreatureRef -> Maybe ToolRef -> db (WeightedSet DamageOutcome)
+weighDamageOutcomes :: (DBReadable db) => AttackModel -> MonsterRef -> Maybe ToolRef -> db (WeightedSet DamageOutcome)
 weighDamageOutcomes attack_model defender m_shield =
-    do damage_rating <- getCreatureAbilityScore (DamageSkill $ interactionMode attack_model) $ attacker attack_model
-       damage_reduction_rating <- getCreatureAbilityScore (DamageReductionTrait $ interactionMode attack_model) $ defender
+    do damage_rating <- getMonsterAbilityScore (DamageSkill $ interactionMode attack_model) $ attacker attack_model
+       damage_reduction_rating <- getMonsterAbilityScore (DamageReductionTrait $ interactionMode attack_model) $ defender
        let damageInflicted = DamageInflicted (attacker attack_model) (weapon attack_model) defender
        shield_weight <- maybe (return 0) toolValue m_shield
        weapon_weight <- maybe (return 0) toolValue $ weapon attack_model
@@ -149,7 +149,7 @@ data AttackChainOutcome = AttackChainOutcome {
     _chain_attack_outcome :: AttackOutcome,
     _chain_damage_outcome :: [DamageOutcome] }
 
-resolveAttackChain :: forall db. (DBReadable db) => AttackModel -> Either Facing CreatureRef -> db AttackChainOutcome
+resolveAttackChain :: forall db. (DBReadable db) => AttackModel -> Either Facing MonsterRef -> db AttackChainOutcome
 resolveAttackChain attack_model e_face_defender =
     do m_defender_ref <- case e_face_defender of
            Right defender_ref -> return $ Just defender_ref
@@ -172,11 +172,11 @@ resolveAttackChain attack_model e_face_defender =
 
 executeAttackChain :: AttackChainOutcome -> DB ()
 executeAttackChain (AttackChainOutcome (WeaponExplodes attacker_ref tool_ref damage) _ _) =
-    do injureCreature damage attacker_ref
+    do injureMonster damage attacker_ref
        dbPushSnapshot $ WeaponExplodesEvent attacker_ref tool_ref
        deleteTool tool_ref
 executeAttackChain (AttackChainOutcome (WeaponMalfunctions attacker_ref tool_ref damage) _ _) =
-    do injureCreature damage attacker_ref
+    do injureMonster damage attacker_ref
        _ <- move tool_ref =<< dropTool tool_ref
        dbPushSnapshot $ WeaponOverheatsEvent attacker_ref tool_ref
        return ()
@@ -187,15 +187,15 @@ executeAttackChain (AttackChainOutcome _ _ damages) =
 
 executeDamage :: DamageOutcome -> DB ()
 executeDamage (DamageInflicted attacker_ref m_tool_ref defender_ref damage) =
-    do injureCreature damage defender_ref
+    do injureMonster damage defender_ref
        dbPushSnapshot $ AttackEvent attacker_ref m_tool_ref defender_ref
 executeDamage (DamageDisarms attacker_ref defender_ref dropped_tool damage) =
-    do injureCreature damage defender_ref
+    do injureMonster damage defender_ref
        dbPushSnapshot $ DisarmEvent attacker_ref defender_ref dropped_tool
        _ <- move dropped_tool =<< dropTool dropped_tool
        return ()
 executeDamage (DamageSunders attacker_ref weapon_ref defender_ref sundered_tool damage) =
-    do injureCreature damage defender_ref
+    do injureMonster damage defender_ref
        dbPushSnapshot $ SunderEvent attacker_ref weapon_ref defender_ref sundered_tool
        deleteTool sundered_tool
 

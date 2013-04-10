@@ -62,12 +62,12 @@ data Behavior =
       deriving (Show)
 
 -- | Decide which FacingBehavior is most appropriate for for a character's situation.
-facingBehavior :: (DBReadable db) => CreatureRef -> Facing -> db FacingBehavior
+facingBehavior :: (DBReadable db) => MonsterRef -> Facing -> db FacingBehavior
 facingBehavior creature_ref face =
     do ((Parent plane_ref,pos) :: (Parent Plane,Position)) <- liftM detail $ getPlanarLocation creature_ref
        let facing_pos = offsetPosition (facingToRelative face) pos
        t <- terrainAt plane_ref facing_pos
-       who :: [CreatureRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
+       who :: [MonsterRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
        what :: [BuildingRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
        result <- case t of
            _ | not (null who) -> return Attack
@@ -81,17 +81,17 @@ facingBehavior creature_ref face =
 -- | Indicates whether or not it is allowed for the specified creature to conduct
 -- the specified behavior.  A true result here does not guarantee that the action
 -- will succeed.
-isBehaviorAvailable :: (DBReadable db) => Behavior -> CreatureRef -> db Bool
+isBehaviorAvailable :: (DBReadable db) => Behavior -> MonsterRef -> db Bool
 isBehaviorAvailable (FacingBehavior Jump _) creature_ref =
     do ((Parent plane_ref,pos) :: (Parent Plane,Position)) <- liftM detail $ getPlanarLocation creature_ref
        the_terrain <- terrainAt plane_ref pos
-       creature_has_teleport_ability <- getCreatureSpecial Teleportation creature_ref
+       creature_has_teleport_ability <- getMonsterSpecial Teleportation creature_ref
        return $
            creature_has_teleport_ability ||
            the_terrain == RecreantFactory
 isBehaviorAvailable _ _ = return True
 
-executeBehavior :: Behavior -> CreatureRef -> DB ()
+executeBehavior :: Behavior -> MonsterRef -> DB ()
 executeBehavior the_behavior the_creature =
     do logDB gameplay_log INFO ("Running behavior: behavior=" ++ show the_behavior ++ " creature=" ++ (show $ toUID the_creature))
        available <- isBehaviorAvailable the_behavior the_creature
@@ -99,9 +99,9 @@ executeBehavior the_behavior the_creature =
            throwError $ DBError $ "Behavior is not available:" ++ show the_behavior
        dbBehave_ the_behavior the_creature
 
-dbBehave_ :: Behavior -> CreatureRef -> DB ()
+dbBehave_ :: Behavior -> MonsterRef -> DB ()
 dbBehave_ (FacingBehavior Step face) creature_ref =
-    do (move_from,move_to) <- move creature_ref =<< stepCreature face creature_ref
+    do (move_from,move_to) <- move creature_ref =<< stepMonster face creature_ref
        dbAdvanceTime creature_ref =<< case () of
            () | (move_from == move_to) -> return 0
            () | face == Here -> actionTime creature_ref -- counts as turning in place
@@ -123,7 +123,7 @@ dbBehave_ (FacingBehavior Jump face) creature_ref =
        dbAdvanceTime creature_ref =<< move2ActionTime creature_ref
 
 dbBehave_ (FacingBehavior TurnInPlace face) creature_ref =
-    do _ <- move creature_ref =<< turnCreature face creature_ref
+    do _ <- move creature_ref =<< turnMonster face creature_ref
        dbAdvanceTime creature_ref =<< actionTime creature_ref
 
 dbBehave_ (Pickup tool_ref) creature_ref =
@@ -140,7 +140,7 @@ dbBehave_ (Wield tool_ref) creature_ref =
            () | otherwise -> actionTime creature_ref
 
 dbBehave_ (Unwield) creature_ref =
-    do dbUnwieldCreature creature_ref
+    do dbUnwieldMonster creature_ref
        dbAdvanceTime creature_ref =<< actionTime creature_ref
 
 dbBehave_ (Drop tool_ref) creature_ref =
@@ -153,14 +153,14 @@ dbBehave_ (Drop tool_ref) creature_ref =
            () | otherwise -> actionTime creature_ref
 
 dbBehave_ (FacingBehavior Fire face) creature_ref =
-    do _ <- move creature_ref =<< turnCreature face creature_ref
+    do _ <- move creature_ref =<< turnMonster face creature_ref
        ranged_attack_model <- rangedAttackModel creature_ref
        _ <- atomic executeAttackChain $ resolveAttackChain ranged_attack_model (Left face)
        dbAdvanceTime creature_ref =<< actionTime creature_ref
        return ()
 
 dbBehave_ (FacingBehavior Attack face) creature_ref =
-    do _ <- move creature_ref =<< turnCreature face creature_ref
+    do _ <- move creature_ref =<< turnMonster face creature_ref
        melee_attack_model <- meleeAttackModel creature_ref
        _ <- atomic executeAttackChain $ resolveAttackChain melee_attack_model (Left face)
        dbAdvanceTime creature_ref =<< actionTime creature_ref
@@ -171,11 +171,11 @@ dbBehave_ Wait creature_ref = dbAdvanceTime creature_ref =<< actionTime creature
 dbBehave_ Vanish creature_ref =
     do dbAdvanceTime creature_ref =<< actionTime creature_ref
        (Parent plane_ref :: Parent Plane) <- liftM detail $ getPlanarLocation creature_ref
-       faction <- getCreatureFaction creature_ref
+       faction <- getMonsterFaction creature_ref
        is_visible_to_anyone_else <- liftM (any (genericReference creature_ref `elem`)) $
            mapM (\fact -> dbGetVisibleObjectsForFaction (return . const True) fact plane_ref)
                 ({- all factions except this one: -} delete faction [minBound..maxBound])
-       when (not is_visible_to_anyone_else) $ deleteCreature creature_ref
+       when (not is_visible_to_anyone_else) $ deleteMonster creature_ref
        return ()
 
 dbBehave_ Activate creature_ref =
@@ -189,14 +189,14 @@ dbBehave_ (Make make_prep) creature_ref =
        return ()
 
 dbBehave_ (FacingBehavior ClearTerrain face) creature_ref =
-    do _ <- move creature_ref =<< turnCreature face creature_ref
+    do _ <- move creature_ref =<< turnMonster face creature_ref
        ok <- modifyFacingTerrain clearTerrain face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
        dbAdvanceTime creature_ref =<< actionTime creature_ref
        return ()
 
 dbBehave_ (FacingBehavior ActivateBuilding face) creature_ref =
-    do _ <- move creature_ref =<< turnCreature face creature_ref
+    do _ <- move creature_ref =<< turnMonster face creature_ref
        ok <- activateFacingBuilding face creature_ref
        when (not ok) $ throwError $ DBErrorFlag Unable
        dbAdvanceTime creature_ref =<< actionTime creature_ref
@@ -205,25 +205,25 @@ dbBehave_ (FacingBehavior ActivateBuilding face) creature_ref =
 -- These are functions related to determing how long it takes for a creature to execute an action.
 ----------------------------------------------------------------------------------------------------}
 
-getBaseSpeed :: (DBReadable db) => CreatureRef -> db Integer
+getBaseSpeed :: (DBReadable db) => MonsterRef -> db Integer
 getBaseSpeed creature_ref =
-    do c <- dbGetCreature creature_ref
+    do c <- dbGetMonster creature_ref
        let raw_speed = rawScore Speed c
        when (raw_speed <= 0) $ error $ "getBaseSpeed: Non-positive raw speed (" ++ show c ++ ")"
        return raw_speed
 
 -- | Time required to do a simple physical task.
-actionTime :: (DBReadable db) => CreatureRef -> db Rational
+actionTime :: (DBReadable db) => MonsterRef -> db Rational
 actionTime creature_ref =
     do raw_speed <- getBaseSpeed creature_ref
        return $ 1000 % (1000 + raw_speed)
 
 -- | Time required to move one step.
-move1ActionTime :: (DBReadable db) => CreatureRef -> db Rational
+move1ActionTime :: (DBReadable db) => MonsterRef -> db Rational
 move1ActionTime creature_ref =
     do raw_speed <- getBaseSpeed creature_ref
        return $ 100 % (100+raw_speed)
 
 -- | Time required to move diagonally one step.
-move2ActionTime :: (DBReadable db) => CreatureRef -> db Rational
+move2ActionTime :: (DBReadable db) => MonsterRef -> db Rational
 move2ActionTime = liftM (*1.4142) . move1ActionTime

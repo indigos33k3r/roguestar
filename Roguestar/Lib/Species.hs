@@ -9,8 +9,8 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.SpeciesData
 
 data SpeciesData = SpeciesData {
-        species_traits :: [(CreatureTrait,Integer)],
-        species_specials :: [CreatureSpecial] }
+        species_traits :: [(MonsterTrait,Integer)],
+        species_specials :: [MonsterSpecial] }
 
 speciesInfo :: Species -> SpeciesData
 
