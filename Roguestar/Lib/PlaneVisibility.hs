@@ -13,7 +13,7 @@ import Roguestar.Lib.TerrainData
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneData
 import Control.Monad
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Data.List as List
 import Roguestar.Lib.Grids
 import Roguestar.Lib.GridRayCaster

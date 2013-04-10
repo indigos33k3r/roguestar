@@ -1,5 +1,4 @@
--- Mechanics
-module Roguestar.Lib.CharacterAdvancement
+module Roguestar.Lib.Behavior.CharacterAdvancement
     (CharacterBumpResult(..),
      characterFitness,
      bumpCharacter,
@@ -9,7 +8,7 @@ module Roguestar.Lib.CharacterAdvancement
     where
 
 import qualified Data.Map as Map
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PowerUpData
 import Roguestar.Lib.PersistantData
 

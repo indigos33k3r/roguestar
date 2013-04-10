@@ -25,7 +25,7 @@ import Roguestar.Lib.Perception
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.TerrainData as TerrainData
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Facing
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests

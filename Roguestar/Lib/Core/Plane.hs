@@ -25,7 +25,7 @@ import Roguestar.Lib.TerrainData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.PlanetData
 import Roguestar.Lib.ToolData (Tool)
-import Roguestar.Lib.CreatureData (Creature)
+import Roguestar.Lib.Data.MonsterData (Creature)
 import Control.Monad
 import Control.Monad.Random as Random
 import Data.Maybe

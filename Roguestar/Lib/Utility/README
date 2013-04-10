@@ -1,0 +1,3 @@
+
+The Utility module contains algorithms for solving various problems, such as finding suitable terrain to place an object, or figuring out which monster is in the line-of-fire when the player fires a weapon.
+

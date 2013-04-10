@@ -6,7 +6,7 @@ module Roguestar.Lib.Behavior.Activate
 
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
-import Roguestar.Lib.Creature
+import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.DB
 import Control.Monad.Error
 import Roguestar.Lib.Substances

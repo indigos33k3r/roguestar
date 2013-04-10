@@ -1,9 +1,8 @@
--- Core
-module Roguestar.Lib.Character
+module Roguestar.Lib.Data.CharacterData
     (applyCharacterClass)
     where
 
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PersistantData
 
 applyCharacterClass :: CharacterClass -> Creature -> Creature

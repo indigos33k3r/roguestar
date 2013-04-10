@@ -21,7 +21,7 @@ module Roguestar.Lib.DBPrivate
 
 import Roguestar.Lib.HierarchicalDatabase
 import Roguestar.Lib.Facing
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.Data.BuildingData

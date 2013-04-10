@@ -22,8 +22,8 @@ import Data.Ord
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.TerrainData
 import Data.List (minimumBy)
-import Roguestar.Lib.Creature
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Core.Monster
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Logging
 import Roguestar.Lib.TravelData
 import Roguestar.Lib.DetailedLocation

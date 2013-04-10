@@ -1,0 +1,3 @@
+
+The World module contains rules for constructing the game world on a large scale. This includes things like deciding what planets exist in the world, what kinds of monsters populate each planet.
+

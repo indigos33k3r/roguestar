@@ -9,14 +9,14 @@ module Roguestar.Lib.Behavior.Combat
     where
 
 import Roguestar.Lib.DB
-import Roguestar.Lib.Creature
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Core.Monster
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
 import Control.Monad.Error
 import Roguestar.Lib.Facing
 import Data.Maybe
-import Roguestar.Lib.Contact
+import Roguestar.Lib.Utility.Contact
 import Roguestar.Lib.DetailedLocation
 import Data.List as List
 

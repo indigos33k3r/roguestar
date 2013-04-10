@@ -11,10 +11,10 @@ import Roguestar.Lib.DB
 import Roguestar.Lib.Reference
 import Roguestar.Lib.FactionData
 import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.CreatureData (Creature)
+import Roguestar.Lib.Data.MonsterData (Creature)
 import Roguestar.Lib.Core.Plane
 import Control.Monad
-import Roguestar.Lib.Creature
+import Roguestar.Lib.Core.Monster
 import Data.Ratio
 import Roguestar.Lib.Facing
 import Roguestar.Lib.TerrainData

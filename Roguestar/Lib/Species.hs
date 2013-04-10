@@ -5,7 +5,7 @@ module Roguestar.Lib.Species
     where
 
 --Data
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.SpeciesData
 
 data SpeciesData = SpeciesData {

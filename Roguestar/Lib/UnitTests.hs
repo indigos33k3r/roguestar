@@ -97,7 +97,7 @@ testLocal =
 
 testPickRandomClearSite :: UnitTest
 testPickRandomClearSite = runWithRandomPlanes 10 "testPickRandomClearSite" $ \plane_ref ->
-    do Position (x,y) <- pickRandomSite (-1000,100) (-1000,100) 50 (areaClearForObjectPlacement 1) plane_ref
+    do Position (x,y) <- pickRandomSite (-1000,1000) (-1000,1000) 50 (areaClearForObjectPlacement 1) plane_ref
        t1 <- terrainAt plane_ref $ Position (x-1,y-1)
        t2 <- terrainAt plane_ref $ Position (x,y-1)
        t3 <- terrainAt plane_ref $ Position (x+1,y-1)

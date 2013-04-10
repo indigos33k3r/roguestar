@@ -22,7 +22,7 @@ import Roguestar.Lib.Position
 import Roguestar.Lib.TerrainData
 import Control.Monad.Error
 import Roguestar.Lib.PowerUpData
-import Roguestar.Lib.CharacterAdvancement
+import Roguestar.Lib.Behavior.CharacterAdvancement
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.Data.PlayerState
 

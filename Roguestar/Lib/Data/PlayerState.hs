@@ -6,7 +6,7 @@ module Roguestar.Lib.Data.PlayerState
     where
 
 import Roguestar.Lib.DBData
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.TravelData
 import Roguestar.Lib.PersistantData
 import Data.Maybe

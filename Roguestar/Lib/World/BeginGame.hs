@@ -5,7 +5,7 @@ module Roguestar.Lib.World.BeginGame
 
 -- World
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Facing

@@ -11,7 +11,7 @@ import Roguestar.Lib.DBPrivate
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.ToolData
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 
 --
 -- Reference Equality

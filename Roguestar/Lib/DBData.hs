@@ -33,7 +33,7 @@ module Roguestar.Lib.DBData
 import Roguestar.Lib.Facing
 import Roguestar.Lib.DBPrivate
 import Roguestar.Lib.ToolData
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Control.Monad

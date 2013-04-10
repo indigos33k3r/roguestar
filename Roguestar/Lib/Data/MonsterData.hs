@@ -1,5 +1,5 @@
 --Data
-module Roguestar.Lib.CreatureData
+module Roguestar.Lib.Data.MonsterData
     (Creature(..),
      CreatureTrait(..),
      CreatureSpecial(..),

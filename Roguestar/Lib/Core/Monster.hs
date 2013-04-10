@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies, PatternGuards #-}
 --Core
-module Roguestar.Lib.Creature
+module Roguestar.Lib.Core.Monster
     (generateInitialPlayerCreature,
      newCreature,
      getCreatureSpecial,
@@ -16,7 +16,7 @@ module Roguestar.Lib.Creature
     where
 
 import Prelude hiding (getContents)
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.DB
 import Roguestar.Lib.SpeciesData
 import Roguestar.Lib.Species

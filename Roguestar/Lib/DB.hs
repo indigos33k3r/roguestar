@@ -57,7 +57,7 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.DBPrivate
 import Roguestar.Lib.DBData
 import Roguestar.Lib.Reference
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.RNG

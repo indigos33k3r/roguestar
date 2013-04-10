@@ -34,7 +34,7 @@ import Data.Ord
 import Roguestar.Lib.DB as DB
 import Roguestar.Lib.Reference
 import Roguestar.Lib.FactionData
-import Roguestar.Lib.Creature as Creature
+import Roguestar.Lib.Core.Monster as Creature
 import Roguestar.Lib.PlaneVisibility
 import Data.Maybe
 import Data.List as List
@@ -48,7 +48,7 @@ import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.DetailedLocation
 import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.ToolData
 import Roguestar.Lib.Behavior as Behavior

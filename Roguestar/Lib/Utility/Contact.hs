@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 
--- Mechanics
-module Roguestar.Lib.Contact
+module Roguestar.Lib.Utility.Contact
     (findContacts,
      ContactMode(..),
      ContactModeType(..))
@@ -11,7 +10,7 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Facing
 import Roguestar.Lib.DB
-import Roguestar.Lib.CreatureData
+import Roguestar.Lib.Data.MonsterData
 import Control.Monad
 import Roguestar.Lib.PlaneData
 import Data.Ord
