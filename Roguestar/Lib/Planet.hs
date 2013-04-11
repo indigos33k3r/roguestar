@@ -5,11 +5,11 @@ module Roguestar.Lib.Planet
      generatePlanetInfo)
     where
 
-import Roguestar.Lib.PlanetData
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlanetData
+import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Control.Monad
 import Control.Monad.Random
 import Data.Maybe

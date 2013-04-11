@@ -9,8 +9,8 @@ module Roguestar.Lib.Behavior.CharacterAdvancement
 
 import qualified Data.Map as Map
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.PowerUpData
-import Roguestar.Lib.PersistantData
+import Roguestar.Lib.Data.PowerUpData
+import Roguestar.Lib.Data.PersistantData
 
 -- TODO: rename "bump" to more clear language, like "advance" or "advanceCharacterLevel".
 

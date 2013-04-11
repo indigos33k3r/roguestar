@@ -1,5 +1,5 @@
 --Data
-module Roguestar.Lib.SpeciesData
+module Roguestar.Lib.Data.SpeciesData
     (Species(..),
      all_species)
     where

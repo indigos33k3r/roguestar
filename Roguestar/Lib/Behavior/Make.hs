@@ -1,14 +1,14 @@
 module Roguestar.Lib.Behavior.Make
-    (module Roguestar.Lib.MakeData,
+    (module Roguestar.Lib.Data.MakeData,
      MakeOutcome,
      resolveMake,
      executeMake)
     where
 
-import Roguestar.Lib.MakeData
+import Roguestar.Lib.Data.MakeData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Tool
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Data.List
 
 data MakeOutcome = MakeSuccess MonsterRef Tool [ToolRef] | MakeFailed

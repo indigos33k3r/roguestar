@@ -18,13 +18,13 @@ module Roguestar.Lib.Core.Plane
     where
 
 import Prelude hiding (getContents)
-import Roguestar.Lib.Grids
+import Roguestar.Lib.Utility.Grids
 import Roguestar.Lib.Reference
 import Roguestar.Lib.DB
-import Roguestar.Lib.TerrainData
-import Roguestar.Lib.PlaneData
-import Roguestar.Lib.PlanetData
-import Roguestar.Lib.ToolData (Tool)
+import Roguestar.Lib.Data.TerrainData
+import Roguestar.Lib.Data.PlaneData
+import Roguestar.Lib.Data.PlanetData
+import Roguestar.Lib.Data.ToolData (Tool)
 import Roguestar.Lib.Data.MonsterData (Monster)
 import Control.Monad
 import Control.Monad.Random as Random

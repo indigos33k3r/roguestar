@@ -22,9 +22,9 @@ import Roguestar.Lib.Roguestar
 import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.Data.ErrorData
 import Roguestar.Lib.Perception
-import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.ToolData
-import Roguestar.Lib.TerrainData as TerrainData
+import Roguestar.Lib.Data.SpeciesData
+import Roguestar.Lib.Data.ToolData
+import Roguestar.Lib.Data.TerrainData as TerrainData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Logging

@@ -1,9 +1,9 @@
 --Data
-module Roguestar.Lib.PlaneData
+module Roguestar.Lib.Data.PlaneData
     (Plane(..))
     where
 
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import qualified Data.ByteString.Char8 as B
 import Roguestar.Lib.Random as Random
 

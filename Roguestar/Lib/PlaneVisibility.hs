@@ -9,15 +9,15 @@ module Roguestar.Lib.PlaneVisibility
 import Prelude hiding (getContents)
 import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.DB
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 import Control.Monad
 import Roguestar.Lib.Data.MonsterData
 import Data.List as List
-import Roguestar.Lib.Grids
-import Roguestar.Lib.GridRayCaster
-import Roguestar.Lib.VisibilityData
+import Roguestar.Lib.Utility.Grids
+import Roguestar.Lib.Utility.RayCasting
+import Roguestar.Lib.Data.VisibilityData
 import Roguestar.Lib.Data.FacingData
 import Data.Ratio
 import Roguestar.Lib.Core.Building

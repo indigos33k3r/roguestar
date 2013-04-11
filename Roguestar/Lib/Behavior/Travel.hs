@@ -20,12 +20,12 @@ import Control.Monad
 import Control.Monad.Trans
 import Data.Ord
 import Roguestar.Lib.Position as Position
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Data.List (minimumBy)
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Logging
-import Roguestar.Lib.TravelData
+import Roguestar.Lib.Data.TravelData
 import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.Utility.DetailedTravel as DetailedTravel
 

@@ -18,9 +18,9 @@ module Roguestar.Lib.Utility.DetailedLocation
     where
 
 import Roguestar.Lib.Data.LocationData
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Data.BuildingData
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Position
 import Data.Maybe

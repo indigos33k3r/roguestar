@@ -20,19 +20,19 @@ import Control.Monad.Error
 import Roguestar.Lib.Behavior.Combat
 import Roguestar.Lib.Behavior.Activate
 import Roguestar.Lib.Behavior.Travel
-import Roguestar.Lib.TravelData
+import Roguestar.Lib.Data.TravelData
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.PlaneVisibility
 import Data.List
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Behavior.Make
 import Roguestar.Lib.Behavior.Construction
 import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Reference
 import Roguestar.Lib.Utility.DetailedLocation
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 
 data FacingBehavior =
     Step

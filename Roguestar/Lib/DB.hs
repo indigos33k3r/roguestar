@@ -58,14 +58,14 @@ import Roguestar.Lib.Data.ReferenceTypes
 import Roguestar.Lib.Data.LocationData
 import Roguestar.Lib.Reference
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.RNG
 import Data.Map as Map
 import Data.List as List
-import qualified Roguestar.Lib.HierarchicalDatabase as HD
+import qualified Roguestar.Lib.Utility.HierarchicalDatabase as HD
 import Data.Maybe
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Control.Monad.State
 import Control.Monad.Error
 import Control.Monad.Reader

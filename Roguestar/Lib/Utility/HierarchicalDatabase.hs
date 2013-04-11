@@ -1,17 +1,17 @@
 -- Services
-module Roguestar.Lib.HierarchicalDatabase
+module Roguestar.Lib.Utility.HierarchicalDatabase
     (HierarchicalDatabase,
      HierarchicalRelation(..),
-     Roguestar.Lib.HierarchicalDatabase.empty,
-     Roguestar.Lib.HierarchicalDatabase.insert,
-     Roguestar.Lib.HierarchicalDatabase.delete,
-     Roguestar.Lib.HierarchicalDatabase.lookup,
+     Roguestar.Lib.Utility.HierarchicalDatabase.empty,
+     Roguestar.Lib.Utility.HierarchicalDatabase.insert,
+     Roguestar.Lib.Utility.HierarchicalDatabase.delete,
+     Roguestar.Lib.Utility.HierarchicalDatabase.lookup,
      lookupChildren,
      lookupParent,
      parentOf,
      childrenOf,
-     Roguestar.Lib.HierarchicalDatabase.toList,
-     Roguestar.Lib.HierarchicalDatabase.fromList,
+     Roguestar.Lib.Utility.HierarchicalDatabase.toList,
+     Roguestar.Lib.Utility.HierarchicalDatabase.fromList,
      insidenessTests)
     where
 

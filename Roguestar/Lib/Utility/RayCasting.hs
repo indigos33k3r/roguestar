@@ -1,6 +1,6 @@
 
 --Data
-module Roguestar.Lib.GridRayCaster
+module Roguestar.Lib.Utility.RayCasting
     (castRays,
      castRay,
      gridRayCasterTests)

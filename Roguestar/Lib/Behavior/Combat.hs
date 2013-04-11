@@ -12,7 +12,7 @@ import Roguestar.Lib.DB
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Control.Monad.Error
 import Roguestar.Lib.Data.FacingData
 import Data.Maybe

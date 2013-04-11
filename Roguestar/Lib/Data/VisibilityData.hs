@@ -1,12 +1,12 @@
 --Data
-module Roguestar.Lib.VisibilityData
+module Roguestar.Lib.Data.VisibilityData
     (distanceCostForSight,
      terrainHideMultiplier,
      terrainOpacity,
      maximumRangeForSpotCheck)
     where
 
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Data.List
 import Roguestar.Lib.Data.FacingData
 

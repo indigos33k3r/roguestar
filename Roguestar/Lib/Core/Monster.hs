@@ -18,7 +18,7 @@ module Roguestar.Lib.Core.Monster
 import Prelude hiding (getContents)
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.DB
-import Roguestar.Lib.SpeciesData
+import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Species
 import Roguestar.Lib.Data.FactionData
 import Control.Monad.Error

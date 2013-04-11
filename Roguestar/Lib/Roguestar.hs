@@ -38,12 +38,12 @@ import Roguestar.Lib.DB as DB
 import Control.Concurrent.STM
 import Control.Monad
 import Roguestar.Lib.Data.PlayerState
-import Roguestar.Lib.SpeciesData
+import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.World.BeginGame as BeginGame
 import Roguestar.Lib.Perception
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Behavior as Behavior
 import Roguestar.Lib.Turns

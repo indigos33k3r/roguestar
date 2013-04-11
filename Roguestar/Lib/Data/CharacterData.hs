@@ -3,7 +3,7 @@ module Roguestar.Lib.Data.CharacterData
     where
 
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.PersistantData
+import Roguestar.Lib.Data.PersistantData
 
 applyCharacterClass :: CharacterClass -> Monster -> Monster
 applyCharacterClass character_class creature = applyToMonster (CharacterClass character_class : classInfo character_class) creature

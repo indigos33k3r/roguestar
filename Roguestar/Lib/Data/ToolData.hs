@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 --Data
-module Roguestar.Lib.ToolData
+module Roguestar.Lib.Data.ToolData
     (Tool(..),
      toolName,
      fromSphere,

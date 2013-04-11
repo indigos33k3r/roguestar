@@ -6,7 +6,7 @@ module Roguestar.Lib.Species
 
 --Data
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.SpeciesData
+import Roguestar.Lib.Data.SpeciesData
 
 data SpeciesData = SpeciesData {
         species_traits :: [(MonsterTrait,Integer)],

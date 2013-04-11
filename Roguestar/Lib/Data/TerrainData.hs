@@ -1,5 +1,5 @@
 --Data
-module Roguestar.Lib.TerrainData
+module Roguestar.Lib.Data.TerrainData
     (Biome(..),
      Terrain(..),
      MetaTerrain(..),
@@ -14,7 +14,7 @@ module Roguestar.Lib.TerrainData
      impassable_terrains)
     where
 
-import Roguestar.Lib.Grids
+import Roguestar.Lib.Utility.Grids
 import Data.List as List
 import Data.Map as Map
 --import Substances hiding (Water)

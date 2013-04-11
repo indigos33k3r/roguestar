@@ -42,15 +42,15 @@ import Data.Map as Map
 import Control.Applicative
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Position as Position
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Utility.DetailedLocation
-import Roguestar.Lib.SpeciesData
+import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Behavior as Behavior
 import qualified Roguestar.Lib.Utility.DetailedTravel as DT
 

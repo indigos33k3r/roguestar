@@ -18,10 +18,10 @@ import Roguestar.Lib.Utility.DetailedLocation
 import Control.Monad.Error
 import Data.Maybe
 import Data.List as List
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Substances
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 
 pickupTool :: (DBReadable db) =>
                 MonsterRef ->

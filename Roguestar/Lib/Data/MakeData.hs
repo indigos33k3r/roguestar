@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 --Mechanics
-module Roguestar.Lib.MakeData
+module Roguestar.Lib.Data.MakeData
     (PrepareMake(..),
      prepare_make,
      isFinished,
@@ -15,7 +15,7 @@ module Roguestar.Lib.MakeData
     where
 
 import Roguestar.Lib.Data.LocationData
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Substances
 
 -- | Multi-step process for gathering the materials to make something.

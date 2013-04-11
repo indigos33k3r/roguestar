@@ -32,9 +32,9 @@ module Roguestar.Lib.Data.LocationData
 
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Data.ReferenceTypes
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Control.Monad
 import Roguestar.Lib.Position

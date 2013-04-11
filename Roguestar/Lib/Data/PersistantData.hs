@@ -1,5 +1,5 @@
 --Data
-module Roguestar.Lib.PersistantData
+module Roguestar.Lib.Data.PersistantData
     (CharacterClass(..),
      PowerUpData(..),
      PlanetRegion(..),

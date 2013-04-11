@@ -5,7 +5,7 @@ module Roguestar.Lib.Behavior.Activate
     where
 
 import Roguestar.Lib.Tool
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.DB
 import Control.Monad.Error

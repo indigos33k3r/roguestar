@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 --World
-module Roguestar.Lib.PlanetData
+module Roguestar.Lib.Data.PlanetData
     (PlanetRegion(..),
      PlanetInfo(..),
      addTown,
@@ -9,8 +9,8 @@ module Roguestar.Lib.PlanetData
      cyborg_planets)
     where
 
-import Roguestar.Lib.PersistantData
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.PersistantData
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.BuildingData
 import qualified Roguestar.Lib.Random as Random
 import Data.Ratio

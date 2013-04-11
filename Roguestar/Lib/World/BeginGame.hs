@@ -9,11 +9,11 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.FacingData
-import Roguestar.Lib.TerrainData
-import Roguestar.Lib.ToolData
+import Roguestar.Lib.Data.TerrainData
+import Roguestar.Lib.Data.ToolData
 import Control.Monad
 import Control.Monad.Error
-import Roguestar.Lib.SpeciesData
+import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.PlayerState
 import Roguestar.Lib.Town
 import qualified Data.ByteString.Char8 as B ()

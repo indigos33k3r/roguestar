@@ -12,7 +12,7 @@ import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.MonsterData
 import Control.Monad
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 import Data.Ord
 import Data.List as List
 import Roguestar.Lib.Utility.DetailedLocation

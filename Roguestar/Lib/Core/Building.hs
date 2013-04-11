@@ -16,12 +16,12 @@ import Roguestar.Lib.Data.FacingData
 import Data.Maybe
 import Control.Monad.Maybe
 import Control.Monad.Random
-import Roguestar.Lib.PlaneData
+import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Position
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Control.Monad.Error
-import Roguestar.Lib.PowerUpData
+import Roguestar.Lib.Data.PowerUpData
 import Roguestar.Lib.Behavior.CharacterAdvancement
 import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.Data.PlayerState

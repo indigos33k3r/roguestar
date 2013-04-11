@@ -13,8 +13,8 @@ module Roguestar.Lib.Data.BuildingData
      buildingOccupies)
     where
 
-import Roguestar.Lib.PowerUpData
-import Roguestar.Lib.PersistantData
+import Roguestar.Lib.Data.PowerUpData
+import Roguestar.Lib.Data.PersistantData
 
 basic_stargate :: BuildingPrototype
 basic_stargate = BuildingPrototype (TwoWayStargate NonAlignedRegion) Portal (Just Magnetic)

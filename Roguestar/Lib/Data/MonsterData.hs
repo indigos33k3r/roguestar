@@ -13,7 +13,7 @@ module Roguestar.Lib.Data.MonsterData
      empty_creature)
     where
 
-import Roguestar.Lib.PersistantData
+import Roguestar.Lib.Data.PersistantData
 import Data.Ratio
 import Data.Maybe
 import Roguestar.Lib.Data.FactionData
@@ -21,8 +21,8 @@ import Data.Monoid
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List as List
-import Roguestar.Lib.SpeciesData
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.SpeciesData
+import Roguestar.Lib.Data.TerrainData
 
 data Monster = Monster { creature_traits :: Map.Map MonsterTrait Integer,
                            creature_specials :: Set.Set MonsterSpecial,

@@ -1,5 +1,5 @@
 --Data
-module Roguestar.Lib.TravelData
+module Roguestar.Lib.Data.TravelData
     (ClimbDirection(..)) where
 
 data ClimbDirection = ClimbUp | ClimbDown

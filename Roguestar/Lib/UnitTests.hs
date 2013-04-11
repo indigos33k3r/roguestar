@@ -12,7 +12,7 @@ import Roguestar.Lib.DB
 import Roguestar.Lib.Data.PlayerState
 import Control.Monad.Reader.Class
 import Roguestar.Lib.Core.Plane
-import Roguestar.Lib.TerrainData
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Utility.SiteCriteria
 import Roguestar.Lib.Random as Random
 

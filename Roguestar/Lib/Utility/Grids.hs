@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- Data
-module Roguestar.Lib.Grids
+module Roguestar.Lib.Utility.Grids
     (Grid,
      gridAt,
      generateGrid,
