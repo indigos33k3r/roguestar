@@ -5,7 +5,6 @@ module Roguestar.Lib.Random
      weightedSet,
      unweightedSet,
      append,
-     Roguestar.Lib.Random.map,
      fromWeightedSet,
      weightedPick,
      weightedPickM,
@@ -45,8 +44,8 @@ unweightedSet as = WeightedSet {
 append :: WeightedSet a -> WeightedSet a -> WeightedSet a
 append a b = weightedSet $ (Vector.toList $ weighted_set a) ++ (Vector.toList $ weighted_set b)
 
-map :: (a -> b) -> WeightedSet a -> WeightedSet b
-map f s = WeightedSet (weighted_set_total s) $ Vector.map (\(x,y) -> (x,f y)) $ weighted_set s
+instance Functor WeightedSet where
+    fmap f s = WeightedSet (weighted_set_total s) $ Vector.map (\(x,y) -> (x,f y)) $ weighted_set s
 
 fromWeightedSet :: WeightedSet a -> [a]
 fromWeightedSet = List.map snd . Vector.toList . weighted_set

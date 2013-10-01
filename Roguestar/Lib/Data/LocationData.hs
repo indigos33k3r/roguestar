@@ -3,6 +3,9 @@
 module Roguestar.Lib.Data.LocationData
     (Reference,
      toUID,
+     (=:=),
+     (=/=),
+     ReferenceType(..),
      genericReference,
      MonsterRef,
      PlaneRef,
@@ -38,7 +41,6 @@ import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Data.BuildingData
 import Control.Monad
 import Roguestar.Lib.Position
-import Roguestar.Lib.Reference
 
 --
 -- Getting References generically.

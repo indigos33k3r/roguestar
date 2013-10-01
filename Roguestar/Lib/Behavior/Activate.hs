@@ -9,7 +9,7 @@ import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.DB
 import Control.Monad.Error
-import Roguestar.Lib.Substances
+import Roguestar.Lib.Data.Substances
 
 -- | Outcome of activating a tool.
 data ActivationOutcome =

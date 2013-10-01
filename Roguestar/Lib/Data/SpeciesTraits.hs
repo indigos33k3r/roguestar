@@ -1,10 +1,8 @@
---Data
-module Roguestar.Lib.Species
+module Roguestar.Lib.Data.SpeciesTraits
     (SpeciesData(..),
      speciesInfo)
     where
 
---Data
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.SpeciesData
 
@@ -43,6 +41,6 @@ speciesInfo TabularMonstrosity = SpeciesData
      (Perception, 1),
      (Speed,      4)]
     [Hover,
-     ComplexificationMesh]
+     HolographicTrail]
 
 

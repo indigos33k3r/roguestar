@@ -32,7 +32,6 @@ import Control.Monad.Reader
 import Control.Monad.Random
 import Data.Ord
 import Roguestar.Lib.DB as DB
-import Roguestar.Lib.Reference
 import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Core.Monster as Monster
 import Roguestar.Lib.PlaneVisibility
@@ -51,6 +50,7 @@ import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.Data.ToolData
+import Roguestar.Lib.Data.BehaviorData
 import Roguestar.Lib.Behavior as Behavior
 import qualified Roguestar.Lib.Utility.DetailedTravel as DT
 

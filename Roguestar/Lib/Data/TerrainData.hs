@@ -47,6 +47,7 @@ data Terrain = RockFace
              | Lava
              | Glass -- solidified lava
              | RecreantFactory
+             | ForceField
              | Upstairs
              | Downstairs
                 deriving (Read,Show,Eq,Ord,Enum,Bounded)
@@ -70,7 +71,7 @@ data TerrainPlacement = TerrainPlacement {
 placeTerrain :: TerrainPlacement -> TerrainGrid -> TerrainGrid
 placeTerrain terrain_placement =
     arbitraryReplaceGrid (List.map (second Terrain) $ placement_sources terrain_placement)
-                         (Random.map Terrain $ placement_replacements terrain_placement)
+                         (fmap Terrain $ placement_replacements terrain_placement)
                          (placement_seed terrain_placement)
                          (placement_blob terrain_placement)
 
@@ -125,7 +126,7 @@ difficult_terrains = impassable_terrains ++ [Water,Lava]
 -- A list of TerrainPatches that are considered "impassable" for traveling.
 --
 impassable_terrains :: [Terrain]
-impassable_terrains = [RockFace,Forest]
+impassable_terrains = [RockFace,Forest,ForceField]
 
 terrainInterpFn :: (Biome,Biome) -> WeightedSet Terrain
 terrainInterpFn biomes = case biomes of
@@ -144,7 +145,7 @@ terrainInterpMap :: Map (MetaTerrain,MetaTerrain) (WeightedSet MetaTerrain)
 terrainInterpMap =
     let biome_patch_pairs :: [(Biome,Biome)]
         biome_patch_pairs = [(a,b) | a <- [minBound..maxBound], b <- [minBound..maxBound]]
-        interps = List.map (Random.map Terrain . terrainInterpFn) biome_patch_pairs
+        interps = List.map (fmap Terrain . terrainInterpFn) biome_patch_pairs
             in fromList (zip (List.map (first Biome . second Biome) biome_patch_pairs) interps)
 
 type TerrainGrid = Grid MetaTerrain
@@ -159,5 +160,5 @@ generateTerrain :: TerrainGenerationData -> [Integer] -> TerrainGrid
 generateTerrain tg rands = flip (List.foldr placeTerrain) (tg_placements tg) $
     interpolateGrid Nothing (head rands) $
     interpolateGrid (Just terrainInterpMap) (head $ drop 1 rands) $
-    generateGrid (Random.map Biome $ tg_biome tg) Nothing (tg_smootheness tg) (drop 2 rands)
+    generateGrid (fmap Biome $ tg_biome tg) Nothing (tg_smootheness tg) (drop 2 rands)
 

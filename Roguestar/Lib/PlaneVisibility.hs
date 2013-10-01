@@ -23,7 +23,6 @@ import Data.Ratio
 import Roguestar.Lib.Core.Building
 import Roguestar.Lib.Position as Position
 import Control.Applicative
-import Roguestar.Lib.Reference
 import Roguestar.Lib.Utility.DetailedLocation
 
 dbGetSeersForFaction :: (DBReadable db) => Faction -> PlaneRef -> db [MonsterRef]

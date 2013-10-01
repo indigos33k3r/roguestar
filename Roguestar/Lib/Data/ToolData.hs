@@ -19,7 +19,7 @@ module Roguestar.Lib.Data.ToolData
      kinetic_sabre)
     where
 
-import Roguestar.Lib.Substances
+import Roguestar.Lib.Data.Substances
 import qualified Data.Text as T
 
 data Tool = DeviceTool DeviceFunction Device

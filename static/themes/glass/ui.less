@@ -1,5 +1,6 @@
 
 @red: #933;
+@darkred: #311;
 @green: #393;
 @darkgreen: #131;
 @blue: #339;
@@ -90,6 +91,13 @@
     &:hover:active {
         border-style: inset;
     }
+
+    &:disabled {
+        border-style: solid;
+        &:hover:active {
+          border-style: solid;
+        }
+    }
 }
 
 .tabbed-border {
@@ -114,6 +122,16 @@
 
     &a {
         color: @white;
+    }
+
+    &:disabled {
+      background-color: @black;
+      border-color: @darkred;
+
+      &:hover {
+        background-color: @darkred;
+        border-color: @darkred;
+      }
     }
 }
 

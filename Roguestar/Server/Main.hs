@@ -30,7 +30,7 @@ import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests
 import Roguestar.Lib.HTML.Mustache
-import Roguestar.Lib.Behavior as Behavior
+import Roguestar.Lib.Data.BehaviorData
 import qualified System.UUID.V4 as V4
 import GHC.Stats
 import Data.Aeson as Aeson
@@ -272,6 +272,8 @@ moveBehavior =
                       "fire" -> return Fire
                       "jump" -> return Jump
                       "turn" -> return TurnInPlace
+                      "holographic-trail" -> return HolographicTrailStep
+                      "temporal-web" -> return TemporalWebStep
                       other  -> fail $ "moveBehavior: Didn't recognize: " ++ T.unpack (decodeUtf8 other)
                   return $ FacingBehavior action facing
 
@@ -423,8 +425,12 @@ getValidControls :: Handler App App Aeson.Value
 getValidControls =
     do g <- getGame
        can_teleport <- oops $ liftIO $ perceiveSnapshot g $ Roguestar.Lib.Perception.isBehaviorAvailable (FacingBehavior Jump Here)
+       can_holographic_trail <- oops $ liftIO $ perceiveSnapshot g $ Roguestar.Lib.Perception.isBehaviorAvailable (FacingBehavior HolographicTrailStep Here)
+       can_temporal_web <- oops $ liftIO $ perceiveSnapshot g $ Roguestar.Lib.Perception.isBehaviorAvailable (FacingBehavior TemporalWebStep Here)
        return $ object [
-           "teleport" .= can_teleport ]
+           "teleport" .= can_teleport,
+           "holographic-trail" .= can_holographic_trail,
+           "temporal-web" .= can_temporal_web ]
 
 data Style = Empty | Strong | Rocky | Icy | Plants | Dusty | Sandy | Wet | Molten | Gloomy | Magic | StrongMagic | StrongDusty | WarpIn | Damage | Active | BlueIFF | RedIFF
 
@@ -491,6 +497,7 @@ instance Charcoded Species where
 
 instance Charcoded Terrain where
     codedRepresentation _ RockFace          = ('#',Rocky)
+    codedRepresentation _ ForceField        = ('#',Magic)
     codedRepresentation _ RockyGround       = ('.',Rocky)
     codedRepresentation _ Dirt              = ('.',Dusty)
     codedRepresentation _ Grass             = ('.',Plants)

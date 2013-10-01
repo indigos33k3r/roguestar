@@ -10,16 +10,17 @@ import Data.Vector as V
 import Data.Text.Encoding as Encoding
 import Data.Text.Lazy.Encoding as LazyEncoding
 import Control.Monad
+import Control.Monad.IO.Class
 
-roguestar_muconfig :: MuConfig
-roguestar_muconfig = MuConfig {
+roguestar_muconfig :: (MonadIO m) => MuConfig m
+roguestar_muconfig = defaultConfig {
     muEscapeFunc = htmlEscape,
     muTemplateFileDir = Just "static/templates/",
     muTemplateFileExt = Just ".mustache" }
 
 mkAesonContext :: (Monad m) => Aeson.Value -> MuContext m
-mkAesonContext (Object obj) key = maybe MuNothing aesonToMu $ Map.lookup (Encoding.decodeUtf8 key) obj
-mkAesonContext x            _   = aesonToMu x
+mkAesonContext (Object obj) key = return $ maybe MuNothing aesonToMu $ Map.lookup (Encoding.decodeUtf8 key) obj
+mkAesonContext x            _   = return $ aesonToMu x
 
 aesonToMu :: (Monad m) => Aeson.Value -> MuType m
 aesonToMu obj@(Object {}) = MuList [mkAesonContext obj]

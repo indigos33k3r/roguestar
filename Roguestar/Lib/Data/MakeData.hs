@@ -16,7 +16,7 @@ module Roguestar.Lib.Data.MakeData
 
 import Roguestar.Lib.Data.LocationData
 import Roguestar.Lib.Data.ToolData
-import Roguestar.Lib.Substances
+import Roguestar.Lib.Data.Substances
 
 -- | Multi-step process for gathering the materials to make something.
 data PrepareMake = PrepareMake {

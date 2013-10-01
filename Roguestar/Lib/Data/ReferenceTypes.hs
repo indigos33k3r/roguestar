@@ -1,7 +1,12 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Roguestar.Lib.Data.ReferenceTypes
     (Reference(..),
      unsafeReference,
      toUID,
+     ReferenceType(..),
+     (=:=),
+     (=/=),
      Location(..),
      Position(..),
      Standing(..),
@@ -31,9 +36,6 @@ import Roguestar.Lib.Position
 -- For References and Locations we make considerable use of phantom types
 -- to guarantee that such data structures are always consistent with the game logic,
 -- e.g. a planet can not be wielded as a weapon.
---
--- DB and DBData import and re-export most of DBPrivate, but the un-exported portions
--- of this module are unsafe.  Other modules should not import DBPrivate.
 --
 
 -- |
@@ -66,6 +68,53 @@ unsafeReference UniverseRef = UniverseRef
 toUID :: Reference a -> Integer
 toUID (UniverseRef) = 0
 toUID a = uid a
+
+--
+-- Reference Equality
+--
+(=:=) :: Reference a -> Reference b -> Bool
+a =:= b = toUID a == toUID b
+
+(=/=) :: Reference a -> Reference b -> Bool
+a =/= b = not $ a =:= b
+
+class ReferenceType a where
+    coerceReference :: Reference x -> Maybe (Reference a)
+
+instance ReferenceType () where
+    coerceReference = Just . unsafeReference
+
+instance ReferenceType Plane where
+    coerceReference (PlaneRef ref) = Just $ PlaneRef ref
+    coerceReference _ = Nothing
+
+instance ReferenceType Tool where
+    coerceReference (ToolRef ref) = Just $ ToolRef ref
+    coerceReference _ = Nothing
+
+instance ReferenceType Monster where
+    coerceReference (MonsterRef ref) = Just $ MonsterRef ref
+    coerceReference _ = Nothing
+
+instance ReferenceType Building where
+    coerceReference (BuildingRef ref) = Just $ BuildingRef ref
+    coerceReference _ = Nothing
+
+instance ReferenceType TheUniverse where
+    coerceReference UniverseRef = Just UniverseRef
+    coerceReference _ = Nothing
+
+instance (ReferenceType a, ReferenceType b) => ReferenceType (Either a b) where
+    coerceReference x =
+        let coerce_left :: Maybe (Reference a)
+            coerce_left = coerceReference x
+            coerce_right :: Maybe (Reference b)
+            coerce_right = coerceReference x
+            result = case (coerce_left,coerce_right) of
+                (Just l,_) -> Just $ unsafeReference l
+                (_,Just r) -> Just $ unsafeReference r
+                _ -> Nothing
+            in result
 
 -- |
 -- The location of a Monster standing on a Plane.

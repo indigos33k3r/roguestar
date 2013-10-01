@@ -89,7 +89,7 @@ data MonsterSpecial =
      Hover
    | Teleportation
    | TemporalWeb
-   | ComplexificationMesh
+   | HolographicTrail
          deriving (Eq,Read,Show,Ord)
 
 instance MonsterEndo MonsterSpecial where

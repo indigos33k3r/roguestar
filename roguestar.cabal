@@ -1,6 +1,6 @@
 name:          roguestar
-version:       0.10.1.0
-cabal-version: >=1.2
+version:       0.11.0.0
+cabal-version: >= 1.2
 build-type:    Simple
 license:       OtherLicense
 license-file:  LICENSE
@@ -10,22 +10,24 @@ synopsis:      Sci-fi roguelike game.
 description:   A sci-fi roguelike game.
 category:      Game
 author:        Christopher Lane Hinson
-tested-with:   GHC ==7.4.1
+tested-with:   GHC ==7.6.3
 
 executable roguestar-server
   Main-is:        Roguestar/Server/Main.hs
   hs-source-dirs: .
   build-depends:  aeson >= 0.6.0.2,
-                  snap >=0.8,
-                  snap-core >=0.8,
-                  snap-server >= 0.8,
+                  snap >= 0.8,
+                  snap-core,
+                  snap-server,
                   text >=0.11,
                   MonadCatchIO-transformers >= 0.2,
                   data-lens-template,
                   containers >=0.3.0.0,
                   base >=4.4,
                   system-uuid >= 1.2.7,
-                  binary >= 0.5.1
+                  binary >= 0.5.1,
+                  transformers >= 0.3.0.0,
+                  cipher-aes == 0.1.8
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
@@ -58,7 +60,6 @@ library
                   streams >= 0.8.2
   other-modules:  Roguestar.Lib.Perception,
                   Roguestar.Lib.PlaneVisibility,
-                  Roguestar.Lib.Turns,
                   Roguestar.Lib.Core.Building,
                   Roguestar.Lib.Core.Monster,
                   Roguestar.Lib.Core.Plane,
@@ -68,24 +69,23 @@ library
                   Roguestar.Lib.Utility.RayCasting,
                   Roguestar.Lib.Utility.SiteCriteria,
                   Roguestar.Lib.Tool,
-                  Roguestar.Lib.Substances,
-                  Roguestar.Lib.Behavior.Travel,
                   Roguestar.Lib.RNG,
-                  Roguestar.Lib.Species,
                   Roguestar.Lib.Position,
-                  Roguestar.Lib.Behavior.Combat,
                   Roguestar.Lib.Tests,
                   Roguestar.Lib.World.BeginGame,
-                  Roguestar.Lib.TimeCoordinate,
+                  Roguestar.Lib.World.Planet,
+                  Roguestar.Lib.Time,
                   Roguestar.Lib.DB,
                   Roguestar.Lib.Town,
                   Roguestar.Lib.Random,
                   Roguestar.Lib.Behavior,
                   Roguestar.Lib.Behavior.Activate,
                   Roguestar.Lib.Behavior.CharacterAdvancement,
+                  Roguestar.Lib.Behavior.Combat,
                   Roguestar.Lib.Behavior.Construction,
                   Roguestar.Lib.Behavior.Make,
-                  Roguestar.Lib.Planet,
+                  Roguestar.Lib.Behavior.Travel,
+                  Roguestar.Lib.Behavior.Turns,
                   Roguestar.Lib.Logging,
                   Roguestar.Lib.Data.BuildingData,
                   Roguestar.Lib.Data.CharacterData,
@@ -101,6 +101,8 @@ library
                   Roguestar.Lib.Data.PowerUpData,
                   Roguestar.Lib.Data.ReferenceTypes,
                   Roguestar.Lib.Data.SpeciesData,
+                  Roguestar.Lib.Data.SpeciesTraits,
+                  Roguestar.Lib.Data.Substances,
                   Roguestar.Lib.Data.TerrainData,
                   Roguestar.Lib.Data.ToolData,
                   Roguestar.Lib.Data.TravelData,

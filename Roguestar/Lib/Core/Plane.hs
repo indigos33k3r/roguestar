@@ -19,7 +19,6 @@ module Roguestar.Lib.Core.Plane
 
 import Prelude hiding (getContents)
 import Roguestar.Lib.Utility.Grids
-import Roguestar.Lib.Reference
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.PlaneData

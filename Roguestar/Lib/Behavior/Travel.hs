@@ -8,16 +8,19 @@ module Roguestar.Lib.Behavior.Travel
      executeClimb,
      TeleportJumpOutcome,
      resolveTeleportJump,
-     executeTeleportJump)
+     executeTeleportJump,
+     resolveStepWithHolographicTrail,
+     resolveStepWithTemporalWeb)
     where
 
 import Control.Monad.Maybe
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.DB as DB
-import Roguestar.Lib.Core.Plane
+import Roguestar.Lib.Core.Plane as Plane
 import Data.Maybe
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Error
 import Data.Ord
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Data.TerrainData
@@ -28,33 +31,58 @@ import Roguestar.Lib.Logging
 import Roguestar.Lib.Data.TravelData
 import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.Utility.DetailedTravel as DetailedTravel
+import Roguestar.Lib.Behavior.Outcome
+import Roguestar.Lib.Time
+import Roguestar.Lib.PlaneVisibility
+
+data MoveOutcome =
+    MoveGood { _move_monster :: MonsterRef, move_from :: Standing, _move_to :: Standing }
+  | MoveFailedBecauseTerrainImpassable { move_from :: Standing }
 
 walkMonster :: (DBReadable db) => Facing ->
                                    (Integer,Integer) ->
                                    MonsterRef ->
-                                   db Standing
-walkMonster face (x',y') creature_ref =
-    do l <- DetailedTravel.whereIs creature_ref
+                                   db MoveOutcome
+walkMonster face (x',y') monster_ref =
+    do l <- DetailedTravel.whereIs monster_ref
        let (Parent plane_ref) = detail l
            Position (x,y) = detail l
            standing = Standing { standing_plane = plane_ref,
                                  standing_position = Position (x+x',y+y'),
                                  standing_facing = face }
        is_passable <- isTerrainPassable plane_ref
-                                        creature_ref
+                                        monster_ref
                                         (standing_position standing)
        case () of
            () | not is_passable ->
                do logDB gameplay_log INFO $ "Terrain not passable."
-                  return $ detail l
+                  return $ MoveFailedBecauseTerrainImpassable (detail l)
            () | otherwise ->
-               return $ standing
+               return $ MoveGood monster_ref (detail l) standing
 
-stepMonster :: (DBReadable db) => Facing -> MonsterRef -> db Standing
+stepMonster :: (DBReadable db) => Facing -> MonsterRef -> db MoveOutcome
 stepMonster face = walkMonster face (facingToRelative face)
 
-turnMonster :: (DBReadable db) => Facing -> MonsterRef -> db Standing
+turnMonster :: (DBReadable db) => Facing -> MonsterRef -> db MoveOutcome
 turnMonster face = walkMonster face (0,0)
+
+executeMoveMonster :: MoveOutcome -> DB ()
+executeMoveMonster (MoveGood monster_ref _ to) =
+    do _ <- move monster_ref to
+       return ()
+executeMoveMonster (MoveFailedBecauseTerrainImpassable {}) =
+       return ()
+
+instance Effect MoveOutcome where
+    applyEffect = executeMoveMonster
+
+instance Outcome MoveOutcome where
+    failureMode (MoveFailedBecauseTerrainImpassable {}) = Abort
+    failureMode _ = Success
+
+instance HasDuration MoveOutcome where
+    getDuration (MoveFailedBecauseTerrainImpassable {}) = return 0.0
+    getDuration (MoveGood monster_ref from to) = moveActionTime 1.0 (standing_position from, standing_position to) monster_ref
 
 --------------------------------------------------------------------------------
 --      Travel between planes.
@@ -106,7 +134,8 @@ executeClimb (ClimbGood direction creature_ref standing_location) =
 --------------------------------------------------------------------------------
 
 -- |
--- Try to teleport the creature to the specified Position.  The teleport attempt can be automatically retried a number of times, and the most accurate attempt will be used.
+-- Find a random teleport landing position.
+-- The teleport attempt can be automatically retried a number of times, and the most accurate attempt will be used.
 -- If the retries are negative, the teleport will be made artificially innacurate.
 --
 randomTeleportLanding :: (DBReadable db) => Integer -> PlaneRef -> Position -> Position -> db Position
@@ -143,4 +172,71 @@ executeTeleportJump (TeleportJumpGood creature_ref standing_location) =
     do _ <- move creature_ref standing_location
        dbPushSnapshot $ TeleportEvent creature_ref
        return ()
+
+--------------------------------------------------------------------------------
+--      Setting Terrain
+--------------------------------------------------------------------------------
+
+data SetTerrainEffect = SetTerrainEffect {
+    set_terrain_position :: Position,
+    set_terrain_plane :: PlaneRef,
+    set_terrain_type :: Terrain }
+
+executeSetTerrain :: SetTerrainEffect -> DB ()
+executeSetTerrain outcome = setTerrainAt (set_terrain_plane outcome)
+                                         (set_terrain_position outcome)
+                                         (set_terrain_type outcome)
+
+instance Effect SetTerrainEffect where
+    applyEffect o = executeSetTerrain o
+
+--------------------------------------------------------------------------------
+--      Slowing Monsters
+--------------------------------------------------------------------------------
+
+data SlowMonsterEffect = SlowMonsterEffect {
+    slow_monster_ref :: MonsterRef,
+    slow_monster_amount :: Rational }
+
+executeSlowMonster :: SlowMonsterEffect -> DB ()
+executeSlowMonster outcome = increaseTime (slow_monster_ref outcome) (slow_monster_amount outcome)
+
+instance Effect SlowMonsterEffect where
+    applyEffect = executeSlowMonster
+
+--------------------------------------------------------------------------------
+--      HolographicTrail
+--------------------------------------------------------------------------------
+
+resolveStepWithHolographicTrail :: (DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome, Maybe SetTerrainEffect))
+resolveStepWithHolographicTrail facing monster_ref =
+    do when (not $ facing `elem` [North,South,East,West]) $
+           throwError $ DBError "resolveStepWithHolographicTrail: only allowed in the four NSEW directions"
+       move_outcome <- stepMonster facing monster_ref
+       let (plane_ref :: PlaneRef, position :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)
+       old_terrain_type <- terrainAt plane_ref position
+       return $ OutcomeWithEffect
+            move_outcome
+            (move_outcome,
+             if old_terrain_type `elem` difficult_terrains then Nothing else Just $ SetTerrainEffect position plane_ref ForceField)
+            (getDuration move_outcome)
+
+--------------------------------------------------------------------------------
+--      TemporalWeb
+--------------------------------------------------------------------------------
+
+resolveStepWithTemporalWeb :: (DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome,[SlowMonsterEffect]))
+resolveStepWithTemporalWeb facing monster_ref =
+    do move_outcome <- stepMonster facing monster_ref
+       let (plane_ref :: PlaneRef, position :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)
+       t <- getDuration move_outcome
+       faction <- getMonsterFaction monster_ref
+       (vobs :: [MonsterRef]) <- liftM (mapMaybe coerceReference) $ dbGetVisibleObjectsForFaction (const $ return True) faction plane_ref
+       slows <- forM vobs $ \vob ->
+           do (p :: Position) <- liftM detail $ getPlanarLocation monster_ref
+              return $ SlowMonsterEffect vob (t / fromInteger (Position.distanceBetweenSquared p position))
+       return $ OutcomeWithEffect
+           move_outcome
+           (move_outcome, slows)
+           (getDuration move_outcome)
 

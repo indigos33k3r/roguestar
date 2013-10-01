@@ -8,17 +8,25 @@ $('document').ready(function() {
   //Let the server know we have javascript
   $.cookie('javascript', 'enabled', { expires: 1, path: '/play' });
 
+  //There's some reason for this, but I don't remember what.
   $("img").mousedown(function(){
     return false;
   });
 
+  //When the user selects an action type, disable all but the four cardinal directions on the direction pad.
+  $("input[name=mode]").change( function() {
+    $(".diagonal-direction-button").prop("disabled", $(".four-directions:checked").size() > 0 );
+  });;
+
   //Form buttons that need to be automatically submitted, possibly after a pause while we do an animation.
   $('.autosubmit').hide();
   $('.autosubmit-after-pause').hide();
+
+  //Set up user interface elements.
   $('.roguestar-accordion').accordion( { heightStyle: "content", collapsible:true } );
   $('.roguestar-tabs').tabs();
   $("label, button, input, a").tooltip( {
-    position: { my: "center top+2", at: "center bottom", collision: "flipfit" },
+    position: { my: "right center", at: "left-2 center", collision: "flipfit" },
       hide: 0.25,
       tooltipClass: "tooltip-box"
     });

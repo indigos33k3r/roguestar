@@ -30,13 +30,20 @@
 {{#teleport}}
 <input type="radio" name="mode" id="modeJump" value="jump"/><label for="modeJump" title="Use the direction pad to instantly move 5-7 squares. Exact point of landing is very random. Small chance of failure, leaving you vulnerable.">Teleport</label>
 {{/teleport}}
+{{#holographic-trail}}
+<input type="radio" name="mode" id="modeHolographicTrail" class="four-directions" value="holographic-trail"/><label for="modeHolographicTrail" title="Use the direction pad to move one square at a time. You will leave a persistant holographic barrier that blocks persuing adversaries.">Holographic Trail</label>
+{{/holographic-trail}}
+{{#temporal-web}}
+<input type="radio" name="mode" id="modeTemporalWeb" value="temporal-web"/><label for="modeTemporalWeb" title="Use the direction pad to move one square at a time. While in motion, you distort space-time to slow nearby adversaries. You cannot attack in this mode, only move.">Temporal Web</label>
+{{/temporal-web}}
+
 </div>
 
 <div id="directional-controls">
 <div class="buttonrow">
-<button type="submit" name="direction" value="nw" class="up-left"><img src="/static/themes/glass/button-up-left.svg"/></button>
+<button type="submit" name="direction" class="diagonal-direction-button" value="nw" class="up-left"><img src="/static/themes/glass/button-up-left.svg"/></button>
 <button type="submit" name="direction" value="n" class="up"><img src="/static/themes/glass/button-up.svg"/></button>
-<button type="submit" name="direction" value="ne" class="up-right"><img src="/static/themes/glass/button-up-right.svg"/></button>
+<button type="submit" name="direction" class="diagonal-direction-button" value="ne" class="up-right"><img src="/static/themes/glass/button-up-right.svg"/></button>
 
 </div>
 
@@ -48,9 +55,9 @@
 </div>
 
 <div class="buttonrow">
-<button type="submit" name="direction" value="sw" class="down-left"><img src="/static/themes/glass/button-down-left.svg"/></button>
+<button type="submit" name="direction" class="diagonal-direction-button" value="sw" class="down-left"><img src="/static/themes/glass/button-down-left.svg"/></button>
 <button type="submit" name="direction" value="s" class="down"><img src="/static/themes/glass/button-down.svg"/></button>
-<button type="submit" name="direction" value="se" class="down-right"><img src="/static/themes/glass/button-down-right.svg"/></button>
+<button type="submit" name="direction" class="diagonal-direction-button" value="se" class="down-right"><img src="/static/themes/glass/button-down-right.svg"/></button>
 
 </div>
 </div>

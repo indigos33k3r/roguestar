@@ -32,4 +32,5 @@ modifyFacingTerrain f face creature_ref = liftM (fromMaybe False) $ runMaybeT $
 clearTerrain :: Terrain -> Terrain
 clearTerrain RockFace = RockyGround
 clearTerrain Forest = Grass
+clearTerrain ForceField = RockyGround
 clearTerrain x = x

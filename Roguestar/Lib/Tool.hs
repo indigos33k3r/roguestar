@@ -13,13 +13,12 @@ module Roguestar.Lib.Tool
 
 import Prelude hiding (getContents)
 import Roguestar.Lib.DB
-import Roguestar.Lib.Reference
 import Roguestar.Lib.Utility.DetailedLocation
 import Control.Monad.Error
 import Data.Maybe
 import Data.List as List
 import Roguestar.Lib.Data.ToolData
-import Roguestar.Lib.Substances
+import Roguestar.Lib.Data.Substances
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Data.PlaneData
 

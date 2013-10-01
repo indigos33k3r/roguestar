@@ -41,8 +41,10 @@ module Roguestar.Lib.DB
      ro, atomic,
      logDB,
      mapRO, filterRO, sortByRO,
-     dbGetTimeCoordinate,
-     dbAdvanceTime,
+     getTime,
+     setTime,
+     adjustTime,
+     increaseTime,
      dbNextTurn,
      dbPushSnapshot,
      peepOldestSnapshot,
@@ -56,7 +58,6 @@ module Roguestar.Lib.DB
 import Prelude hiding (getContents)
 import Roguestar.Lib.Data.ReferenceTypes
 import Roguestar.Lib.Data.LocationData
-import Roguestar.Lib.Reference
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Data.BuildingData
@@ -70,7 +71,6 @@ import Control.Monad.State
 import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Applicative
-import Roguestar.Lib.TimeCoordinate
 import Data.Ord
 import Control.Monad.Random as Random
 import Roguestar.Lib.Random
@@ -98,7 +98,7 @@ data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_tools :: Map ToolRef Tool,
                                  db_buildings :: Map BuildingRef Building,
                                  db_hierarchy :: HD.HierarchicalDatabase Location,
-                                 db_time_coordinates :: Map (Reference ()) TimeCoordinate,
+                                 db_time_coordinates :: Map (Reference ()) Rational,
                                  db_error_flag :: String,
                                  db_prior_snapshot :: Maybe DB_BaseType,
                                  db_action_count :: Integer }
@@ -217,6 +217,9 @@ sortByRO f xs =
             return (x,y)) xs
 
 -- | Run action synthesized from a read-only action (prepare-execute pattern).
+-- I don't remember why I wrote this function, and suspect that it is not needed.
+-- It might have had something to do with reverting the state of the database if
+-- an error were thrown.
 atomic :: (x -> DB ()) -> (forall m. DBReadable m => m x) -> DB x
 atomic action ro_action =
     do x <- ro ro_action
@@ -241,7 +244,7 @@ initial_db = DB_BaseType {
     db_buildings = Map.fromList [],
     db_hierarchy = HD.fromList [],
     db_error_flag = [],
-    db_time_coordinates = Map.fromList [(genericReference the_universe, zero_time)],
+    db_time_coordinates = Map.fromList [(genericReference the_universe, 0)],
     db_prior_snapshot = Nothing,
     db_action_count = 0 }
 
@@ -280,7 +283,7 @@ dbAddObjectComposable constructReferenceAction updateObjectAction constructLocat
        updateObjectAction ref thing
        setLocation $ constructLocationAction ref loc
        genericParent_ref <- liftM parentReference $ whereIs ref
-       dbSetTimeCoordinate (genericReference ref) =<< dbGetTimeCoordinate (genericReference genericParent_ref)
+       setTime (genericReference ref) =<< getTime (genericReference genericParent_ref)
        return ref
 
 -- |
@@ -456,7 +459,7 @@ dbUnwieldMonster c = mapM_ (maybe (return ()) setLocation . returnToInventory) =
 -- Moves an object, returning the location of the object before and after
 -- the move.
 --
-move :: (LocationConstructor l, ReferenceTypeOf l ~ e) => Reference e -> l -> DB (Location,Location)
+move :: (LocationConstructor l, ReferenceTypeOf l ~ e, ReferenceType e) => Reference e -> l -> DB (Location,Location)
 move ref location_data =
     do old <- whereIs ref
        let new = constructLocation ref location_data (Just old)
@@ -464,7 +467,7 @@ move ref location_data =
        when (childReference old /= childReference new) $
            throwError $ DBError "moveTo: Object changed identity during move!"
        when (parentReference old == parentReference new) $
-           dbSetTimeCoordinate ref =<< dbGetTimeCoordinate (parentReference new)
+           setTime ref =<< getTime (parentReference new)
        return (old,new)
 
 moveAllWithin :: (LocationConstructor l, ReferenceTypeOf l ~ ()) =>
@@ -504,21 +507,29 @@ getContents item = asks (HD.lookupChildren (toUID item) . db_hierarchy)
 -- |
 -- Gets the time of an object.
 --
-dbGetTimeCoordinate :: (DBReadable db,ReferenceType a) => Reference a -> db TimeCoordinate
-dbGetTimeCoordinate ref = asks (fromMaybe (error "dbGetTimeCoordinate: missing time coordinate.") . 
-                                  Map.lookup (genericReference ref) . db_time_coordinates)
+-- The "time" of an object is when its next turn is scheduled.
+--
+getTime :: (DBReadable db,ReferenceType a) => Reference a -> db Rational
+getTime ref = asks (fromMaybe (error "dbGetTimeCoordinate: missing time coordinate.") .
+    Map.lookup (genericReference ref) . db_time_coordinates)
 
 -- |
 -- Sets the time of an object.
 --
-dbSetTimeCoordinate :: Reference a -> TimeCoordinate -> DB ()
-dbSetTimeCoordinate ref tc = modify (\db -> db { db_time_coordinates = Map.insert (genericReference ref) tc $ db_time_coordinates db })
+setTime :: (ReferenceType a) => Reference a -> Rational -> DB ()
+setTime ref tc = modify (\db -> db { db_time_coordinates = Map.insert (genericReference ref) tc $ db_time_coordinates db })
 
 -- |
--- Advances the time of an object.
+-- Adjust the time of an object by an arbitrary rule.
 --
-dbAdvanceTime :: (ReferenceType a) => Reference a -> Rational -> DB ()
-dbAdvanceTime ref t = dbSetTimeCoordinate ref =<< (return . (advanceTime t)) =<< dbGetTimeCoordinate ref
+adjustTime :: (ReferenceType a) => Reference a -> (Rational -> Rational) -> DB ()
+adjustTime ref f = setTime ref . f =<< getTime ref
+
+-- |
+-- Add to the time of an object.
+--
+increaseTime :: (ReferenceType a) => Reference a -> Rational -> DB ()
+increaseTime ref x = adjustTime ref (+ x)
 
 -- |
 -- Finds the object whose turn is next, among a restricted group of objects.

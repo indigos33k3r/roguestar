@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 --Data
-module Roguestar.Lib.Substances
+module Roguestar.Lib.Data.Substances
     (Gas(..),
      Material(..),
      Chromalite(..),

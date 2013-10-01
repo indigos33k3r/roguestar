@@ -45,8 +45,9 @@ import Roguestar.Lib.World.BeginGame as BeginGame
 import Roguestar.Lib.Perception
 import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.FacingData
+import Roguestar.Lib.Data.BehaviorData
 import Roguestar.Lib.Behavior as Behavior
-import Roguestar.Lib.Turns
+import Roguestar.Lib.Behavior.Turns
 import Roguestar.Lib.Core.Plane
 import Data.Text as T
 import System.Time

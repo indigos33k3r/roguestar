@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 --World
-module Roguestar.Lib.Planet
+module Roguestar.Lib.World.Planet
     (makePlanets,
      generatePlanetInfo)
     where

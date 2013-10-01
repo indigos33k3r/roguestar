@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, ScopedTypeVariables #-}
 --Mechanics
-module Roguestar.Lib.Turns
+module Roguestar.Lib.Behavior.Turns
     (performPlayerTurn)
     where
 
@@ -8,7 +8,6 @@ import Prelude hiding (getContents)
 import Control.Monad.Maybe
 import Control.Monad.Trans
 import Roguestar.Lib.DB
-import Roguestar.Lib.Reference
 import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.MonsterData (Monster)
@@ -19,6 +18,7 @@ import Data.Ratio
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Data.TerrainData
 import Data.Maybe
+import Roguestar.Lib.Data.BehaviorData
 import Roguestar.Lib.Behavior
 import qualified Roguestar.Lib.Perception as P
 import Roguestar.Lib.Position
@@ -83,7 +83,7 @@ dbPerform1PlanarAITurn plane_ref =
            do (terrain_type,species) <- weightedPickM $ unweightedSet monster_spawns
               _ <- spawnNPC terrain_type species plane_ref $ List.map detail $ player_locations
               return ()
-       dbAdvanceTime plane_ref planar_turn_interval
+       increaseTime plane_ref planar_turn_interval
 
 -- |
 -- Spawn a non-player creature on the specified terrain type (or fail if not finding that terrain type)
