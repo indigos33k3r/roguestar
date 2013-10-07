@@ -91,17 +91,17 @@ dbBehave_ (FacingBehavior HolographicTrailStep face) creature_ref =
        increaseTime creature_ref =<< getDuration holo_outcome
 
 dbBehave_ StepDown creature_ref =
-    do _ <- atomic executeClimb $ resolveClimb creature_ref ClimbDown
+    do _ <- executeClimb =<< resolveClimb creature_ref ClimbDown
        -- FIXME: should be conditional
        increaseTime creature_ref =<< actionTime creature_ref
 
 dbBehave_ StepUp creature_ref =
-    do _ <- atomic executeClimb $ resolveClimb creature_ref ClimbUp
+    do _ <- executeClimb =<< resolveClimb creature_ref ClimbUp
        -- FIXME: should be conditional
        increaseTime creature_ref =<< actionTime creature_ref
 
 dbBehave_ (FacingBehavior Jump face) creature_ref =
-    do _ <- atomic executeTeleportJump $ resolveTeleportJump creature_ref face
+    do _ <- executeTeleportJump =<< resolveTeleportJump creature_ref face
        increaseTime creature_ref =<< actionTime creature_ref -- FIXME: this should use moveActionTime
 
 dbBehave_ (FacingBehavior TurnInPlace face) monster_ref =
@@ -139,7 +139,7 @@ dbBehave_ (FacingBehavior Fire face) creature_ref =
     do turn_outcome <- turnMonster face creature_ref
        applyEffect turn_outcome
        ranged_attack_model <- rangedAttackModel creature_ref
-       _ <- atomic executeAttackChain $ resolveAttackChain ranged_attack_model (Left face)
+       _ <- executeAttackChain =<< resolveAttackChain ranged_attack_model (Left face)
        increaseTime creature_ref =<< actionTime creature_ref
        return ()
 
@@ -147,7 +147,7 @@ dbBehave_ (FacingBehavior Attack face) creature_ref =
     do turn_outcome <- turnMonster face creature_ref
        applyEffect turn_outcome
        melee_attack_model <- meleeAttackModel creature_ref
-       _ <- atomic executeAttackChain $ resolveAttackChain melee_attack_model (Left face)
+       _ <- executeAttackChain =<< resolveAttackChain melee_attack_model (Left face)
        increaseTime creature_ref =<< actionTime creature_ref
        return ()
 
@@ -164,7 +164,7 @@ dbBehave_ Vanish creature_ref =
        return ()
 
 dbBehave_ Activate creature_ref =
-    do _ <- atomic executeActivation $ resolveActivation creature_ref
+    do _ <- executeActivation =<< resolveActivation creature_ref
        increaseTime creature_ref =<< actionTime creature_ref
        return ()
 

@@ -13,6 +13,7 @@ import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Data.PlaneData
 import Control.Monad
+import Control.Monad.Random
 import Roguestar.Lib.Data.MonsterData
 import Data.List as List
 import Roguestar.Lib.Utility.Grids
@@ -52,10 +53,10 @@ dbGetVisibleTerrainForMonster creature_ref =
 -- to the specified faction on the specified plane.  Accepts a filter to
 -- determine what kinds of objects will be tested.
 --
-dbGetVisibleObjectsForFaction :: (DBReadable db) => (forall m. DBReadable m => Reference () -> m Bool) -> Faction -> PlaneRef -> db [Reference ()]
+dbGetVisibleObjectsForFaction :: (MonadRandom db, DBReadable db) => (forall m. (MonadRandom m, DBReadable m) => Reference () -> m Bool) -> Faction -> PlaneRef -> db [Reference ()]
 dbGetVisibleObjectsForFaction filterF faction plane_ref =
     do critters <- dbGetSeersForFaction faction plane_ref
-       liftM (nubBy (=:=) . concat) $ mapRO (dbGetVisibleObjectsForMonster filterF) critters
+       liftM (nubBy (=:=) . concat) $ mapM (dbGetVisibleObjectsForMonster (\x -> ro $ filterF x)) critters
 
 -- |
 -- Returns a list of all objects that are visible to the specified creature.

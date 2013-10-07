@@ -70,7 +70,7 @@ instance (DBReadable db,MonadRandom db) => MonadRandom (DBPerception db) where
 -- 'liftDB' takes an action in DBReadable and lifts it to DBPerception.  Obviously not exported,
 -- or DBPerception wouldn't be limited.
 --
-liftDB :: (DBReadable db) => (forall m. DBReadable m => m a) -> DBPerception db a
+liftDB :: (MonadRandom db, DBReadable db) => (forall m. (MonadRandom m, DBReadable m) => m a) -> DBPerception db a
 liftDB actionM = DBPerception $ lift actionM
 
 -- |
@@ -83,10 +83,10 @@ whoAmI = DBPerception $ ask
 -- |
 -- Run a DBPerception from the point-of-view of the given creature.
 --
-runPerception :: (DBReadable db) => MonsterRef -> (forall m. DBReadable m => DBPerception m a) -> db a
+runPerception :: (MonadRandom db, DBReadable db) => MonsterRef -> (forall m. DBReadable m => DBPerception m a) -> db a
 runPerception creature_ref perception = dbSimulate $ runReaderT (fromPerception perception) creature_ref
 
-visibleTerrain :: (DBReadable db) => DBPerception db [(Position,Terrain)]
+visibleTerrain :: (MonadRandom db, DBReadable db) => DBPerception db [(Position,Terrain)]
 visibleTerrain =
     do plane_ref <- whatPlaneAmIOn
        faction <- myFaction
@@ -177,8 +177,8 @@ visibleObjectSize :: VisibleObject -> Integer
 visibleObjectSize (VisibleTool {} ) = 0
 visibleObjectSize _ = 1000000
 
-visibleObjects :: (DBReadable db) =>
-                  (forall m. DBReadable m => Reference () -> DBPerception m Bool) ->
+visibleObjects :: (MonadRandom db, DBReadable db) =>
+                  (forall m. (MonadRandom m, DBReadable m) => Reference () -> DBPerception m Bool) ->
                   DBPerception db [VisibleObject]
 visibleObjects filterF =
     do me <- whoAmI
@@ -192,31 +192,31 @@ visibleObjects filterF =
            Nothing -> return []
        liftDB $ mapRO convertToVisibleObjectRecord visible_objects
 
-myInventory :: (DBReadable db) => DBPerception db [VisibleObject]
+myInventory :: (MonadRandom db, DBReadable db) => DBPerception db [VisibleObject]
 myInventory =
     do me <- whoAmI
        (result :: [DetailedLocation Inventory]) <- liftDB $ liftM mapLocations $ DB.getContents me
        liftDB $ mapRO convertToVisibleObjectRecord $ sortBy (comparing toUID) $ (asChildren result :: [ToolRef])
 
-myFaction :: (DBReadable db) => DBPerception db Faction
+myFaction :: (MonadRandom db, DBReadable db) => DBPerception db Faction
 myFaction = Roguestar.Lib.Perception.getMonsterFaction =<< whoAmI
 
-getMonsterFaction :: (DBReadable db) => MonsterRef -> DBPerception db Faction
+getMonsterFaction :: (MonadRandom db, DBReadable db) => MonsterRef -> DBPerception db Faction
 getMonsterFaction creature_ref = liftDB $ Monster.getMonsterFaction creature_ref
 
-whereAmI :: (DBReadable db) => DBPerception db (Facing,Position)
+whereAmI :: (MonadRandom db, DBReadable db) => DBPerception db (Facing,Position)
 whereAmI = liftM detail $ Roguestar.Lib.Perception.whereIs =<< whoAmI
 
-whatPlaneAmIOn :: (DBReadable db) => DBPerception db PlaneRef
+whatPlaneAmIOn :: (MonadRandom db, DBReadable db) => DBPerception db PlaneRef
 whatPlaneAmIOn = liftM (planar_parent . identityDetail) $ (\x -> liftDB $ getPlanarLocation x) =<< whoAmI
 
-whereIs :: (DBReadable db, ReferenceType a) =>
+whereIs :: (MonadRandom db, DBReadable db, ReferenceType a) =>
            Reference a -> DBPerception db (DetailedLocation (Child a))
 whereIs ref = liftM (fromMaybe (error "Perception.whereIs: not a child of its own location record") . fromLocation) $ liftDB $ DB.whereIs ref
 
 -- Let's look into re-writing this with A*:
 -- http://hackage.haskell.org/packages/archive/astar/0.2.1/doc/html/Data-Graph-AStar.html
-compass :: (DBReadable db) => DBPerception db Facing
+compass :: (MonadRandom db, DBReadable db) => DBPerception db Facing
 compass =
     do (_,pos) <- whereAmI
        plane <- whatPlaneAmIOn
@@ -231,17 +231,17 @@ compass =
 -- |
 -- Depth of the current plane below the surface.
 --
-depth :: (DBReadable db) => DBPerception db Integer
+depth :: (MonadRandom db, DBReadable db) => DBPerception db Integer
 depth =
     do plane <- whatPlaneAmIOn
        liftDB $ planeDepth plane
 
-myHealth :: (DBReadable db) => DBPerception db MonsterHealth
+myHealth :: (MonadRandom db, DBReadable db) => DBPerception db MonsterHealth
 myHealth =
     do creature_ref <- whoAmI
        liftDB $ getMonsterHealth creature_ref
 
-isBehaviorAvailable :: (DBReadable db) => Behavior -> DBPerception db Bool
+isBehaviorAvailable :: (MonadRandom db, DBReadable db) => Behavior -> DBPerception db Bool
 isBehaviorAvailable b =
     do creature_ref <- whoAmI
        liftDB $ Behavior.isBehaviorAvailable b creature_ref

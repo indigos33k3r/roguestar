@@ -9,6 +9,7 @@ import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.DB
 import Control.Monad.Error
+import Control.Monad.Random
 import Roguestar.Lib.Data.Substances
 
 -- | Outcome of activating a tool.
@@ -17,7 +18,7 @@ data ActivationOutcome =
   | ExpendTool ToolRef ActivationOutcome
   | NoEffect
 
-resolveActivation :: (DBReadable db) => MonsterRef -> db ActivationOutcome
+resolveActivation :: (MonadRandom db, DBReadable db) => MonsterRef -> db ActivationOutcome
 resolveActivation creature_ref =
     do tool_ref <- maybe (throwError $ DBErrorFlag NoToolWielded) return =<< getWielded creature_ref
        tool <- dbGetTool tool_ref

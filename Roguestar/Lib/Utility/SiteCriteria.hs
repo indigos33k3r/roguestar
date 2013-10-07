@@ -74,12 +74,12 @@ atDistanceFrom p d = AtDistanceFrom p d
 instance SiteCriteria a => SiteCriteria [a] where
     testSiteCriteria plane_ref p xs = liftM sum $ mapM (testSiteCriteria plane_ref p) xs
 
-pickRandomSite :: (DBReadable db, SiteCriteria a) => (Integer,Integer) -> (Integer,Integer) -> Integer -> a -> PlaneRef -> db Position
+pickRandomSite :: (MonadRandom db, DBReadable db, SiteCriteria a) => (Integer,Integer) -> (Integer,Integer) -> Integer -> a -> PlaneRef -> db Position
 pickRandomSite east_west north_south tryhard site_criteria plane_ref =
         do liftM pickBest $ forM [1.. fromInteger tryhard] $ const generateOption
     where pickBest :: [(Double,Position)] -> Position
           pickBest = snd . maximumBy (comparing fst)
-          generateOption :: (DBReadable db) => db (Double,Position)
+          generateOption :: (MonadRandom db, DBReadable db) => db (Double,Position)
           generateOption =
               do x <- getRandomR east_west
                  y <- getRandomR north_south

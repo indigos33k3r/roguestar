@@ -175,11 +175,9 @@ dbRandom rgen = DB $ \context ->
        writeSTRef (db_rng context) g1
        return $ Right x
 
-class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,MonadRandom db,Applicative db) => DBReadable db where
+class (Monad db,MonadError DBError db,MonadReader DB_BaseType db,Applicative db,MonadRandom db) => DBReadable db where
     dbSimulate :: DB a -> db a
     dbPeepSnapshot :: (DBReadable db) => (forall m. DBReadable m => m a) -> db (Maybe a)
---    uniform :: (Int,Int) -> db Int
---    uniformVector :: Int -> (Int,Int) -> db (Vector.Vector Int)
 
 instance DBReadable DB where
     dbSimulate = local id
@@ -189,19 +187,13 @@ instance DBReadable DB where
                Just snapshot ->
                    do liftM Just $ local (const snapshot) $ dbSimulate actionM
                Nothing ->  return Nothing
-{-    uniform range = DB $ \context ->
-        do gen <- readSTRef (db_mwc_rng context)
-           liftM Right $ MWC.uniformR range gen
-    uniformVector n (a,b) = DB $ \ context ->
-        do gen <- readSTRef (db_mwc_rng context)
-           liftM (Right . Vector.map ((+a) . (`mod` (b-a)))) $ MWC.uniformVector gen n -}
 
 logDB :: (DBReadable db) => String -> Priority -> String -> db ()
 logDB l p s = unsafePerformIO $
     do logM l p $ l ++ ": " ++ s
        return $ return ()
 
-ro :: (DBReadable db) => (forall m. DBReadable m => m a) -> db a
+ro :: (DBReadable db) => (forall m. (MonadRandom m, DBReadable m) => m a) -> db a
 ro db = dbSimulate db
 
 filterRO :: (DBReadable db) => (forall m. DBReadable m => a -> m Bool) -> [a] -> db [a]
@@ -220,7 +212,7 @@ sortByRO f xs =
 -- I don't remember why I wrote this function, and suspect that it is not needed.
 -- It might have had something to do with reverting the state of the database if
 -- an error were thrown.
-atomic :: (x -> DB ()) -> (forall m. DBReadable m => m x) -> DB x
+atomic :: (x -> DB ()) -> (forall m. (MonadRandom m, DBReadable m) => m x) -> DB x
 atomic action ro_action =
     do x <- ro ro_action
        s <- dbSimulate $

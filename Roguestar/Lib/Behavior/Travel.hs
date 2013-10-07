@@ -21,6 +21,7 @@ import Data.Maybe
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Error
+import Control.Monad.Random
 import Data.Ord
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Data.TerrainData
@@ -95,9 +96,9 @@ data ClimbOutcome =
 -- |
 -- Climb up or down between Planes.
 --
-resolveClimb :: (DBReadable db) => MonsterRef ->
-                                   ClimbDirection ->
-                                   db ClimbOutcome
+resolveClimb :: (MonadRandom db, DBReadable db) => MonsterRef ->
+                                                   ClimbDirection ->
+                                                db ClimbOutcome
 resolveClimb creature_ref direction = liftM (fromMaybe ClimbFailed) $ runMaybeT $
     do l <- lift $ DetailedTravel.whereIs creature_ref
        let plane_ref :: PlaneRef = asParent $ detail l
@@ -138,7 +139,7 @@ executeClimb (ClimbGood direction creature_ref standing_location) =
 -- The teleport attempt can be automatically retried a number of times, and the most accurate attempt will be used.
 -- If the retries are negative, the teleport will be made artificially innacurate.
 --
-randomTeleportLanding :: (DBReadable db) => Integer -> PlaneRef -> Position -> Position -> db Position
+randomTeleportLanding :: (MonadRandom db, DBReadable db) => Integer -> PlaneRef -> Position -> Position -> db Position
 randomTeleportLanding retries plane_ref source_destination goal_destination =
     do landings <- replicateM (fromInteger $ max 1 retries) $ (pickRandomClearSite 3) 0 0 goal_destination (not . (`elem` impassable_terrains)) plane_ref
        return $ minimumBy (comparing $ \p -> Position.distanceBetweenSquared goal_destination p ^ 2 * Position.distanceBetweenSquared source_destination p) landings
@@ -150,7 +151,7 @@ data TeleportJumpOutcome =
 -- |
 -- Teleport jump a creature about 5-7 units in the specified direction.
 --
-resolveTeleportJump :: (DBReadable db) => MonsterRef -> Facing -> db TeleportJumpOutcome
+resolveTeleportJump :: (MonadRandom db, DBReadable db) => MonsterRef -> Facing -> db TeleportJumpOutcome
 resolveTeleportJump creature_ref face = liftM (fromMaybe TeleportJumpFailed) $ runMaybeT $
     do start_location <- lift $ DetailedTravel.whereIs creature_ref
        jump_roll <- lift $ getMonsterAbilityScore JumpSkill creature_ref
@@ -225,7 +226,7 @@ resolveStepWithHolographicTrail facing monster_ref =
 --      TemporalWeb
 --------------------------------------------------------------------------------
 
-resolveStepWithTemporalWeb :: (DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome,[SlowMonsterEffect]))
+resolveStepWithTemporalWeb :: (MonadRandom db, DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome,[SlowMonsterEffect]))
 resolveStepWithTemporalWeb facing monster_ref =
     do move_outcome <- stepMonster facing monster_ref
        let (plane_ref :: PlaneRef, position :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)

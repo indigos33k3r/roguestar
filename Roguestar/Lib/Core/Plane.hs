@@ -51,7 +51,7 @@ dbNewPlane name tg_data l =
 planetName :: (DBReadable db) => PlaneRef -> db B.ByteString
 planetName = liftM plane_planet_name . dbGetPlane
 
-randomPlanetName :: (DBReadable db) => Faction -> db B.ByteString
+randomPlanetName :: (MonadRandom db, DBReadable db) => Faction -> db B.ByteString
 randomPlanetName faction =
     do planet_number <- getRandomR (1000 :: Integer,9999)
        return $ factionPrefix faction `B.append` "-" `B.append` B.pack (show planet_number)
@@ -140,7 +140,7 @@ getCurrentPlane = runMaybeT $
 --
 -- The timeout value should be a small integer greater or equal to one, since this function becomes slow with large timeout values.
 --
-pickRandomClearSite :: (DBReadable db) =>
+pickRandomClearSite :: (MonadRandom db, DBReadable db) =>
     Integer -> Integer -> Integer ->
     Position -> (Terrain -> Bool) -> PlaneRef ->
     db Position
@@ -159,7 +159,7 @@ pickRandomClearSite search_radius
                                         terrainPredicate
                                         plane_ref
 
-pickRandomClearSite_withTimeout :: (DBReadable db) =>
+pickRandomClearSite_withTimeout :: (MonadRandom db, DBReadable db) =>
     Maybe Integer -> Integer -> Integer -> Integer ->
     Position -> (Terrain -> Bool) -> PlaneRef ->
     db (Maybe Position)

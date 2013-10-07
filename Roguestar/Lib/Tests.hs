@@ -1,9 +1,9 @@
 --Deprecated
 module Roguestar.Lib.Tests 
-    (TestResult(..), 
-     TestCase, 
-     test, 
-     runAllTests, 
+    (TestResult(..),
+     TestCase,
+     test,
+     runAllTests,
      sampleTestCase)
     where
 

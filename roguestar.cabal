@@ -27,7 +27,8 @@ executable roguestar-server
                   system-uuid >= 1.2.7,
                   binary >= 0.5.1,
                   transformers >= 0.3.0.0,
-                  cipher-aes == 0.1.8
+                  cipher-aes == 0.1.8,
+                  HUnit >= 1.2
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
@@ -60,9 +61,20 @@ library
                   streams >= 0.8.2
   other-modules:  Roguestar.Lib.Perception,
                   Roguestar.Lib.PlaneVisibility,
+                  Roguestar.Lib.Behavior,
+                  Roguestar.Lib.Behavior.Activate,
+                  Roguestar.Lib.Behavior.CharacterAdvancement,
+                  Roguestar.Lib.Behavior.Combat,
+                  Roguestar.Lib.Behavior.Construction,
+                  Roguestar.Lib.Behavior.Make,
+                  Roguestar.Lib.Behavior.Travel,
+                  Roguestar.Lib.Behavior.Turns,
                   Roguestar.Lib.Core.Building,
                   Roguestar.Lib.Core.Monster,
                   Roguestar.Lib.Core.Plane,
+                  Roguestar.Lib.Model.Graph,
+                  Roguestar.Lib.Model.Classes,
+                  Roguestar.Lib.Model.Tests,
                   Roguestar.Lib.Utility.Contact,
                   Roguestar.Lib.Utility.Grids,
                   Roguestar.Lib.Utility.HierarchicalDatabase,
@@ -78,14 +90,6 @@ library
                   Roguestar.Lib.DB,
                   Roguestar.Lib.Town,
                   Roguestar.Lib.Random,
-                  Roguestar.Lib.Behavior,
-                  Roguestar.Lib.Behavior.Activate,
-                  Roguestar.Lib.Behavior.CharacterAdvancement,
-                  Roguestar.Lib.Behavior.Combat,
-                  Roguestar.Lib.Behavior.Construction,
-                  Roguestar.Lib.Behavior.Make,
-                  Roguestar.Lib.Behavior.Travel,
-                  Roguestar.Lib.Behavior.Turns,
                   Roguestar.Lib.Logging,
                   Roguestar.Lib.Data.BuildingData,
                   Roguestar.Lib.Data.CharacterData,

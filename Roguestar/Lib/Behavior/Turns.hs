@@ -104,7 +104,7 @@ dbPerform1MonsterAITurn :: MonsterRef -> DB ()
 dbPerform1MonsterAITurn creature_ref =
     do logDB gameplay_log INFO $ "dbPerform1MonsterAITurn; Performing a creature's AI turn: id=" ++ show (toUID creature_ref)
        liftM (const ()) $ atomic (flip executeBehavior creature_ref) $ P.runPerception creature_ref $ liftM (fromMaybe Vanish) $ runMaybeT $
-        do let isPlayer :: forall db. (DBReadable db) => Reference () -> P.DBPerception db Bool
+        do let isPlayer :: forall db. (MonadRandom db, DBReadable db) => Reference () -> P.DBPerception db Bool
                isPlayer ref | (Just might_be_the_player_creature_ref) <- coerceReference ref =
                    do f <- P.getMonsterFaction might_be_the_player_creature_ref
                       return $ f == Player

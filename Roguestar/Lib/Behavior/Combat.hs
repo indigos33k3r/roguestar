@@ -14,6 +14,7 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Tool
 import Roguestar.Lib.Data.ToolData
 import Control.Monad.Error
+import Control.Monad.Random
 import Roguestar.Lib.Data.FacingData
 import Data.Maybe
 import Roguestar.Lib.Utility.Contact
@@ -149,7 +150,7 @@ data AttackChainOutcome = AttackChainOutcome {
     _chain_attack_outcome :: AttackOutcome,
     _chain_damage_outcome :: [DamageOutcome] }
 
-resolveAttackChain :: forall db. (DBReadable db) => AttackModel -> Either Facing MonsterRef -> db AttackChainOutcome
+resolveAttackChain :: forall db. (MonadRandom db, DBReadable db) => AttackModel -> Either Facing MonsterRef -> db AttackChainOutcome
 resolveAttackChain attack_model e_face_defender =
     do m_defender_ref <- case e_face_defender of
            Right defender_ref -> return $ Just defender_ref
