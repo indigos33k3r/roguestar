@@ -15,6 +15,7 @@ import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Time
 import Roguestar.Lib.Tool
 import Control.Monad.Error
+import Control.Monad.Reader
 import Roguestar.Lib.Behavior.Combat
 import Roguestar.Lib.Behavior.Activate
 import Roguestar.Lib.Behavior.Travel
@@ -127,7 +128,7 @@ dbBehave_ (Unwield) creature_ref =
        increaseTime creature_ref =<< actionTime creature_ref
 
 dbBehave_ (Drop tool_ref) creature_ref =
-    do tool_parent <- liftM parentReference $ whereIs tool_ref
+    do tool_parent <- liftM parentReference $ asks $ whereIs tool_ref
        already_wielded <- getWielded creature_ref
        when (tool_parent =/= creature_ref) $ throwError $ DBErrorFlag ToolIs_NotInInventory
        _ <- move tool_ref =<< dropTool tool_ref

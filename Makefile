@@ -6,10 +6,13 @@ dontuse:
 	echo "cabal install"
 
 configure:
-	cabal-dev configure --ghc-options="-Werror" --enable-library-profiling --enable-executable-profiling
+	cabal-dev configure --ghc-options="-Werror" 
+
+configure-profiling:
+	--enable-library-profiling --enable-executable-profiling
 
 build:
-	cabal-dev build
+	cabal-dev build -j
 
 clean:
 	cabal-dev clean
@@ -22,20 +25,4 @@ check: clean
 	cabal-dev build
 
 depends:
-	cabal-dev install cipher-aes-0.1.8
-	cabal-dev install MaybeT
-	cabal-dev install MonadCatchIO-transformers
-	cabal-dev install aeson
-	cabal-dev install data-lens-template
-	cabal-dev install data-memocombinators
-	cabal-dev install hastache
-	cabal-dev install hslogger
-	cabal-dev install mwc-random
-	cabal-dev install snap-core
-	cabal-dev install snap-server
-	cabal-dev install snap
-	cabal-dev install streams
-	cabal-dev install system-uuid
-	cabal-dev install data-lens-template
-	cabal-dev install snap
-	cabal-dev install streams
+	cabal-dev install -j cipher-aes MaybeT MonadCatchIO-transformers aeson data-lens-template data-memocombinators hastache hslogger mwc-random snap-core snap-server snap streams system-uuid data-lens-template snap streams

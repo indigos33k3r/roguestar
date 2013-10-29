@@ -27,7 +27,7 @@ executable roguestar-server
                   system-uuid >= 1.2.7,
                   binary >= 0.5.1,
                   transformers >= 0.3.0.0,
-                  cipher-aes == 0.1.8,
+                  cipher-aes,
                   HUnit >= 1.2
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all

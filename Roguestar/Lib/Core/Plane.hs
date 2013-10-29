@@ -27,6 +27,7 @@ import Roguestar.Lib.Data.ToolData (Tool)
 import Roguestar.Lib.Data.MonsterData (Monster)
 import Control.Monad
 import Control.Monad.Random as Random
+import Control.Monad.Reader
 import Data.Maybe
 import Data.List as List
 import Roguestar.Lib.Position as Position
@@ -37,7 +38,7 @@ import qualified Data.ByteString.Char8 as B
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Logging
 import Control.Monad.Maybe
-import Control.Monad.Trans
+import Roguestar.Lib.Core.Entities
 
 dbNewPlane :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => B.ByteString -> TerrainGenerationData -> l -> DB PlaneRef
 dbNewPlane name tg_data l =
@@ -49,7 +50,7 @@ dbNewPlane name tg_data l =
                            plane_planet_name = name}) l
 
 planetName :: (DBReadable db) => PlaneRef -> db B.ByteString
-planetName = liftM plane_planet_name . dbGetPlane
+planetName = liftM plane_planet_name . asks . getPlane
 
 randomPlanetName :: (MonadRandom db, DBReadable db) => Faction -> db B.ByteString
 randomPlanetName faction =
@@ -58,7 +59,7 @@ randomPlanetName faction =
 
 planeDepth :: (DBReadable db) => PlaneRef -> db Integer
 planeDepth this_plane =
-    do l <- whereIs this_plane
+    do l <- asks $ whereIs this_plane
        case () of
            () | Just (Beneath above) <- fromLocation l -> liftM succ $ planeDepth above
            () | otherwise -> return 0
@@ -74,14 +75,14 @@ instance AlwaysHasIndirectPlanarLocation Building
 --
 getPlanarLocation :: (DBReadable db,AlwaysHasIndirectPlanarLocation a) => Reference a -> db PlanarLocation
 getPlanarLocation ref =
-    liftM (fromMaybe (error "getPlanarLocation: Implements AlwaysHasIndirectPlanarLocation, but doesn't.") . listToMaybe . mapLocations) $ dbGetAncestors ref
+    liftM (fromMaybe (error "getPlanarLocation: Implements AlwaysHasIndirectPlanarLocation, but doesn't.") . listToMaybe . mapLocations) $ asks $ getAncestors ref
 
 -- |
 -- Get the plane beneath this one, if it exists.
 --
 getBeneath :: (DBReadable db) => PlaneRef -> db (Maybe PlaneRef)
 getBeneath item =
-    do (plane_locs :: [DetailedLocation Beneath]) <- liftM mapLocations $ getContents item
+    do (plane_locs :: [DetailedLocation Beneath]) <- liftM mapLocations $ asks $ getContents item
        return $
            do Child plane_ref <- liftM detail $ listToMaybe plane_locs
               return plane_ref
@@ -91,7 +92,7 @@ getBeneath item =
 --
 getSubsequent :: (DBReadable db) => PlanetRegion -> PlaneRef -> db (Maybe PlaneRef)
 getSubsequent planet_region item =
-    do plane_locs <- liftM (filterLocations $ \subsequent -> subsequent_via subsequent == planet_region) $ getContents item
+    do plane_locs <- liftM (filterLocations $ \subsequent -> subsequent_via subsequent == planet_region) $ asks $ getContents item
        return $
            do Child plane_ref <- liftM detail $ listToMaybe plane_locs
               return plane_ref
@@ -169,8 +170,8 @@ pickRandomClearSite_withTimeout timeout search_radius object_clear terrain_clear
        xys <- liftM2 (\a b -> List.map Position $ zip a b)
            (mapM (\x -> liftM (+start_x) $ getRandomR (-x,x)) [1..search_radius])
            (mapM (\x -> liftM (+start_y) $ getRandomR (-x,x)) [1..search_radius])
-       terrain <- liftM plane_terrain $ dbGetPlane plane_ref
-       clutter_locations <- liftM (List.map identityDetail . filterLocations (\(_ :: MultiPosition) -> True)) $ getContents plane_ref
+       terrain <- liftM plane_terrain $ asks $ getPlane plane_ref
+       clutter_locations <- liftM (List.map identityDetail . filterLocations (\(_ :: MultiPosition) -> True)) $ asks $ getContents plane_ref
        let terrainIsClear (Position (x,y)) =
                all terrainPredicate $ List.map (\(Terrain t) -> t) $
                    concat [[gridAt terrain (x',y') |
@@ -193,7 +194,7 @@ pickRandomClearSite_withTimeout timeout search_radius object_clear terrain_clear
 
 terrainAt :: (DBReadable db) => PlaneRef -> Position -> db Terrain
 terrainAt plane_ref (Position (x,y)) =
-    do terrain <- liftM plane_terrain $ dbGetPlane plane_ref
+    do terrain <- liftM plane_terrain $ asks $ getPlane plane_ref
        return $ case (gridAt terrain (x,y)) of
            Terrain t -> t
            Biome _ -> error "terrainAt: What's this biome doing here?"
@@ -205,7 +206,7 @@ setTerrainAt plane_ref (Position pos) patch = dbModPlane (\p -> p { plane_terrai
 -- Typically this is zero or one creatures, and zero or more tools.  Might be a building.
 whatIsOccupying :: (DBReadable db) => PlaneRef -> Position -> db [PlanarLocation]
 whatIsOccupying plane_ref position =
-    liftM (mapLocations . filterLocations (\(x :: MultiPosition) -> distanceBetweenChessboard position x == 0)) $ getContents plane_ref
+    liftM (mapLocations . filterLocations (\(x :: MultiPosition) -> distanceBetweenChessboard position x == 0)) $ asks $ getContents plane_ref
 
 -- | Answers True iff a creature may walk or swim or drop objects at the position.
 -- Lava is considered passable, but trees are not.

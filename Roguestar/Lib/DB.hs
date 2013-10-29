@@ -24,17 +24,16 @@ module Roguestar.Lib.DB
      dbAddTool,
      dbAddBuilding,
      dbUnsafeDeleteObject,
-     dbGetMonster,
-     dbGetPlane,
-     dbGetTool,
-     dbGetBuilding,
+     getMonster,
+     getPlane,
+     getTool,
+     getBuilding,
      dbModMonster,
      dbModPlane,
      dbModTool,
      dbModBuilding,
      dbUnwieldMonster,
      dbVerify,
-     dbGetAncestors,
      whereIs,
      getContents,
      move,
@@ -193,6 +192,7 @@ logDB l p s = unsafePerformIO $
     do logM l p $ l ++ ": " ++ s
        return $ return ()
 
+-- Not sure that these "ro" functions are really that useful.
 ro :: (DBReadable db) => (forall m. (MonadRandom m, DBReadable m) => m a) -> db a
 ro db = dbSimulate db
 
@@ -274,7 +274,7 @@ dbAddObjectComposable constructReferenceAction updateObjectAction constructLocat
     do ref <- liftM constructReferenceAction $ dbNextObjectRef
        updateObjectAction ref thing
        setLocation $ constructLocationAction ref loc
-       genericParent_ref <- liftM parentReference $ whereIs ref
+       genericParent_ref <- liftM parentReference $ asks $ whereIs ref
        setTime (genericReference ref) =<< getTime (genericReference genericParent_ref)
        return ref
 
@@ -361,33 +361,33 @@ dbPutBuilding = dbPutObjectComposable db_buildings $
 -- |
 -- Gets an object from the database using getter functions.
 --
-dbGetObjectComposable :: (DBReadable db) => String -> (DB_BaseType -> Map (Reference a) b) -> Reference a -> db b
-dbGetObjectComposable type_info get_fn ref = 
-    asks (fromMaybe (error $ "dbGetObjectComposable: Nothing.  UID was " ++ show (toUID ref) ++ ", type info was " ++ type_info) . Map.lookup ref . get_fn)
+getObjectComposable :: String -> (DB_BaseType -> Map (Reference a) b) -> Reference a -> DB_BaseType -> b
+getObjectComposable type_info get_fn ref = 
+    fromMaybe (error $ "dbGetObjectComposable: Nothing.  UID was " ++ show (toUID ref) ++ ", type info was " ++ type_info) . Map.lookup ref . get_fn
 
 -- |
 -- Gets a Monster from a MonsterRef
 --
-dbGetMonster :: (DBReadable m) => MonsterRef -> m Monster
-dbGetMonster = dbGetObjectComposable "MonsterRef" db_creatures
+getMonster :: MonsterRef -> DB_BaseType -> Monster
+getMonster = getObjectComposable "MonsterRef" db_creatures
 
 -- |
 -- Gets a Plane from a PlaneRef
 --
-dbGetPlane :: (DBReadable m) => PlaneRef -> m Plane
-dbGetPlane = dbGetObjectComposable "PlaneRef" db_planes
+getPlane :: PlaneRef -> DB_BaseType -> Plane
+getPlane = getObjectComposable "PlaneRef" db_planes
 
 -- |
 -- Gets a Plane from a PlaneRef
 --
-dbGetTool :: (DBReadable m) => ToolRef -> m Tool
-dbGetTool = dbGetObjectComposable "ToolRef" db_tools
+getTool :: ToolRef -> DB_BaseType -> Tool
+getTool = getObjectComposable "ToolRef" db_tools
 
 -- |
 -- Gets a Plane from a PlaneRef
 --
-dbGetBuilding :: (DBReadable m) => BuildingRef -> m Building
-dbGetBuilding = dbGetObjectComposable "BuildingRef" db_buildings
+getBuilding :: BuildingRef -> DB_BaseType -> Building
+getBuilding = getObjectComposable "BuildingRef" db_buildings
 
 -- |
 -- Modifies an Object based on an ObjectRef.
@@ -400,25 +400,25 @@ dbModObjectComposable getter putter f ref = (putter ref . f) =<< (getter ref)
 -- Modifies a Plane based on a PlaneRef.
 --
 dbModPlane :: (Plane -> Plane) -> PlaneRef -> DB ()
-dbModPlane = dbModObjectComposable dbGetPlane dbPutPlane
+dbModPlane = dbModObjectComposable (asks . getPlane) dbPutPlane
 
 -- |
 -- Modifies a Monster based on a PlaneRef.
 --
 dbModMonster :: (Monster -> Monster) -> MonsterRef -> DB ()
-dbModMonster = dbModObjectComposable dbGetMonster dbPutMonster
+dbModMonster = dbModObjectComposable (asks . getMonster) dbPutMonster
 
 -- |
 -- Modifies a Tool based on a PlaneRef.
 --
 dbModTool :: (Tool -> Tool) -> ToolRef -> DB ()
-dbModTool = dbModObjectComposable dbGetTool dbPutTool
+dbModTool = dbModObjectComposable (asks . getTool) dbPutTool
 
 -- |
 -- Modifies a Tool based on a PlaneRef.
 --
 dbModBuilding :: (Building -> Building) -> BuildingRef -> DB ()
-dbModBuilding = dbModObjectComposable dbGetBuilding dbPutBuilding
+dbModBuilding = dbModObjectComposable (asks . getBuilding) dbPutBuilding
 
 -- | A low-level set location instruction.  Merely guarantees the consistency of the location graph.
 setLocation :: Location -> DB ()
@@ -438,14 +438,14 @@ setLocation loc =
 --
 shuntPlane :: (LocationDetail a) => (a -> Bool) -> PlaneRef -> DB ()
 shuntPlane f p =
-    do locations <- liftM (List.filter (maybe False f . fromLocation)) $ getContents p
+    do locations <- liftM (List.filter (maybe False f . fromLocation)) $ asks $ getContents p
        mapM_ (maybe (return ()) setLocation . shuntToTheUniverse) locations
 
 -- |
 -- Shunt any wielded objects into inventory.
 --
 dbUnwieldMonster :: MonsterRef -> DB ()
-dbUnwieldMonster c = mapM_ (maybe (return ()) setLocation . returnToInventory) =<< getContents c
+dbUnwieldMonster c = mapM_ (maybe (return ()) setLocation . returnToInventory) =<< asks (getContents c)
 
 -- |
 -- Moves an object, returning the location of the object before and after
@@ -453,7 +453,7 @@ dbUnwieldMonster c = mapM_ (maybe (return ()) setLocation . returnToInventory) =
 --
 move :: (LocationConstructor l, ReferenceTypeOf l ~ e, ReferenceType e) => Reference e -> l -> DB (Location,Location)
 move ref location_data =
-    do old <- whereIs ref
+    do old <- asks $ whereIs ref
        let new = constructLocation ref location_data (Just old)
        setLocation new
        when (childReference old /= childReference new) $
@@ -467,7 +467,7 @@ moveAllWithin :: (LocationConstructor l, ReferenceTypeOf l ~ ()) =>
                  (forall m. (DBReadable m) => Reference () -> m l) ->
                  DB [(Location,Location)]
 moveAllWithin ref f =
-    do all_entities <- liftM (List.map childReference) $ getContents ref
+    do all_entities <- liftM (List.map childReference) $ asks $ getContents ref
        forM all_entities $ \e -> move e =<< f e
 
 -- |
@@ -476,25 +476,14 @@ moveAllWithin ref f =
 dbVerify :: (DBReadable db) => Reference e -> db Bool
 dbVerify ref = asks (isJust . HD.parentOf (toUID ref) . db_hierarchy)
 
-whereIs :: (DBReadable db) => Reference e -> db Location
-whereIs item = asks (fromMaybe (error "whereIs: has no location") . HD.lookupParent (toUID item) . db_hierarchy)
-
--- |
--- Returns all ancestor Locations of this element starting with the location
--- of the element and ending with TheUniverse.
---
-dbGetAncestors :: (DBReadable db) => Reference e -> db [Location]
-dbGetAncestors ref | genericReference ref == genericReference the_universe = return []
-dbGetAncestors ref =
-    do this <- whereIs ref
-       rest <- dbGetAncestors $ parentReference this
-       return $ this : rest
+whereIs :: Reference e -> DB_BaseType -> Location
+whereIs item = fromMaybe (error "whereIs: has no location") . HD.lookupParent (toUID item) . db_hierarchy
 
 -- |
 -- Returns locations of all children of a reference.
 --
-getContents :: (DBReadable db) => Reference t -> db [Location]
-getContents item = asks (HD.lookupChildren (toUID item) . db_hierarchy)
+getContents :: Reference t -> DB_BaseType -> [Location]
+getContents item = HD.lookupChildren (toUID item) . db_hierarchy
 
 -- |
 -- Gets the time of an object.

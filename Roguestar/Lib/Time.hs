@@ -8,10 +8,11 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Position
 import Data.Ratio
 import Control.Monad
+import Control.Monad.Reader
 
 getBaseSpeed :: (DBReadable db) => MonsterRef -> db Integer
 getBaseSpeed creature_ref =
-    do c <- dbGetMonster creature_ref
+    do c <- asks $ getMonster creature_ref
        let raw_speed = rawScore Speed c
        when (raw_speed <= 0) $ error $ "getBaseSpeed: Non-positive raw speed (" ++ show c ++ ")"
        return raw_speed

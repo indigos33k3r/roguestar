@@ -15,6 +15,7 @@ import Roguestar.Lib.Tool
 import Roguestar.Lib.Data.ToolData
 import Control.Monad.Error
 import Control.Monad.Random
+import Control.Monad.Reader
 import Roguestar.Lib.Data.FacingData
 import Data.Maybe
 import Roguestar.Lib.Utility.Contact
@@ -49,7 +50,7 @@ attackModel attacker_ref =
        case m_tool_ref of
            Nothing -> return $ UnarmedAttackModel attacker_ref
            Just tool_ref ->
-               do tool <- dbGetTool tool_ref
+               do tool <- asks $ getTool tool_ref
                   case tool of
                       DeviceTool Gun device -> return $ RangedAttackModel attacker_ref tool_ref device
                       DeviceTool Sword device -> return $ MeleeAttackModel attacker_ref tool_ref device

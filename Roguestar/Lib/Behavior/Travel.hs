@@ -13,28 +13,28 @@ module Roguestar.Lib.Behavior.Travel
      resolveStepWithTemporalWeb)
     where
 
-import Control.Monad.Maybe
-import Roguestar.Lib.Data.FacingData
-import Roguestar.Lib.DB as DB
-import Roguestar.Lib.Core.Plane as Plane
-import Data.Maybe
 import Control.Monad
-import Control.Monad.Trans
 import Control.Monad.Error
+import Control.Monad.Maybe
 import Control.Monad.Random
+import Control.Monad.Reader
+import Data.Maybe
 import Data.Ord
-import Roguestar.Lib.Position as Position
-import Roguestar.Lib.Data.TerrainData
 import Data.List (minimumBy)
+import Roguestar.Lib.Behavior.Outcome
 import Roguestar.Lib.Core.Monster
+import Roguestar.Lib.Core.Plane as Plane
+import Roguestar.Lib.DB as DB
+import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Data.MonsterData
-import Roguestar.Lib.Logging
+import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.TravelData
+import Roguestar.Lib.Logging
+import Roguestar.Lib.PlaneVisibility
+import Roguestar.Lib.Position as Position
+import Roguestar.Lib.Time
 import Roguestar.Lib.Utility.DetailedLocation
 import Roguestar.Lib.Utility.DetailedTravel as DetailedTravel
-import Roguestar.Lib.Behavior.Outcome
-import Roguestar.Lib.Time
-import Roguestar.Lib.PlaneVisibility
 
 data MoveOutcome =
     MoveGood { _move_monster :: MonsterRef, move_from :: Standing, _move_to :: Standing }
@@ -114,7 +114,7 @@ resolveClimb creature_ref direction = liftM (fromMaybe ClimbFailed) $ runMaybeT 
        lift $ logDB gameplay_log DEBUG $ "Stepping " ++ show direction ++ " from: " ++ show (plane_ref,pos)
        plane_destination <- MaybeT $ case direction of
                  ClimbDown -> getBeneath plane_ref
-                 ClimbUp -> liftM (fmap asParent . fromLocation) $ DB.whereIs plane_ref
+                 ClimbUp -> liftM (fmap asParent . fromLocation) $ asks $ DB.whereIs plane_ref
        lift $ logDB gameplay_log DEBUG $ "Stepping " ++ show direction ++ " to: " ++ show plane_destination
        pos' <- lift $ pickRandomClearSite 10 0 0 pos (== expected_landing_terrain) plane_destination
        return $ ClimbGood direction creature_ref $

@@ -23,6 +23,7 @@ import Roguestar.Lib.Data.SpeciesTraits
 import Roguestar.Lib.Data.FactionData
 import Control.Monad.Error
 import Control.Monad.Random
+import Control.Monad.Reader
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Position
 import Roguestar.Lib.Core.Plane
@@ -39,7 +40,7 @@ generateMonster faction species =
     do r <- getRandomR (1,1000000)
        return $ applyToMonster (species_specials $ speciesInfo species) $
                 applyToMonster (species_traits $ speciesInfo species) $
-           empty_creature {
+           empty_monster {
                creature_species = species,
                creature_faction = faction,
                creature_random_id = r }
@@ -61,11 +62,11 @@ newMonster faction species loc =
        dbAddMonster creature loc
 
 getMonsterSpecial :: (DBReadable db) => MonsterSpecial -> MonsterRef -> db Bool
-getMonsterSpecial special creature_ref = liftM (Set.member special . creature_specials) $ dbGetMonster creature_ref
+getMonsterSpecial special creature_ref = liftM (Set.member special . creature_specials) $ asks $ getMonster creature_ref
 
 getMonsterAbilityScore :: (DBReadable db) => MonsterAbility -> MonsterRef -> db Integer
 getMonsterAbilityScore ability creature_ref =
-    do raw_ideal <- liftM (creatureAbilityScore ability) $ dbGetMonster creature_ref
+    do raw_ideal <- liftM (creatureAbilityScore ability) $ asks $ getMonster creature_ref
        terrain_ideal <- getTerrainAffinity creature_ref
        return $ raw_ideal + terrain_ideal
 
@@ -75,7 +76,7 @@ getTerrainAffinity creature_ref =
     do (Parent plane_ref,pos) <- liftM detail $ getPlanarLocation creature_ref
        terrain_affinity_points <- liftM sum $ forM [minBound..maxBound] $ \face ->
                do t <- terrainAt plane_ref $ offsetPosition (facingToRelative face) pos
-                  liftM (creatureAbilityScore $ TerrainAffinity t) $ dbGetMonster creature_ref
+                  liftM (creatureAbilityScore $ TerrainAffinity t) $ asks $ getMonster creature_ref
        return $ terrain_affinity_points `div` 4
 
 -- | Get the current creature, if it belongs to the specified faction, based on the current playerState.
@@ -86,7 +87,7 @@ getCurrentMonster faction =
        return $ if is_one_of_us then m_who else Nothing
 
 getMonsterFaction :: (DBReadable db) => MonsterRef -> db Faction
-getMonsterFaction = liftM creature_faction . dbGetMonster
+getMonsterFaction = liftM creature_faction . asks . getMonster
 
 injureMonster :: Integer -> MonsterRef -> DB ()
 injureMonster x = dbModMonster $ \c -> c { creature_damage = max 0 $ creature_damage c + x }
@@ -96,10 +97,10 @@ healMonster = injureMonster . negate
 
 -- | Health as a fraction of 1.
 getMonsterHealth :: (DBReadable db) => MonsterRef -> db MonsterHealth
-getMonsterHealth creature_ref = liftM creatureHealth $ dbGetMonster creature_ref
+getMonsterHealth creature_ref = liftM creatureHealth $ asks $ getMonster creature_ref
 
 getDead :: (DBReadable db) => Reference a -> db [MonsterRef]
-getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getMonsterHealth) =<< liftM asChildren (getContents parent_ref)
+getDead parent_ref = filterRO (liftM ((<= 0) . creature_health) . getMonsterHealth) =<< liftM asChildren (asks $ getContents parent_ref)
 
 deleteMonster :: MonsterRef -> DB ()
 deleteMonster creature_ref =

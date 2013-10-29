@@ -16,11 +16,12 @@ import Roguestar.Lib.Data.FacingData
 import Data.Maybe
 import Control.Monad.Maybe
 import Control.Monad.Random
+import Control.Monad.Error
+import Control.Monad.Reader
 import Roguestar.Lib.Data.PlaneData
 import Roguestar.Lib.Core.Plane
 import Roguestar.Lib.Position
 import Roguestar.Lib.Data.TerrainData
-import Control.Monad.Error
 import Roguestar.Lib.Data.PowerUpData
 import Roguestar.Lib.Behavior.CharacterAdvancement
 import Roguestar.Lib.Utility.DetailedLocation
@@ -32,16 +33,16 @@ buildingSize = liftM (genericLength . buildingOccupies) . buildingShape
 
 buildingShape :: (DBReadable db) => BuildingRef -> db BuildingShape
 buildingShape building_ref =
-    do constructed <- liftM fromLocation $ whereIs building_ref
+    do constructed <- liftM fromLocation $ asks $ whereIs building_ref
        case constructed of
            Just building_shape -> return building_shape
            _ -> error "buildingType: impossible case"
 
 buildingSignal :: (DBReadable db) => BuildingRef -> db (Maybe BuildingSignal)
-buildingSignal  = liftM building_signal . dbGetBuilding
+buildingSignal  = liftM building_signal . asks . getBuilding
 
 buildingBehavior :: (DBReadable db) => BuildingRef -> db BuildingBehavior
-buildingBehavior building_ref = liftM building_behavior $ dbGetBuilding building_ref
+buildingBehavior building_ref = liftM building_behavior $ asks $ getBuilding building_ref
 
 deleteBuilding :: BuildingRef -> DB ()
 deleteBuilding building_ref = dbUnsafeDeleteObject building_ref
@@ -50,7 +51,7 @@ deleteBuilding building_ref = dbUnsafeDeleteObject building_ref
 -- | Activate the facing building, returns True iff any building was actually activated.
 activateFacingBuilding :: Facing -> MonsterRef -> DB Bool
 activateFacingBuilding face creature_ref = liftM (fromMaybe False) $ runMaybeT $
-    do (Parent plane_ref,position) <- MaybeT $ liftM fromLocation $ whereIs creature_ref
+    do (Parent plane_ref,position) <- MaybeT $ liftM fromLocation $ asks $ whereIs creature_ref
        buildings <- lift $ liftM mapLocations $ whatIsOccupying plane_ref $ offsetPosition (facingToRelative face) position
        liftM or $ lift $ forM buildings $ \(Child building_ref) ->
            do building_behavior_type <- buildingBehavior building_ref
@@ -85,7 +86,7 @@ activateBuilding (OneWayStargate region) creature_ref building_ref =
 -- the dbMove result from the action.
 portalMonsterTo :: Maybe BuildingBehavior -> Integer -> MonsterRef -> PlaneRef -> DB (Location,Location)
 portalMonsterTo building_behavior_type offset creature_ref plane_ref =
-    do (all_buildings :: [BuildingRef]) <- liftM asChildren (getContents plane_ref)
+    do (all_buildings :: [BuildingRef]) <- liftM asChildren (asks $ getContents plane_ref)
        portals <- filterM (liftM ((== building_behavior_type) . Just) . buildingBehavior) all_buildings
        ideal_position <- if null portals
            then liftM2 (\x y -> Position (x,y)) (getRandomR (-40,40)) (getRandomR (-40,40))
@@ -97,7 +98,7 @@ portalMonsterTo building_behavior_type offset creature_ref plane_ref =
 
 captureNode :: PowerUpData -> MonsterRef -> BuildingRef -> DB ()
 captureNode power_up_data creature_ref building_ref =
-    do c <- dbGetMonster creature_ref
+    do c <- asks $ getMonster creature_ref
        let result = bumpCharacter power_up_data c
        dbModMonster (const $ character_new result) creature_ref
        deleteBuilding building_ref

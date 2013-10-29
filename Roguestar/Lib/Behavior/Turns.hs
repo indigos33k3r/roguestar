@@ -13,6 +13,7 @@ import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.MonsterData (Monster)
 import Roguestar.Lib.Core.Plane
 import Control.Monad
+import Control.Monad.Reader
 import Roguestar.Lib.Core.Monster
 import Data.Ratio
 import Roguestar.Lib.Data.FacingData
@@ -47,7 +48,7 @@ dbFinishPlanarAITurns :: PlaneRef -> DB ()
 dbFinishPlanarAITurns plane_ref =
     do logDB gameplay_log INFO $ "Running turns for plane: id=" ++ show (toUID plane_ref)
        sweepDead plane_ref
-       (all_creatures_on_plane :: [MonsterRef]) <- liftM asChildren $ getContents plane_ref
+       (all_creatures_on_plane :: [MonsterRef]) <- liftM asChildren $ asks $ getContents plane_ref
        any_players_left <- liftM (any (== Player)) $ mapM getMonsterFaction all_creatures_on_plane
        next_turn <- dbNextTurn $ List.map genericReference all_creatures_on_plane ++ [genericReference plane_ref]
        case next_turn of
@@ -76,7 +77,7 @@ monster_spawns = [(RecreantFactory,RedRecreant)]
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
 dbPerform1PlanarAITurn plane_ref =
     do logDB gameplay_log INFO $ "dbPerform1PlanarAITurn; Beginning planar AI turn (for the plane itself):"
-       (creature_locations :: [DetailedLocation (Child Monster)]) <- liftM mapLocations $ getContents plane_ref
+       (creature_locations :: [DetailedLocation (Child Monster)]) <- liftM mapLocations $ asks $ getContents plane_ref
        player_locations <- filterRO (liftM (== Player) . getMonsterFaction . asChild . detail) creature_locations
        num_npcs <- liftM length $ filterRO (liftM (/= Player) . getMonsterFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 3) $

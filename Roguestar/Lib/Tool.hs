@@ -15,6 +15,7 @@ import Prelude hiding (getContents)
 import Roguestar.Lib.DB
 import Roguestar.Lib.Utility.DetailedLocation
 import Control.Monad.Error
+import Control.Monad.Reader
 import Data.Maybe
 import Data.List as List
 import Roguestar.Lib.Data.ToolData
@@ -27,8 +28,8 @@ pickupTool :: (DBReadable db) =>
                 ToolRef ->
                 db (Inventory)
 pickupTool creature_ref tool_ref =
-    do creature_loc <- whereIs creature_ref
-       tool_loc <- whereIs tool_ref
+    do creature_loc <- asks $ whereIs creature_ref
+       tool_loc <- asks $ whereIs tool_ref
        distance_between <- distanceBetweenSquared creature_ref tool_ref
        when (parentReference tool_loc =/= parentReference creature_loc || distance_between /= Just 0) $
            throwError (DBErrorFlag ToolIs_NotAtFeet)
@@ -37,11 +38,11 @@ pickupTool creature_ref tool_ref =
 -- | Move a tool into wielded position for whatever creature is carrying or standing over it.
 wieldTool :: (DBReadable db) => ToolRef -> db Wielded
 wieldTool tool_ref =
-    do l <- whereIs tool_ref
+    do l <- asks $ whereIs tool_ref
        case () of
            () | Just l' <- fromLocation l -> return l' -- if it coerces into our return type, then it's already wielded
            () | Just (Dropped plane_ref position) <- fromLocation l ->
-               do pickupers <- liftM (mapLocations . filterLocations (== position)) $ getContents plane_ref
+               do pickupers <- liftM (mapLocations . filterLocations (== position)) $ asks $ getContents plane_ref
                   case pickupers of -- the creature that is standing over the tool -- there can be only one
                       [Child single_pickuper] -> return $ Wielded single_pickuper
                       [] -> throwError $ DBErrorFlag ToolIs_Unreachable
@@ -57,19 +58,19 @@ dropTool tool_ref =
 availablePickups :: (DBReadable db) => MonsterRef -> db [ToolRef]
 availablePickups creature_ref =
     do (Parent plane_ref :: Parent Plane, creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
-       pickups <- liftM (mapLocations . filterLocations (==creature_position)) $ getContents plane_ref
+       pickups <- liftM (mapLocations . filterLocations (==creature_position)) $ asks $ getContents plane_ref
        return $ List.map (asChild . identityDetail) pickups
 
 -- | List of tools that the specified creature may choose to wield.
 -- That is, they are either on the ground or in the creature's inventory.
 availableWields :: (DBReadable db) => MonsterRef -> db [ToolRef]
 availableWields creature_ref =
-    do carried_tools :: [ToolRef] <- liftM (List.map (asChild . identityDetail) . mapLocations) $ getContents creature_ref
+    do carried_tools :: [ToolRef] <- liftM (List.map (asChild . identityDetail) . mapLocations) $ asks $ getContents creature_ref
        pickups <- availablePickups creature_ref
        return $ List.union carried_tools pickups
 
 getWielded :: (DBReadable db) => MonsterRef -> db (Maybe ToolRef)
-getWielded = liftM (listToMaybe . List.map (asChild . detail) . filterLocations (\(Wielded {}) -> True)) . getContents
+getWielded = liftM (listToMaybe . List.map (asChild . detail) . filterLocations (\(Wielded {}) -> True)) . asks . getContents
 
 -- | Safely delete tools.
 deleteTool :: ToolRef -> DB ()
@@ -78,7 +79,7 @@ deleteTool tool_ref = dbUnsafeDeleteObject tool_ref $
 
 toolValue :: (DBReadable db) => ToolRef -> db Integer
 toolValue tool_ref =
-    do t <- dbGetTool tool_ref
+    do t <- asks $ getTool tool_ref
        return $ case t of
           DeviceTool _ d -> deviceValue d
           Sphere substance -> substanceValue substance

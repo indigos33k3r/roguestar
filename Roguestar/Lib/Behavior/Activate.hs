@@ -10,6 +10,7 @@ import Roguestar.Lib.Core.Monster
 import Roguestar.Lib.DB
 import Control.Monad.Error
 import Control.Monad.Random
+import Control.Monad.Reader
 import Roguestar.Lib.Data.Substances
 
 -- | Outcome of activating a tool.
@@ -21,7 +22,7 @@ data ActivationOutcome =
 resolveActivation :: (MonadRandom db, DBReadable db) => MonsterRef -> db ActivationOutcome
 resolveActivation creature_ref =
     do tool_ref <- maybe (throwError $ DBErrorFlag NoToolWielded) return =<< getWielded creature_ref
-       tool <- dbGetTool tool_ref
+       tool <- asks $ getTool tool_ref
        case tool of
            DeviceTool {} -> throwError $ DBErrorFlag ToolIs_Innapropriate
            Sphere (ChromaliteSubstance c) ->

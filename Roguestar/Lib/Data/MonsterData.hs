@@ -10,7 +10,7 @@ module Roguestar.Lib.Data.MonsterData
      MonsterHealth(..),
      creatureHealth,
      creatureAbilityScore,
-     empty_creature)
+     empty_monster)
     where
 
 import Roguestar.Lib.Data.PersistantData
@@ -35,8 +35,8 @@ data Monster = Monster { creature_traits :: Map.Map MonsterTrait Integer,
 
 -- | Monster having no attributes and undefined 'creature_species', 'creature_random_id', and 'creature_faction'
 --
-empty_creature :: Monster
-empty_creature = Monster {
+empty_monster :: Monster
+empty_monster = Monster {
     creature_traits = Map.empty,
     creature_specials = Set.empty,
     creature_species = error "empty_creature: undefined creature_species",

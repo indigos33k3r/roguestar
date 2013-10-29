@@ -7,14 +7,15 @@ module Roguestar.Lib.Utility.Contact
     where
 
 import Prelude hiding (getContents)
-import Roguestar.Lib.Position as Position
-import Roguestar.Lib.Data.FacingData
-import Roguestar.Lib.DB
-import Roguestar.Lib.Data.MonsterData
 import Control.Monad
-import Roguestar.Lib.Data.PlaneData
-import Data.Ord
+import Control.Monad.Reader
 import Data.List as List
+import Data.Ord
+import Roguestar.Lib.Data.FacingData
+import Roguestar.Lib.Data.MonsterData
+import Roguestar.Lib.Data.PlaneData
+import Roguestar.Lib.DB
+import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Utility.DetailedLocation
 
 -- | 'Touch' contacts are on the same or facing square as the subject.
@@ -42,7 +43,7 @@ instance ContactModeType MonsterInteractionMode where
 findContacts :: (DBReadable db,ContactModeType c) =>
                 c -> Reference x -> Facing -> db [DetailedLocation Planar]
 findContacts contact_mode attacker_ref face =
-    do (m_l :: Maybe (Parent Plane,MultiPosition)) <- liftM fromLocation $ whereIs attacker_ref
+    do (m_l :: Maybe (Parent Plane,MultiPosition)) <- liftM fromLocation $ asks $ whereIs attacker_ref
        let testF pos (x :: MultiPosition) = case contactMode contact_mode of
                Touch -> min (x `distanceBetweenChessboard` (offsetPosition (facingToRelative face) pos))
                             (x `distanceBetweenChessboard` pos) == 0
@@ -55,6 +56,6 @@ findContacts contact_mode attacker_ref face =
            liftM (sortBy (comparing (Position.distanceBetweenSquared (center_pos pos) . (detail :: DetailedLocation Planar -> MultiPosition))) .
                   filter ((/= genericReference attacker_ref) . asChild . detail) .
                   filter (testF pos . detail)) $
-                      (liftM mapLocations $ getContents plane_ref)
+                      (liftM mapLocations $ asks $ getContents plane_ref)
 
 

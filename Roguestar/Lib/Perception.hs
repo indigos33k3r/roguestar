@@ -28,6 +28,7 @@ module Roguestar.Lib.Perception
      Roguestar.Lib.Perception.isBehaviorAvailable)
     where
 
+import Control.Applicative
 import Control.Monad.Reader
 import Control.Monad.Random
 import Data.Ord
@@ -38,7 +39,6 @@ import Roguestar.Lib.PlaneVisibility
 import Data.Maybe
 import Data.List as List
 import Data.Map as Map
-import Control.Applicative
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Data.TerrainData
@@ -124,19 +124,19 @@ isVisibleBuilding _ = False
 
 convertToVisibleObjectRecord :: (DBReadable db) => Reference a -> db VisibleObject
 convertToVisibleObjectRecord ref | (Just creature_ref) <- coerceReference ref =
-    do species <- liftM creature_species $ dbGetMonster creature_ref
-       traits <- liftM creature_traits $ dbGetMonster creature_ref
+    do species <- liftM creature_species $ asks $ getMonster creature_ref
+       traits <- liftM creature_traits $ asks $ getMonster creature_ref
        faction <- Monster.getMonsterFaction creature_ref
        m_tool_ref <- getWielded creature_ref
        position <- liftM detail $ DT.whereIs creature_ref
        m_wielded <- case m_tool_ref of
            Just tool_ref ->
-               do tool <- dbGetTool tool_ref
+               do tool <- asks $ getTool tool_ref
                   return $ Just $ VisibleTool tool_ref tool position
            Nothing -> return Nothing
        return $ VisibleMonster creature_ref species traits m_wielded position faction
 convertToVisibleObjectRecord ref | (Just tool_ref) <- coerceReference ref =
-    do tool <- dbGetTool tool_ref
+    do tool <- asks $ getTool tool_ref
        position <- liftM detail $ getPlanarLocation tool_ref
        return $ VisibleTool tool_ref tool position
 convertToVisibleObjectRecord ref | (Just building_ref :: Maybe BuildingRef) <- coerceReference ref =
@@ -183,7 +183,7 @@ visibleObjects :: (MonadRandom db, DBReadable db) =>
 visibleObjects filterF =
     do me <- whoAmI
        faction <- myFaction
-       m_parent_plane <- liftDB $ liftM fromLocation (DB.whereIs me)
+       m_parent_plane <- liftDB $ liftM fromLocation (asks $ DB.whereIs me)
        visible_objects <- case m_parent_plane of
            (Just (Parent plane_ref)) -> liftDB $ dbGetVisibleObjectsForFaction
                                             (\a -> runPerception me $ filterF a)
@@ -195,7 +195,7 @@ visibleObjects filterF =
 myInventory :: (MonadRandom db, DBReadable db) => DBPerception db [VisibleObject]
 myInventory =
     do me <- whoAmI
-       (result :: [DetailedLocation Inventory]) <- liftDB $ liftM mapLocations $ DB.getContents me
+       (result :: [DetailedLocation Inventory]) <- liftDB $ liftM mapLocations $ asks $ DB.getContents me
        liftDB $ mapRO convertToVisibleObjectRecord $ sortBy (comparing toUID) $ (asChildren result :: [ToolRef])
 
 myFaction :: (MonadRandom db, DBReadable db) => DBPerception db Faction
@@ -212,7 +212,7 @@ whatPlaneAmIOn = liftM (planar_parent . identityDetail) $ (\x -> liftDB $ getPla
 
 whereIs :: (MonadRandom db, DBReadable db, ReferenceType a) =>
            Reference a -> DBPerception db (DetailedLocation (Child a))
-whereIs ref = liftM (fromMaybe (error "Perception.whereIs: not a child of its own location record") . fromLocation) $ liftDB $ DB.whereIs ref
+whereIs ref = liftM (fromMaybe (error "Perception.whereIs: not a child of its own location record") . fromLocation) $ liftDB $ asks $ DB.whereIs ref
 
 -- Let's look into re-writing this with A*:
 -- http://hackage.haskell.org/packages/archive/astar/0.2.1/doc/html/Data-Graph-AStar.html
@@ -221,7 +221,7 @@ compass =
     do (_,pos) <- whereAmI
        plane <- whatPlaneAmIOn
        liftDB $
-           do (all_buildings :: [DetailedLocation (Child Building)]) <- liftM mapLocations $ DB.getContents plane
+           do (all_buildings :: [DetailedLocation (Child Building)]) <- liftM mapLocations $ asks $ DB.getContents plane
               all_signallers <- filterRO (liftM (== Just Magnetic) . buildingSignal . asChild . detail) all_buildings
               let multipositionOf :: DetailedLocation (Child Building) -> MultiPosition
                   multipositionOf = detail

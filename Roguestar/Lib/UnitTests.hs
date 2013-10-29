@@ -19,6 +19,7 @@ import Roguestar.Lib.Random as Random
 import qualified Test.HUnit.Base as HUnit
 import qualified Test.HUnit.Text as HUnitText
 import qualified Roguestar.Lib.Model.Tests as ModelTests
+import qualified Roguestar.Lib.Core.Tests as CoreTests
 
 type UnitTest = WriterT (T.Text,All) IO ()
 
@@ -54,7 +55,8 @@ testcases :: HUnit.Test
 testcases = HUnit.TestList [
     HUnit.TestLabel "session"               $ HUnit.TestList $ [testSessionAliveBeforeTimeout, testSessionExpiredAfterTimeout],
     HUnit.TestLabel "database"              $ HUnit.TestList $ [testSetPlayerState, testLocal],
-    HUnit.TestLabel "Roguestar.Lib.Model"   $ ModelTests.testcases]
+    HUnit.TestLabel "Roguestar.Lib.Model"   $ ModelTests.testcases,
+    HUnit.TestLabel "Roguestar.Lib.Core"    $ CoreTests.testcases]
 
 testSessionAliveBeforeTimeout :: HUnit.Test
 testSessionAliveBeforeTimeout = HUnit.TestCase $
