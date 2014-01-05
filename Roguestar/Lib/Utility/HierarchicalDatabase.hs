@@ -1,4 +1,4 @@
--- Services
+-- Utilities
 module Roguestar.Lib.Utility.HierarchicalDatabase
     (HierarchicalDatabase,
      HierarchicalRelation(..),
@@ -12,14 +12,14 @@ module Roguestar.Lib.Utility.HierarchicalDatabase
      childrenOf,
      Roguestar.Lib.Utility.HierarchicalDatabase.toList,
      Roguestar.Lib.Utility.HierarchicalDatabase.fromList,
-     insidenessTests)
+     testcases)
     where
 
 import Prelude hiding (lookup)
 import qualified Data.Map as Map
 import qualified Data.List as List
-import Roguestar.Lib.Tests
 import Data.Maybe as Maybe
+import qualified Test.HUnit as HUnit
 
 -- | A record that can be a component of a 'HierarchicalDatabase'.
 class HierarchicalRelation a where
@@ -40,7 +40,8 @@ instance (Show a) => Show (HierarchicalDatabase a) where
     show imap = show $ toList imap
 
 instance (HierarchicalRelation a,Read a) => Read (HierarchicalDatabase a) where
-    readsPrec n = \v -> Prelude.map (\(x,y) -> (fromList x,y)) (readsPrec n v)
+    readsPrec n v = Prelude.map foo (readsPrec n v)
+        where foo (x,y) = (fromList x,y)
 
 empty :: HierarchicalDatabase a
 empty = HierarchicalDatabase (Map.empty) (Map.empty)
@@ -135,34 +136,25 @@ example1 = fromList $ List.map ExampleRelation
                                                 (4,(-6),False),
                                                 (4,14,False)]
 
-testParent :: TestCase
-testParent = if (parentOf 0 example1) == (Just 2)
-             then return (Passed "testParent")
-             else return (Failed "testParent")
+testParent :: HUnit.Test
+testParent = HUnit.TestCase $ HUnit.assertEqual "testParent" (Just 2) (parentOf 0 example1)
 
-testChildren :: TestCase
-testChildren = if (length $ childrenOf 1 example1) == 5
-               then return (Passed "testChildren")
-               else return (Failed "testChildren")
+testChildCount :: HUnit.Test
+testChildCount = HUnit.TestCase $
+    HUnit.assertEqual "testChildCount" 5 (length $ childrenOf 1 example1)
 
-testUserData :: TestCase
+testUserData :: HUnit.Test
 testUserData = let child_records = lookupChildren 1 example1
-                   in if (all (\(ExampleRelation (_,_,b)) -> b) child_records)
-                      then return (Passed "testUserDatas")
-                      else return (Failed "testUserDatas")
+                   in HUnit.TestCase $ HUnit.assertBool "testUserData" (all (\(ExampleRelation (_,_,b)) -> b) child_records)
 
-testChildrenCorrect :: TestCase
-testChildrenCorrect = let the_children = childrenOf 4 example1
-                          in if (all even the_children)
-                             then return (Passed "testChildrenCorrect")
-                             else return (Failed "testChildrenCorrect")
+testChildrenEven :: HUnit.Test
+testChildrenEven = let the_children = childrenOf 4 example1 -- The example data is contrived so that all of the children of "4" have even numbered IDs.
+                        in HUnit.TestCase $ HUnit.assertBool "testChildrenEven" (all even the_children)
 
-testDelete :: TestCase
+testDelete :: HUnit.Test
 testDelete = let deleted = delete 0 $ delete (-6) $ example1
-                 in if ((length $ childrenOf 4 deleted) == 2 &&
-                        (isNothing $ parentOf 0 deleted))
-                 then return (Passed "testDelete")
-                 else return (Failed "testDelete")
+                 in HUnit.TestCase $ HUnit.assertBool "testDelete" ((length $ childrenOf 4 deleted) == 2 &&
+                                                                    (isNothing $ parentOf 0 deleted))
 
-insidenessTests :: [TestCase]
-insidenessTests = [testParent,testChildren,testUserData,testChildrenCorrect,testDelete]
+testcases :: HUnit.Test
+testcases = HUnit.TestLabel "HierarchicalDatabase" $ HUnit.TestList [testParent,testChildCount,testUserData,testChildrenEven,testDelete]

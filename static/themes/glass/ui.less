@@ -11,6 +11,7 @@
 @magenta: #939;
 @cyan: #399;
 @black: #080808;
+@grey: #666;
 @white: #ccc;
 
 @corner-roundness: 0.75em;
@@ -222,7 +223,11 @@ form textarea {
     border-width: 1cm;
     border-color: @red;
     background-color: #000000;
-    color: @green;
+}
+
+.not-horrible {
+    .horrible;
+    border-color: @grey;
 }
 
 #documenttext {

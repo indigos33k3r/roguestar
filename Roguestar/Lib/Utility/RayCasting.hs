@@ -2,14 +2,12 @@
 --Data
 module Roguestar.Lib.Utility.RayCasting
     (castRays,
-     castRay,
-     gridRayCasterTests)
+     castRay)
     where
 
 import Data.Set as Set
 import Data.List as List
 import Data.Ratio
-import Roguestar.Lib.Tests
 
 -- |
 -- When casting large numbers of rays from the same point, castRays will try to do this in
@@ -124,33 +122,3 @@ incrementRay ray@(Ray {ray_origin=(ax,ay), ray_delta=(dx,dy)}) =
 --
 rayToPoints :: Ray -> [(Float,Float)]
 rayToPoints ray = List.map ray_origin $ iterate (incrementRay) ray
-
-sampleDensityFunction :: (Integer,Integer) -> Integer
-sampleDensityFunction (x,y) = (abs x + abs y)
-
-gridRayCasterTests :: [TestCase]
-gridRayCasterTests = [easyRayTest,hardRayTest,tooHardRayTest,stressLazyRayTest]
-
-easyRayTest :: TestCase
-easyRayTest = (if castRay (4,5) (-3,-1) 100 sampleDensityFunction
-               then return (Passed "easyRayTest")
-               else return (Failed "easyRayTest"))
-
-hardRayTest :: TestCase
-hardRayTest = (if castRay (10,0) (0,10) 5 sampleDensityFunction
-               then return (Passed "hardRayTest")
-               else return (Failed "hardRayTest"))
-
-tooHardRayTest :: TestCase
-tooHardRayTest = (if castRay (10,0) (0,10) 4 sampleDensityFunction
-                  then return (Failed "tooHardRayTest")
-                  else return (Passed "tooHardRayTest"))
-
--- |
--- This test should evaluate quickly, even though the ray is very long, because the ray
--- will be opaqued early the casting of the ray.
---
-stressLazyRayTest :: TestCase
-stressLazyRayTest = (if castRay (-1,0) (1,2500000) 2 sampleDensityFunction
-                     then return (Failed "stressLazyRayTest")
-                     else return (Passed "stressLazyRayTest"))

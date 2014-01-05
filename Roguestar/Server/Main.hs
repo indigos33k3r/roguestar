@@ -64,7 +64,8 @@ makeGlobals :: IO Aeson.Value
 makeGlobals =
     do (unit_test_result,unit_tests_passed) <- liftIO runTests
        return $ object $ concat $ [
-           (if not unit_tests_passed then ["failed-unit-tests" .= object ["text-content" .= String unit_test_result]] else [])
+           (if not unit_tests_passed then ["failed-unit-tests" .= object ["text-content" .= String unit_test_result]]
+                                     else ["passed-unit-tests" .= object ["text-content" .= String unit_test_result]])
            ]
 
 handle500 :: MonadSnap m => m a -> m ()
@@ -120,14 +121,22 @@ postFeedback = method POST $ ifTop $
               BS.writeFile ("./feedback/" ++ show uuid) feedback
        redirect "/feedback-thanks/"
 
+getMemoryStatistics :: IO String
+getMemoryStatistics =
+    do ok <- getGCStatsEnabled
+       if ok then liftM show $ getGCStats
+             else return "(Memory statistics disabled. Use +RTS -T -RTS to collect memory statistics.)"
+
 options :: Handler App App ()
 options =
-    do stats <- liftIO $ getGCStats
+    do stats <- liftIO $ getMemoryStatistics
        game_state <- gets _app_game_state
+       globals <- gets _globals
        number_of_games <- liftIO $ getNumberOfGames game_state
        let server_statistics = object [
                "server-statistics" .= show stats,
-               "number-of-games"   .= number_of_games ]
+               "number-of-games"   .= number_of_games,
+               "server-globals"    .= globals ]
        renderThemedPage "static/templates/options.mustache" server_statistics
 
 play :: Handler App App ()

@@ -160,7 +160,10 @@ instance LocationDetail Facing where
     fromLocation (IsSubsequent {}) = Nothing
     fromLocation (IsBeneath {}) = Nothing
 
+-- | A convenience type to indicate that a reference is the parent component of a parent-child location record pair.
 newtype Parent a = Parent { asParent :: Reference a }
+
+-- | A convenience type to indicate that a reference is the child component of a parent-child location record pair.
 newtype Child a = Child { asChild :: Reference a }
 
 instance ReferenceType a => LocationDetail (Parent a) where

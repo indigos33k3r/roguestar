@@ -9,7 +9,6 @@ import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.DB
-import Roguestar.Lib.Core.Entities
 import Roguestar.Lib.Core.Plane
 import Test.HUnit
 

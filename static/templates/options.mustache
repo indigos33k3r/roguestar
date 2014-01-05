@@ -57,7 +57,28 @@
 <code>{{server-statistics}}</code>
 </p>
 
-<p>Current number of game sessions: {{{number-of-games}}}</p>
+<p>Current number of game sessions: {{number-of-games}}</p>
+
+{{#server-globals}}{{#failed-unit-tests}}
+<div class="horrible">
+<p>One or more unit tests failed:</p>
+<pre>
+{{text-content}}
+</pre>
+
+</div>
+{{/failed-unit-tests}}{{/server-globals}}
+
+{{#server-globals}}{{#passed-unit-tests}}
+<div class="not-horrible">
+<p>All unit tests passed:</p>
+<pre>
+{{text-content}}
+</pre>
+
+</div>
+{{/passed-unit-tests}}{{/server-globals}}
+
 </div>
 
 {{> footer}}

@@ -6,8 +6,8 @@ import Data.Text as T
 import Control.Monad.Writer.Lazy as W
 import Roguestar.Lib.Roguestar
 import Data.Maybe
+import Data.List as List
 import Control.Concurrent
-import System.IO
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.PlayerState
 import Control.Monad.Reader.Class
@@ -17,34 +17,39 @@ import Roguestar.Lib.Utility.SiteCriteria
 import Roguestar.Lib.Random as Random
 
 import qualified Test.HUnit.Base as HUnit
-import qualified Test.HUnit.Text as HUnitText
-import qualified Roguestar.Lib.Model.Tests as ModelTests
+import qualified Roguestar.Lib.Graph.Tests as GraphTests
 import qualified Roguestar.Lib.Core.Tests as CoreTests
-
-type UnitTest = WriterT (T.Text,All) IO ()
+import qualified Roguestar.Lib.Utility.HierarchicalDatabase as HDatabaseTests
 
 runTests :: IO (T.Text,Bool)
 runTests =
-    do ((),(t,All b)) <- runWriterT $ sequence_ unit_tests
-       counts <- HUnitText.runTestTT testcases
-       return (t,b && HUnit.errors counts > 0 || HUnit.failures counts > 0)
+    do (counts, text) <- captureTestResults testcases
+       return (text,  HUnit.errors counts == 0 && HUnit.failures counts == 0)
 
-unit_tests :: [UnitTest]
-unit_tests = [testPickRandomClearSite]
+data TestResult = TestResult {
+    test_result_text :: [T.Text] }
 
-assert :: Bool -> T.Text -> UnitTest
-assert ok test_name =
-    do let message = test_name `T.append` (if ok then ": ok." else ": FAILED.") `T.append` "\n"
-       tell (message, All ok)
-       liftIO $ hPutStr stderr $ T.unpack message
+pathOf :: HUnit.State -> String
+pathOf (HUnit.State { HUnit.path = p }) = List.concat $ List.map (nodeToString) $ List.reverse p
+    where nodeToString (HUnit.ListItem i) = "[" ++ show i ++ "]"
+          nodeToString (HUnit.Label s) = "/" ++ s
+
+captureTestResults :: HUnit.Test -> IO (HUnit.Counts, T.Text)
+captureTestResults test =
+        do (counts, test_result) <- HUnit.performTest report_start report_problem report_problem (TestResult []) test
+           return (counts, T.concat $ List.intersperse "\n\n" $ List.reverse $ test_result_text test_result)
+    where report_start state test_result = return $ test_result { test_result_text = (T.pack $ "\n" ++ pathOf state) : test_result_text test_result }
+          report_problem msg state test_result = return $ test_result { test_result_text = (T.pack $ pathOf state ++ ": " ++ msg) : test_result_text test_result }
 
 -- Generate N random planes and run tests against them.
-runWithRandomPlanes :: Int -> T.Text -> (PlaneRef -> DB Bool) -> UnitTest
-runWithRandomPlanes n test_name db_action = forM_ [1..n] $ \x ->
-    do b <- liftIO $ runDB (runWithRandomPlane_ db_action) initial_db
-       assert (either (const False) fst b) (test_name `T.append` "#" `T.append` T.pack (show x))
+runWithRandomPlanes :: Int -> String -> (PlaneRef -> DB HUnit.Assertion) -> HUnit.Test
+runWithRandomPlanes n test_name db_action = HUnit.TestList $ (flip Prelude.map) [1..n] $ \x -> HUnit.TestLabel (test_name ++ "#" ++ show x) $ HUnit.TestCase $
+    liftIO $ do result <- runDB (runWithRandomPlane_ db_action) initial_db
+                case result of
+                    (Right (assertion, _)) -> assertion
+                    (Left (err)) -> HUnit.assertString (show err)
 
-runWithRandomPlane_ :: (PlaneRef -> DB Bool) -> DB Bool
+runWithRandomPlane_ :: (PlaneRef -> DB HUnit.Assertion) -> DB HUnit.Assertion
 runWithRandomPlane_ dbAction =
     do let biome = Random.weightedSet [(4,TemperateClearing),(1,TemperateForest)]
        plane_ref <- dbNewPlane "testPlane" (TerrainGenerationData 3 biome []) TheUniverse
@@ -52,11 +57,13 @@ runWithRandomPlane_ dbAction =
 
 {-- UNIT TESTS BEGIN HERE --}
 testcases :: HUnit.Test
-testcases = HUnit.TestList [
+testcases = HUnit.TestLabel "root" $ HUnit.TestList [
     HUnit.TestLabel "session"               $ HUnit.TestList $ [testSessionAliveBeforeTimeout, testSessionExpiredAfterTimeout],
     HUnit.TestLabel "database"              $ HUnit.TestList $ [testSetPlayerState, testLocal],
-    HUnit.TestLabel "Roguestar.Lib.Model"   $ ModelTests.testcases,
-    HUnit.TestLabel "Roguestar.Lib.Core"    $ CoreTests.testcases]
+    HUnit.TestLabel "clear-site"            $ testPickRandomClearSite,
+    HUnit.TestLabel "Roguestar.Lib.Graph"   $ GraphTests.testcases,
+    HUnit.TestLabel "Roguestar.Lib.Core"    $ CoreTests.testcases,
+    HUnit.TestLabel "Roguestar.Lib.Utility.HierarchicalDatabase" $ HDatabaseTests.testcases]
 
 testSessionAliveBeforeTimeout :: HUnit.Test
 testSessionAliveBeforeTimeout = HUnit.TestCase $
@@ -98,7 +105,7 @@ testLocal = HUnit.TestCase $
            Left _ -> HUnit.assertFailure "testLocal (failed in monad)"
            Right (pstate,_) -> HUnit.assertEqual "testLocal" pstate (SpeciesSelectionState Nothing)
 
-testPickRandomClearSite :: UnitTest
+testPickRandomClearSite :: HUnit.Test
 testPickRandomClearSite = runWithRandomPlanes 10 "testPickRandomClearSite" $ \plane_ref ->
     do Position (x,y) <- pickRandomSite (-1000,1000) (-1000,1000) 50 (areaClearForObjectPlacement 1) plane_ref
        t1 <- terrainAt plane_ref $ Position (x-1,y-1)
@@ -110,4 +117,5 @@ testPickRandomClearSite = runWithRandomPlanes 10 "testPickRandomClearSite" $ \pl
        t7 <- terrainAt plane_ref $ Position (x-1,y+1)
        t8 <- terrainAt plane_ref $ Position (x,y+1)
        t9 <- terrainAt plane_ref $ Position (x+1,y+1)
-       return $ Prelude.all (not . (`elem` difficult_terrains)) [t1,t2,t3,t4,t5,t6,t7,t8,t9]
+       return $ HUnit.assertBool "Unacceptable terrain obstruction." (Prelude.all (not . (`elem` difficult_terrains)) [t1,t2,t3,t4,t5,t6,t7,t8,t9])
+

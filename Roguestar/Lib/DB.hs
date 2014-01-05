@@ -36,6 +36,7 @@ module Roguestar.Lib.DB
      dbVerify,
      whereIs,
      getContents,
+     getAncestors,
      move,
      ro, atomic,
      logDB,
@@ -484,6 +485,15 @@ whereIs item = fromMaybe (error "whereIs: has no location") . HD.lookupParent (t
 --
 getContents :: Reference t -> DB_BaseType -> [Location]
 getContents item = HD.lookupChildren (toUID item) . db_hierarchy
+
+-- |
+-- Returns locations of all ancestors, starting with the parent and proceeding in order to the root.
+--
+getAncestors :: Reference a -> DB_BaseType -> [Location]
+getAncestors reference _ | reference =:= the_universe = []
+getAncestors reference db = location : getAncestors reference' db
+    where reference' = parentReference location
+          location = whereIs reference db
 
 -- |
 -- Gets the time of an object.

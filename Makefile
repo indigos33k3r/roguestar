@@ -25,4 +25,4 @@ check: clean
 	cabal-dev build
 
 depends:
-	cabal-dev install -j cipher-aes MaybeT MonadCatchIO-transformers aeson data-lens-template data-memocombinators hastache hslogger mwc-random snap-core snap-server snap streams system-uuid data-lens-template snap streams
+	cabal-dev install-deps -j

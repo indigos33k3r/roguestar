@@ -38,7 +38,6 @@ import qualified Data.ByteString.Char8 as B
 import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Logging
 import Control.Monad.Maybe
-import Roguestar.Lib.Core.Entities
 
 dbNewPlane :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => B.ByteString -> TerrainGenerationData -> l -> DB PlaneRef
 dbNewPlane name tg_data l =
