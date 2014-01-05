@@ -85,7 +85,6 @@ library
                   Roguestar.Lib.Tool,
                   Roguestar.Lib.RNG,
                   Roguestar.Lib.Position,
-                  Roguestar.Lib.Tests,
                   Roguestar.Lib.World.BeginGame,
                   Roguestar.Lib.World.Planet,
                   Roguestar.Lib.Time,
