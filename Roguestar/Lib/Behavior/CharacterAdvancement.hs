@@ -16,18 +16,18 @@ import Roguestar.Lib.Data.PersistantData
 
 data CharacterBumpResult =
     CharacterAwarded  { character_points_awarded :: Integer,
-                        character_new :: Monster }
+                        character_new :: MonsterData }
   | CharacterAdvanced { character_new_level :: Integer,
-                        character_new :: Monster }
+                        character_new :: MonsterData }
   | CharacterForced   { character_new_character_class :: CharacterClass,
-                        character_new :: Monster }
+                        character_new :: MonsterData }
 
 -- |
 -- Increases the character score by the set amount.
 -- If the score is high enough that the character can advance to the next level,
 -- this function will apply that advancement.
 --
-bumpCharacter :: PowerUpData -> Monster -> CharacterBumpResult
+bumpCharacter :: PowerUpData -> MonsterData -> CharacterBumpResult
 bumpCharacter (ForceCharacter character_class) c =
         if CharacterClass character_class `elem` Map.keys (creature_traits c)
             then bumpCharacter (AwardCharacter $ characterFitness new_character - characterFitness c) c
@@ -61,12 +61,12 @@ newCharacterLevel _ = Nothing
 -- A rather arbitrary (non-representative of game balance)
 -- measure of Character power.
 --
-characterLevel :: Monster -> Integer
+characterLevel :: MonsterData -> Integer
 characterLevel = maximum . Map.elems . creature_traits
 
 -- |
 -- Answers the estimated fitness (powerfulness) of the Character.
 --
-characterFitness :: Monster -> Integer
+characterFitness :: MonsterData -> Integer
 characterFitness c = sum $ (Map.elems $ creature_traits c)
 

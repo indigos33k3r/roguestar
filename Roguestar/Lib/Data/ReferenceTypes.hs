@@ -43,7 +43,7 @@ import Roguestar.Lib.Position
 --
 data TheUniverse = TheUniverse deriving (Read,Show,Eq,Ord)
 
-type MonsterRef = Reference Monster
+type MonsterRef = Reference MonsterData
 type ToolRef = Reference Tool
 type PlaneRef = Reference Plane
 type BuildingRef = Reference Building
@@ -92,7 +92,7 @@ instance ReferenceType Tool where
     coerceReference (ToolRef ref) = Just $ ToolRef ref
     coerceReference _ = Nothing
 
-instance ReferenceType Monster where
+instance ReferenceType MonsterData where
     coerceReference (MonsterRef ref) = Just $ MonsterRef ref
     coerceReference _ = Nothing
 

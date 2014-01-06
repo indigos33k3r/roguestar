@@ -92,7 +92,7 @@ data DBContext s = DBContext {
 
 data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
-                                 db_creatures :: Map MonsterRef Monster,
+                                 db_creatures :: Map MonsterRef MonsterData,
                                  db_player_creature :: Maybe MonsterRef,
                                  db_planes :: Map PlaneRef Plane,
                                  db_tools :: Map ToolRef Tool,
@@ -282,7 +282,7 @@ dbAddObjectComposable constructReferenceAction updateObjectAction constructLocat
 -- |
 -- Adds a new Monster to the database.
 --
-dbAddMonster :: (LocationConstructor l, ReferenceTypeOf l ~ Monster) => Monster -> l -> DB MonsterRef
+dbAddMonster :: (LocationConstructor l, ReferenceTypeOf l ~ MonsterData) => MonsterData -> l -> DB MonsterRef
 dbAddMonster = dbAddObjectComposable MonsterRef dbPutMonster (\r l -> constructLocation r l Nothing)
 
 -- |
@@ -334,7 +334,7 @@ dbPutObjectComposable get_map_fn put_map_fn key thing =
 -- |
 -- Puts a Monster under an arbitrary MonsterRef.
 --
-dbPutMonster :: MonsterRef -> Monster -> DB ()
+dbPutMonster :: MonsterRef -> MonsterData -> DB ()
 dbPutMonster = dbPutObjectComposable db_creatures (\x db_base_type ->
      db_base_type { db_creatures = x })
 
@@ -369,7 +369,7 @@ getObjectComposable type_info get_fn ref =
 -- |
 -- Gets a Monster from a MonsterRef
 --
-getMonster :: MonsterRef -> DB_BaseType -> Monster
+getMonster :: MonsterRef -> DB_BaseType -> MonsterData
 getMonster = getObjectComposable "MonsterRef" db_creatures
 
 -- |
@@ -406,7 +406,7 @@ dbModPlane = dbModObjectComposable (asks . getPlane) dbPutPlane
 -- |
 -- Modifies a Monster based on a PlaneRef.
 --
-dbModMonster :: (Monster -> Monster) -> MonsterRef -> DB ()
+dbModMonster :: (MonsterData -> MonsterData) -> MonsterRef -> DB ()
 dbModMonster = dbModObjectComposable (asks . getMonster) dbPutMonster
 
 -- |

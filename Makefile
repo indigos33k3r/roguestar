@@ -12,7 +12,7 @@ configure-profiling:
 	--enable-library-profiling --enable-executable-profiling
 
 build:
-	cabal-dev build -j
+	cabal-dev build
 
 clean:
 	cabal-dev clean

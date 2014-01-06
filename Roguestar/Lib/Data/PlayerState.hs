@@ -12,7 +12,7 @@ import Roguestar.Lib.Data.PersistantData
 import Data.Maybe
 
 data PlayerState =
-    SpeciesSelectionState (Maybe Monster)
+    SpeciesSelectionState (Maybe MonsterData)
   | PlayerMonsterTurn MonsterRef
   | SnapshotEvent SnapshotEvent
   | GameOver GameOverReason

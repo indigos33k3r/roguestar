@@ -35,7 +35,7 @@ import qualified Data.Set as Set
 -- |
 -- Generates a new Monster from the specified species.
 --
-generateMonster :: Faction -> Species -> DB Monster
+generateMonster :: Faction -> Species -> DB MonsterData
 generateMonster faction species =
     do r <- getRandomR (1,1000000)
        return $ applyToMonster (species_specials $ speciesInfo species) $
@@ -56,7 +56,7 @@ generateInitialPlayerMonster species =
 -- |
 -- Generates a new Monster from the specified Species and adds it to the database.
 --
-newMonster :: (LocationConstructor l, ReferenceTypeOf l ~ Monster) => Faction -> Species -> l -> DB MonsterRef
+newMonster :: (LocationConstructor l, ReferenceTypeOf l ~ MonsterData) => Faction -> Species -> l -> DB MonsterRef
 newMonster faction species loc =
     do creature <- generateMonster faction species
        dbAddMonster creature loc

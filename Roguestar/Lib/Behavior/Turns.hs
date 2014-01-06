@@ -10,7 +10,7 @@ import Control.Monad.Trans
 import Roguestar.Lib.DB
 import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Data.SpeciesData
-import Roguestar.Lib.Data.MonsterData (Monster)
+import Roguestar.Lib.Data.MonsterData (MonsterData)
 import Roguestar.Lib.Core.Plane
 import Control.Monad
 import Control.Monad.Reader
@@ -77,7 +77,7 @@ monster_spawns = [(RecreantFactory,RedRecreant)]
 dbPerform1PlanarAITurn :: PlaneRef -> DB ()
 dbPerform1PlanarAITurn plane_ref =
     do logDB gameplay_log INFO $ "dbPerform1PlanarAITurn; Beginning planar AI turn (for the plane itself):"
-       (creature_locations :: [DetailedLocation (Child Monster)]) <- liftM mapLocations $ asks $ getContents plane_ref
+       (creature_locations :: [DetailedLocation (Child MonsterData)]) <- liftM mapLocations $ asks $ getContents plane_ref
        player_locations <- filterRO (liftM (== Player) . getMonsterFaction . asChild . detail) creature_locations
        num_npcs <- liftM length $ filterRO (liftM (/= Player) . getMonsterFaction . asChild . detail) creature_locations
        when (num_npcs < length player_locations * 3) $

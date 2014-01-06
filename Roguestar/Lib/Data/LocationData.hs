@@ -177,7 +177,7 @@ class LocationConstructor l where
     constructLocation :: Reference (ReferenceTypeOf l) -> l -> Maybe Location -> Location
 
 instance LocationConstructor Standing where
-    type ReferenceTypeOf Standing = Monster
+    type ReferenceTypeOf Standing = MonsterData
     constructLocation a l _ = IsStanding a l
 
 instance LocationConstructor Dropped where

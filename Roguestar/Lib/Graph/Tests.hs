@@ -17,6 +17,7 @@ testcases = TestLabel "Roguestar.Lib.Model.Tests" $ TestList [
 equestria :: Plane
 equestria = Plane {
               plane_to_reference = References.PlaneRef 0,
+              plane_to_data = error "undefined equestria",
               plane_to_monsters = Set.fromList [twilight, picard, zathras],
               plane_to_buildings = Set.fromList [] }
 

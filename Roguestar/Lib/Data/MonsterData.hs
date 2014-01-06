@@ -1,6 +1,6 @@
 --Data
 module Roguestar.Lib.Data.MonsterData
-    (Monster(..),
+    (MonsterData(..),
      MonsterTrait(..),
      MonsterSpecial(..),
      MonsterInteractionMode(..),
@@ -24,7 +24,7 @@ import Data.List as List
 import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.TerrainData
 
-data Monster = Monster { creature_traits :: Map.Map MonsterTrait Integer,
+data MonsterData = MonsterData { creature_traits :: Map.Map MonsterTrait Integer,
                            creature_specials :: Set.Set MonsterSpecial,
                            creature_species :: Species,
                            creature_random_id :: Integer, -- random number attached to the creature, not unique
@@ -35,8 +35,8 @@ data Monster = Monster { creature_traits :: Map.Map MonsterTrait Integer,
 
 -- | Monster having no attributes and undefined 'creature_species', 'creature_random_id', and 'creature_faction'
 --
-empty_monster :: Monster
-empty_monster = Monster {
+empty_monster :: MonsterData
+empty_monster = MonsterData {
     creature_traits = Map.empty,
     creature_specials = Set.empty,
     creature_species = error "empty_creature: undefined creature_species",
@@ -48,11 +48,11 @@ empty_monster = Monster {
 -- | Endomorphisms over a 'Monster'.  These are types that contribute some feature to a 'Monster',
 -- so that 'Monster's can be defined concisely by those properties.
 class MonsterEndo a where
-    applyToMonster :: a -> Monster -> Monster
+    applyToMonster :: a -> MonsterData -> MonsterData
 
 -- | Primitive numeric properties of a Monster.
 class MonsterScore s where
-    rawScore :: s -> Monster -> Integer
+    rawScore :: s -> MonsterData -> Integer
 
 instance (MonsterEndo a,Integral i) => MonsterEndo (a,i) where
     applyToMonster (_,i) | i <= 0 = id
@@ -127,11 +127,11 @@ instance MonsterScore CharacterClass where
 
 -- | Calculator to determine how many ranks a creature has in an ability.
 -- Number of aptitude points plus n times number of ability points
-figureAbility :: [MonsterTrait] -> Monster -> Integer
+figureAbility :: [MonsterTrait] -> MonsterData -> Integer
 figureAbility []     _ = 1
 figureAbility traits c = 1 + sum (map (flip rawScore c) traits) `div` List.genericLength traits
 
-creatureAbilityScore :: MonsterAbility -> Monster -> Integer
+creatureAbilityScore :: MonsterAbility -> MonsterData -> Integer
 creatureAbilityScore ToughnessTrait = figureAbility [Caution,Fortitude]
 creatureAbilityScore (AttackSkill _) = figureAbility [Aggression,Dexterity]
 creatureAbilityScore (DefenseSkill _) = figureAbility [Caution,Dexterity]
@@ -145,7 +145,7 @@ creatureAbilityScore InventorySkill = figureAbility [Fortitude]
 
 -- |
 -- Answers the health/injury/maximum health of this creature.
-creatureHealth :: Monster -> MonsterHealth
+creatureHealth :: MonsterData -> MonsterHealth
 creatureHealth c = case () of
                        () | creature_max_health result <= 0 -> error "creatureHealth: creature_max_health <= 0"
                        () | otherwise -> result

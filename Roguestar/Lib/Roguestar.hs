@@ -12,7 +12,7 @@ module Roguestar.Lib.Roguestar
      getPlayerState,
      getSnapshotPlayerState,
      rerollStartingSpecies,
-     Monster(..),
+     MonsterData(..),
      Terrain(..),
      Position(..),
      Facing(..),

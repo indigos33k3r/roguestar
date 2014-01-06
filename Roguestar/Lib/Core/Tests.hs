@@ -15,7 +15,7 @@ import Test.HUnit
 testcases :: Test
 testcases = TestLabel "Roguestar.Lib.Core.Tests" $ TestList [testAncestors]
 
-spock :: Monster
+spock :: MonsterData
 spock = empty_monster
 
 setupCreatureWithTool :: DB (ToolRef,MonsterRef,PlaneRef)

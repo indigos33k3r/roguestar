@@ -5,7 +5,7 @@ module Roguestar.Lib.Data.CharacterData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.PersistantData
 
-applyCharacterClass :: CharacterClass -> Monster -> Monster
+applyCharacterClass :: CharacterClass -> MonsterData -> MonsterData
 applyCharacterClass character_class creature = applyToMonster (CharacterClass character_class : classInfo character_class) creature
 
 classInfo :: CharacterClass -> [MonsterTrait]

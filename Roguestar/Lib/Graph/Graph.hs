@@ -13,7 +13,7 @@ import Roguestar.Lib.Position
 
 data Monster = Monster {
     monster_to_reference :: References.MonsterRef,
-    monster_to_data :: MonsterData.Monster,
+    monster_to_data :: MonsterData.MonsterData,
     monster_to_square :: Square }
 
 data Square = Square {

@@ -32,7 +32,7 @@ startingEquipmentBySpecies BlueRecreant = []
 startingEquipmentBySpecies Anachronid = []
 startingEquipmentBySpecies TabularMonstrosity = []
 
-dbCreateStartingPlane :: Monster -> DB PlaneRef
+dbCreateStartingPlane :: MonsterData -> DB PlaneRef
 dbCreateStartingPlane creature =
     do seed <- getRandom
        dbNewPlane "belhaven" (TerrainGenerationData {
