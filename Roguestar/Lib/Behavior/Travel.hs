@@ -21,14 +21,20 @@ import Control.Monad.Reader
 import Data.Maybe
 import Data.Ord
 import Data.List (minimumBy)
+import qualified Data.Set as Set
 import Roguestar.Lib.Behavior.Outcome
 import Roguestar.Lib.Core.Monster
+import Roguestar.Lib.Core2.Monster
 import Roguestar.Lib.Core.Plane as Plane
 import Roguestar.Lib.DB as DB
 import Roguestar.Lib.Data.FacingData
+import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Data.MonsterData
+import Roguestar.Lib.Data.ReferenceTypes
 import Roguestar.Lib.Data.TerrainData
 import Roguestar.Lib.Data.TravelData
+import Roguestar.Lib.Graph
+import Roguestar.Lib.Core2.Realization
 import Roguestar.Lib.Logging
 import Roguestar.Lib.PlaneVisibility
 import Roguestar.Lib.Position as Position
@@ -198,6 +204,7 @@ instance Effect SetTerrainEffect where
 data SlowMonsterEffect = SlowMonsterEffect {
     slow_monster_ref :: MonsterRef,
     slow_monster_amount :: Rational }
+    deriving (Eq, Ord)
 
 executeSlowMonster :: SlowMonsterEffect -> DB ()
 executeSlowMonster outcome = increaseTime (slow_monster_ref outcome) (slow_monster_amount outcome)
@@ -226,16 +233,17 @@ resolveStepWithHolographicTrail facing monster_ref =
 --      TemporalWeb
 --------------------------------------------------------------------------------
 
-resolveStepWithTemporalWeb :: (MonadRandom db, DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome,[SlowMonsterEffect]))
+resolveStepWithTemporalWeb :: (MonadRandom db, DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome,Set.Set SlowMonsterEffect))
 resolveStepWithTemporalWeb facing monster_ref =
     do move_outcome <- stepMonster facing monster_ref
        let (plane_ref :: PlaneRef, position :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)
        t <- getDuration move_outcome
        faction <- getMonsterFaction monster_ref
        (vobs :: [MonsterRef]) <- liftM (mapMaybe coerceReference) $ dbGetVisibleObjectsForFaction (const $ return True) faction plane_ref
-       slows <- forM vobs $ \vob ->
-           do (p :: Position) <- liftM detail $ getPlanarLocation monster_ref
-              return $ SlowMonsterEffect vob (t / fromInteger (Position.distanceBetweenSquared p position))
+       me <- realizeMonsterM monster_ref
+       let slowByDistance :: Monster -> Monster -> SlowMonsterEffect
+           slowByDistance me enemy = SlowMonsterEffect (toReference enemy) $ t / fromInteger (Position.distanceBetweenSquared me enemy)
+           slows = Set.map (slowByDistance me) $ enemies me
        return $ OutcomeWithEffect
            move_outcome
            (move_outcome, slows)

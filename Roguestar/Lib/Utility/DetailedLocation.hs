@@ -27,7 +27,7 @@ import Data.Maybe
 import Control.Monad
 import Roguestar.Lib.Data.FacingData
 
-type PlaneLocation = DetailedLocation (Child Plane)
+type PlaneLocation = DetailedLocation (Child PlaneData)
 type BuildingLocation = DetailedLocation (Child Building)
 type MonsterLocation = DetailedLocation (Child MonsterData)
 type ToolLocation = DetailedLocation (Child Tool)
@@ -71,7 +71,7 @@ instance LocationDetail Planar where
     fromLocation l = liftM3 Planar (liftM (\(Parent x) -> x) $ fromLocation l) (fromLocation l) (fromLocation l)
 
 instance LocationConstructor Planar where
-    type ReferenceTypeOf Planar = ()
+    type ChildTypeOf Planar = ()
     constructLocation ref planar | Just creature_ref <- coerceReference ref =
                                    constructLocation creature_ref $ Standing (planar_parent planar) (planar_position planar) Here
     constructLocation ref planar | Just tool_ref     <- coerceReference ref =
@@ -92,29 +92,29 @@ type family LocationAssignmentTable   from             to                       
 type instance LocationAssignmentTable a                (DetailedLocation b)          = LocationAssignmentTable a b
 type instance LocationAssignmentTable a                (Child ())                    = Supported
 type instance LocationAssignmentTable a                (Parent ())                   = Supported
-type instance LocationAssignmentTable Planar           (Parent Plane)                = Supported
+type instance LocationAssignmentTable Planar           (Parent PlaneData)                = Supported
 type instance LocationAssignmentTable Planar           MultiPosition                 = Supported
 type instance LocationAssignmentTable Planar           Position                      = Supported
-type instance LocationAssignmentTable Planar           (Parent Plane, MultiPosition) = Supported
-type instance LocationAssignmentTable Planar           (Parent Plane, Position)      = Supported
+type instance LocationAssignmentTable Planar           (Parent PlaneData, MultiPosition) = Supported
+type instance LocationAssignmentTable Planar           (Parent PlaneData, Position)      = Supported
 type instance LocationAssignmentTable (Child a)        (Child a)                     = Supported
 type instance LocationAssignmentTable (Child MonsterData) Standing                       = Supported
-type instance LocationAssignmentTable (Child MonsterData) (Parent Plane)                 = Supported
+type instance LocationAssignmentTable (Child MonsterData) (Parent PlaneData)                 = Supported
 type instance LocationAssignmentTable (Child MonsterData) Position                       = Supported
 type instance LocationAssignmentTable (Child MonsterData) MultiPosition                  = Supported
 type instance LocationAssignmentTable (Child MonsterData) Planar                         = Supported
 type instance LocationAssignmentTable (Child MonsterData) Facing                         = Supported
 type instance LocationAssignmentTable (Child MonsterData) (Facing,Position)              = Supported
 type instance LocationAssignmentTable (Child MonsterData) (Position,Facing)              = Supported
-type instance LocationAssignmentTable (Child Building) (Parent Plane)                = Supported
+type instance LocationAssignmentTable (Child Building) (Parent PlaneData)                = Supported
 type instance LocationAssignmentTable (Child Building) Position                      = Supported
 type instance LocationAssignmentTable (Child Building) MultiPosition                 = Supported
 type instance LocationAssignmentTable (Child Building) BuildingShape                 = Supported
-type instance LocationAssignmentTable Beneath          (Child Plane)                 = Supported
-type instance LocationAssignmentTable Subsequent       (Child Plane)                 = Supported
+type instance LocationAssignmentTable Beneath          (Child PlaneData)                 = Supported
+type instance LocationAssignmentTable Subsequent       (Child PlaneData)                 = Supported
 type instance LocationAssignmentTable Standing         Planar                        = Supported
 type instance LocationAssignmentTable Standing         (Child MonsterData)               = Supported
-type instance LocationAssignmentTable Standing         (Parent Plane)                = Supported
+type instance LocationAssignmentTable Standing         (Parent PlaneData)                = Supported
 type instance LocationAssignmentTable Standing         Position                      = Supported
 type instance LocationAssignmentTable Standing         MultiPosition                 = Supported
 type instance LocationAssignmentTable Standing         Facing                        = Supported

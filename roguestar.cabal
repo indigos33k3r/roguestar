@@ -35,7 +35,9 @@ executable roguestar-server
     ghc-options: -threaded -rtsopts=all -Wall -fno-warn-type-defaults
   else
     ghc-options: -threaded -fno-warn-type-defaults
-  other-modules:  Roguestar.Lib.HTML.Mustache
+  other-modules:  
+                  Roguestar.Lib.HTML.Mustache,
+                  Roguestar.Lib.Core2.Tests
 
 library
   hs-source-dirs: .
@@ -59,7 +61,8 @@ library
                   base >=4,
                   mwc-random >= 0.12.0.1,
                   streams >= 0.8.2
-  other-modules:  Roguestar.Lib.Perception,
+  other-modules:  
+                  Roguestar.Lib.Perception,
                   Roguestar.Lib.PlaneVisibility,
                   Roguestar.Lib.Behavior,
                   Roguestar.Lib.Behavior.Activate,
@@ -75,7 +78,6 @@ library
                   Roguestar.Lib.Core2.Realization,
                   Roguestar.Lib.Graph.Classes,
                   Roguestar.Lib.Graph.Graph,
-                  Roguestar.Lib.Graph.Location,
                   Roguestar.Lib.Graph.Tests,
                   Roguestar.Lib.Utility.Contact,
                   Roguestar.Lib.Utility.Grids,
@@ -112,7 +114,9 @@ library
                   Roguestar.Lib.Data.ToolData,
                   Roguestar.Lib.Data.TravelData,
                   Roguestar.Lib.Data.VisibilityData,
-                  Roguestar.Lib.HTML.Mustache
+                  Roguestar.Lib.HTML.Mustache,
+                  Roguestar.Lib.Core2.Tests,
+                  Roguestar.Lib.Core2.Location
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)

@@ -1,16 +1,12 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 module Roguestar.Lib.Graph.Classes
     (HasPlane(..),
      HasSquare(..),
      HasMonsters(..),
      HasMonster(..),
-     comonsters,
-     position,
-     planeReference,
-     monsterReference)
+     position)
     where
 
-import qualified Roguestar.Lib.Data.ReferenceTypes as References
 import Roguestar.Lib.Position
 import Roguestar.Lib.Graph.Graph
 import qualified Data.Set as Set
@@ -57,16 +53,5 @@ instance HasSquare Monster where
 instance HasBuildings Plane where
     buildings = plane_to_buildings
 
--- | Monsters, other than this monster, on the same plane as this monster.
-comonsters :: Monster -> Set.Set Monster
-comonsters m = Set.filter (/= m) $ monsters $ plane m
-
 position :: (HasSquare a) => a -> Position
 position = square_to_position . square
-
-planeReference :: (HasPlane a) => a -> References.PlaneRef
-planeReference = plane_to_reference . plane
-
-monsterReference :: (HasMonster a) => a -> References.MonsterRef
-monsterReference = monster_to_reference . monster
-

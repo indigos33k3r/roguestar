@@ -43,7 +43,7 @@ instance ContactModeType MonsterInteractionMode where
 findContacts :: (DBReadable db,ContactModeType c) =>
                 c -> Reference x -> Facing -> db [DetailedLocation Planar]
 findContacts contact_mode attacker_ref face =
-    do (m_l :: Maybe (Parent Plane,MultiPosition)) <- liftM fromLocation $ asks $ whereIs attacker_ref
+    do (m_l :: Maybe (Parent PlaneData,MultiPosition)) <- liftM fromLocation $ asks $ whereIs attacker_ref
        let testF pos (x :: MultiPosition) = case contactMode contact_mode of
                Touch -> min (x `distanceBetweenChessboard` (offsetPosition (facingToRelative face) pos))
                             (x `distanceBetweenChessboard` pos) == 0

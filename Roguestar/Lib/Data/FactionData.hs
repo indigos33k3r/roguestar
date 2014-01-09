@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 --Data
 module Roguestar.Lib.Data.FactionData
-    (Faction(..),factionPrefix)
+    (Faction(..),factionPrefix,
+     GetFaction(..))
     where
 
 import qualified Data.ByteString.Char8 as B
@@ -17,3 +18,9 @@ factionPrefix Player = "Z"
 factionPrefix Monsters = "M"
 factionPrefix Nonaligned = "P"
 factionPrefix Cyborgs = "Y"
+
+class GetFaction faction where
+    getFaction :: faction -> Faction
+
+instance GetFaction Faction where
+    getFaction = id

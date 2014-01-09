@@ -20,7 +20,7 @@ import Data.ByteString.Char8 as B
 import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Data.BuildingData
 
-makePlanet :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => l -> PlanetInfo -> DB PlaneRef
+makePlanet :: (LocationConstructor l, ChildTypeOf l ~ PlaneData) => l -> PlanetInfo -> DB PlaneRef
 makePlanet plane_location planet_info =
     do seed <- getRandom
        seed_down <- getRandom
@@ -51,7 +51,7 @@ makePlanets l (planet_info:rest) =
        (_,last_plane_ref) <- makePlanets (Subsequent first_plane_ref $ subsequent_via l) rest
        return (first_plane_ref,last_plane_ref)
 
-makeDungeons :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) =>
+makeDungeons :: (LocationConstructor l, ChildTypeOf l ~ PlaneData) =>
                 B.ByteString ->
                 l ->
                 Integer ->

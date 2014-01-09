@@ -21,7 +21,7 @@ import Data.Maybe
 -- True iff any terrain modification actually occured.
 modifyFacingTerrain :: (Terrain -> Terrain) -> Facing -> MonsterRef -> DB Bool
 modifyFacingTerrain f face creature_ref = liftM (fromMaybe False) $ runMaybeT $
-    do (Parent plane_ref :: Parent Plane,position :: Position) <- MaybeT $ liftM fromLocation $ asks $ whereIs creature_ref
+    do (Parent plane_ref :: Parent PlaneData,position :: Position) <- MaybeT $ liftM fromLocation $ asks $ whereIs creature_ref
        let target_position = offsetPosition (facingToRelative face) position
        prev_terrain <- lift $ terrainAt plane_ref target_position
        let new_terrain = f prev_terrain

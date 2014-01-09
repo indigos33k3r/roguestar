@@ -2,6 +2,7 @@
 module Roguestar.Lib.Core2.Realization
     (realizePlane,
      realizeMonster,
+     realizeMonsterM,
      realizeSquare)
     where
 
@@ -13,6 +14,7 @@ module Roguestar.Lib.Core2.Realization
 --
 
 import Prelude hiding (getContents)
+import Control.Monad.Reader
 import qualified Roguestar.Lib.Data.PlaneData as PlaneData
 import Roguestar.Lib.DB
 import Roguestar.Lib.Graph
@@ -31,10 +33,13 @@ realizeMonster db monster_ref = Monster {
     monster_to_reference = monster_ref,
     monster_to_data = getMonster monster_ref db,
     monster_to_square = realizeSquare db plane_ref p }
-        where (p :: Position, Parent plane_ref :: Parent PlaneData.Plane) = fromMaybe (error "realizeMonster: doesn't have a planar position") $ fromLocation $ whereIs monster_ref db
+        where (p :: Position, Parent plane_ref :: Parent PlaneData.PlaneData) = fromMaybe (error "realizeMonster: doesn't have a planar position") $ fromLocation $ whereIs monster_ref db
+
+realizeMonsterM :: (DBReadable db) => MonsterRef -> db Monster
+realizeMonsterM monster_ref = asks $ flip realizeMonster monster_ref
 
 realizeSquare :: DB_BaseType -> PlaneRef -> Position -> Square
 realizeSquare db plane_ref p = Square {
      square_to_plane = realizePlane db plane_ref,
      square_to_position = p }
-
+     

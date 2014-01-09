@@ -1,10 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TypeFamilies #-}
 
 module Roguestar.Lib.Data.ReferenceTypes
     (Reference(..),
      unsafeReference,
      toUID,
      ReferenceType(..),
+     ToReference(..),
      (=:=),
      (=/=),
      Location(..),
@@ -45,7 +46,7 @@ data TheUniverse = TheUniverse deriving (Read,Show,Eq,Ord)
 
 type MonsterRef = Reference MonsterData
 type ToolRef = Reference Tool
-type PlaneRef = Reference Plane
+type PlaneRef = Reference PlaneData
 type BuildingRef = Reference Building
 
 -- |
@@ -84,7 +85,7 @@ class ReferenceType a where
 instance ReferenceType () where
     coerceReference = Just . unsafeReference
 
-instance ReferenceType Plane where
+instance ReferenceType PlaneData where
     coerceReference (PlaneRef ref) = Just $ PlaneRef ref
     coerceReference _ = Nothing
 
@@ -115,6 +116,14 @@ instance (ReferenceType a, ReferenceType b) => ReferenceType (Either a b) where
                 (_,Just r) -> Just $ unsafeReference r
                 _ -> Nothing
             in result
+
+class ToReference a where
+    type ReferenceTypeOf a :: *
+    toReference :: a -> Reference (ReferenceTypeOf a)
+
+instance ToReference (Reference a) where
+    type ReferenceTypeOf (Reference a) = a
+    toReference = id
 
 -- |
 -- The location of a Monster standing on a Plane.
@@ -173,9 +182,7 @@ data Beneath =
 
 -- |
 --
--- Represents a location.
---
--- Up to roguestar 0.6, Locations were typed.  As of 0.7 locations are untyped, but I added DetailedLocations.
+-- Represents a location (parent-child pair with additional data, such as (x,y) coordinates of the child within the parent.
 --
 data Location =
      IsStanding MonsterRef Standing

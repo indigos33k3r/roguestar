@@ -173,39 +173,39 @@ instance ReferenceType a => LocationDetail (Child a) where
     fromLocation = fmap Child . coerceReference . childReference
 
 class LocationConstructor l where
-    type ReferenceTypeOf l :: *
-    constructLocation :: Reference (ReferenceTypeOf l) -> l -> Maybe Location -> Location
+    type ChildTypeOf l :: *
+    constructLocation :: Reference (ChildTypeOf l) -> l -> Maybe Location -> Location
 
 instance LocationConstructor Standing where
-    type ReferenceTypeOf Standing = MonsterData
+    type ChildTypeOf Standing = MonsterData
     constructLocation a l _ = IsStanding a l
 
 instance LocationConstructor Dropped where
-    type ReferenceTypeOf Dropped = Tool
+    type ChildTypeOf Dropped = Tool
     constructLocation a l _ = IsDropped a l
 
 instance LocationConstructor Inventory where
-    type ReferenceTypeOf Inventory = Tool
+    type ChildTypeOf Inventory = Tool
     constructLocation a l _ = InInventory a l
 
 instance LocationConstructor Wielded where
-    type ReferenceTypeOf Wielded = Tool
+    type ChildTypeOf Wielded = Tool
     constructLocation a l _ = IsWielded a l
 
 instance LocationConstructor Constructed where
-    type ReferenceTypeOf Constructed = Building
+    type ChildTypeOf Constructed = Building
     constructLocation a l _ = IsConstructed a l
 
 instance LocationConstructor TheUniverse where
-    type ReferenceTypeOf TheUniverse = Plane
+    type ChildTypeOf TheUniverse = PlaneData
     constructLocation a _ _ = InTheUniverse a
 
 instance LocationConstructor Subsequent where
-    type ReferenceTypeOf Subsequent = Plane
+    type ChildTypeOf Subsequent = PlaneData
     constructLocation a l _ = IsSubsequent a l
 
 instance LocationConstructor Beneath where
-    type ReferenceTypeOf Beneath = Plane
+    type ChildTypeOf Beneath = PlaneData
     constructLocation a l _ = IsBeneath a l
 
 returnToInventory :: Location -> Maybe Location

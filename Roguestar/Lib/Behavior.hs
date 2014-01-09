@@ -37,7 +37,7 @@ import Roguestar.Lib.Data.BehaviorData
 -- | Decide which FacingBehavior is most appropriate for for a character's situation.
 facingBehavior :: (DBReadable db) => MonsterRef -> Facing -> db FacingBehavior
 facingBehavior creature_ref face =
-    do ((Parent plane_ref,pos) :: (Parent Plane,Position)) <- liftM detail $ getPlanarLocation creature_ref
+    do ((Parent plane_ref,pos) :: (Parent PlaneData,Position)) <- liftM detail $ getPlanarLocation creature_ref
        let facing_pos = offsetPosition (facingToRelative face) pos
        t <- terrainAt plane_ref facing_pos
        who :: [MonsterRef] <- liftM asChildren $ whatIsOccupying plane_ref facing_pos
@@ -55,7 +55,7 @@ facingBehavior creature_ref face =
 -- will succeed.
 isBehaviorAvailable :: (DBReadable db) => Behavior -> MonsterRef -> db Bool
 isBehaviorAvailable (FacingBehavior Jump _) creature_ref =
-    do ((Parent plane_ref,pos) :: (Parent Plane,Position)) <- liftM detail $ getPlanarLocation creature_ref
+    do ((Parent plane_ref,pos) :: (Parent PlaneData,Position)) <- liftM detail $ getPlanarLocation creature_ref
        the_terrain <- terrainAt plane_ref pos
        creature_has_teleport_ability <- getMonsterSpecial Teleportation creature_ref
        return $
@@ -156,7 +156,7 @@ dbBehave_ Wait creature_ref = increaseTime creature_ref =<< actionTime creature_
 
 dbBehave_ Vanish creature_ref =
     do increaseTime creature_ref =<< actionTime creature_ref
-       (Parent plane_ref :: Parent Plane) <- liftM detail $ getPlanarLocation creature_ref
+       (Parent plane_ref :: Parent PlaneData) <- liftM detail $ getPlanarLocation creature_ref
        faction <- getMonsterFaction creature_ref
        is_visible_to_anyone_else <- liftM (any (genericReference creature_ref `elem`)) $
            mapM (\fact -> dbGetVisibleObjectsForFaction (return . const True) fact plane_ref)

@@ -9,6 +9,7 @@ module Roguestar.Lib.Behavior.Outcome
     where
 
 import Roguestar.Lib.DB
+import qualified Data.Set as Set
 
 -- | An effect or consequence in the game world.
 class Effect e where
@@ -27,6 +28,9 @@ class Outcome e where
 
 instance (Effect e) => Effect [e] where
     applyEffect es = mapM_ applyEffect es
+
+instance (Effect e) => Effect (Set.Set e) where
+    applyEffect = applyEffect . Set.toList
 
 instance (Effect a, Effect b) => Effect (a,b) where
     applyEffect (a,b) = applyEffect a >> applyEffect b

@@ -39,6 +39,7 @@ import Roguestar.Lib.PlaneVisibility
 import Data.Maybe
 import Data.List as List
 import Data.Map as Map
+import qualified Data.Set as Set
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Data.TerrainData
@@ -158,7 +159,7 @@ stackVisibleObjects = List.foldr insertVob Map.empty
     where insertVob :: VisibleObject -> Map Position [VisibleObject] -> Map Position [VisibleObject]
           insertVob vob = List.foldr (\k f -> Map.alter (insertVob_ vob) k . f)
                                      id
-                                     (fromMultiPosition $ visibleObjectPosition vob)
+                                     (Set.toList $ fromMultiPosition $ visibleObjectPosition vob)
           insertVob_ :: VisibleObject -> Maybe [VisibleObject] -> Maybe [VisibleObject]
           insertVob_ vob m_vobs =
               (do vobs <- m_vobs

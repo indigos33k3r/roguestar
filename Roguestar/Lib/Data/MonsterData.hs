@@ -154,3 +154,6 @@ creatureHealth c = case () of
         creature_absolute_health = creature_max_health result - creature_absolute_damage result,
         creature_absolute_damage = creature_damage c,
         creature_max_health = creatureAbilityScore ToughnessTrait c }
+
+instance GetFaction MonsterData where
+    getFaction = creature_faction

@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module Roguestar.Lib.Graph.Graph
     (Monster(..),
      Plane(..),
@@ -6,9 +7,9 @@ module Roguestar.Lib.Graph.Graph
     where
 
 import qualified Data.Set as Set
-import qualified Roguestar.Lib.Data.ReferenceTypes as References
 import qualified Roguestar.Lib.Data.MonsterData as MonsterData
-import qualified Roguestar.Lib.Data.PlaneData as PlaneData
+import Roguestar.Lib.Data.PlaneData as PlaneData
+import Roguestar.Lib.Data.ReferenceTypes as References
 import Roguestar.Lib.Position
 
 data Monster = Monster {
@@ -22,7 +23,7 @@ data Square = Square {
 
 data Plane = Plane {
     plane_to_reference :: References.PlaneRef,
-    plane_to_data :: PlaneData.Plane,
+    plane_to_data :: PlaneData.PlaneData,
     plane_to_monsters :: Set.Set Monster,
     plane_to_buildings :: Set.Set Building }
 
@@ -57,3 +58,23 @@ instance Show Plane where
 instance Show Building where
     show = show . building_to_reference
 
+instance ToReference Plane where
+    type ReferenceTypeOf Plane = PlaneData
+    toReference = plane_to_reference
+
+instance ToReference Monster where
+    type ReferenceTypeOf Monster = MonsterData.MonsterData
+    toReference = monster_to_reference
+
+instance ToPosition Square where
+    toPosition = square_to_position
+
+instance ToMultiPosition Square where
+    toMultiPosition = toMultiPosition . toPosition
+
+instance ToPosition Monster where
+    toPosition = toPosition . monster_to_square
+
+instance ToMultiPosition Monster where
+    toMultiPosition = toMultiPosition . toPosition
+   

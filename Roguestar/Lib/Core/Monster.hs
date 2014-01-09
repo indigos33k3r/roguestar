@@ -56,7 +56,7 @@ generateInitialPlayerMonster species =
 -- |
 -- Generates a new Monster from the specified Species and adds it to the database.
 --
-newMonster :: (LocationConstructor l, ReferenceTypeOf l ~ MonsterData) => Faction -> Species -> l -> DB MonsterRef
+newMonster :: (LocationConstructor l, ChildTypeOf l ~ MonsterData) => Faction -> Species -> l -> DB MonsterRef
 newMonster faction species loc =
     do creature <- generateMonster faction species
        dbAddMonster creature loc

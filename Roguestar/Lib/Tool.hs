@@ -57,7 +57,7 @@ dropTool tool_ref =
 
 availablePickups :: (DBReadable db) => MonsterRef -> db [ToolRef]
 availablePickups creature_ref =
-    do (Parent plane_ref :: Parent Plane, creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
+    do (Parent plane_ref :: Parent PlaneData, creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
        pickups <- liftM (mapLocations . filterLocations (==creature_position)) $ asks $ getContents plane_ref
        return $ List.map (asChild . identityDetail) pickups
 

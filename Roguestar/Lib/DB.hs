@@ -94,7 +94,7 @@ data DB_BaseType = DB_BaseType { db_player_state :: PlayerState,
                                  db_next_object_ref :: Integer,
                                  db_creatures :: Map MonsterRef MonsterData,
                                  db_player_creature :: Maybe MonsterRef,
-                                 db_planes :: Map PlaneRef Plane,
+                                 db_planes :: Map PlaneRef PlaneData,
                                  db_tools :: Map ToolRef Tool,
                                  db_buildings :: Map BuildingRef Building,
                                  db_hierarchy :: HD.HierarchicalDatabase Location,
@@ -282,25 +282,25 @@ dbAddObjectComposable constructReferenceAction updateObjectAction constructLocat
 -- |
 -- Adds a new Monster to the database.
 --
-dbAddMonster :: (LocationConstructor l, ReferenceTypeOf l ~ MonsterData) => MonsterData -> l -> DB MonsterRef
+dbAddMonster :: (LocationConstructor l, ChildTypeOf l ~ MonsterData) => MonsterData -> l -> DB MonsterRef
 dbAddMonster = dbAddObjectComposable MonsterRef dbPutMonster (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Plane to the database.
 --
-dbAddPlane :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => Plane -> l -> DB PlaneRef
+dbAddPlane :: (LocationConstructor l, ChildTypeOf l ~ PlaneData) => PlaneData -> l -> DB PlaneRef
 dbAddPlane = dbAddObjectComposable PlaneRef dbPutPlane (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Tool to the database.
 --
-dbAddTool :: (LocationConstructor l, ReferenceTypeOf l ~ Tool) => Tool -> l -> DB ToolRef
+dbAddTool :: (LocationConstructor l, ChildTypeOf l ~ Tool) => Tool -> l -> DB ToolRef
 dbAddTool = dbAddObjectComposable ToolRef dbPutTool (\r l -> constructLocation r l Nothing)
 
 -- |
 -- Adds a new Tool to the database.
 --
-dbAddBuilding :: (LocationConstructor l, ReferenceTypeOf l ~ Building) => Building -> l -> DB BuildingRef
+dbAddBuilding :: (LocationConstructor l, ChildTypeOf l ~ Building) => Building -> l -> DB BuildingRef
 dbAddBuilding = dbAddObjectComposable BuildingRef dbPutBuilding (\r l -> constructLocation r l Nothing)
 
 -- |
@@ -308,7 +308,7 @@ dbAddBuilding = dbAddObjectComposable BuildingRef dbPutBuilding (\r l -> constru
 -- to fail.  Accepts a function to move all of the objects nested within the
 -- object being deleted.
 --
-dbUnsafeDeleteObject :: (LocationConstructor l, ReferenceTypeOf l ~ ()) =>
+dbUnsafeDeleteObject :: (LocationConstructor l, ChildTypeOf l ~ ()) =>
     Reference e ->
     (forall m. (DBReadable m) => Reference () -> m l) ->
     DB ()
@@ -341,7 +341,7 @@ dbPutMonster = dbPutObjectComposable db_creatures (\x db_base_type ->
 -- |
 -- Puts a Plane under an arbitrary PlaneRef
 --
-dbPutPlane :: PlaneRef -> Plane -> DB ()
+dbPutPlane :: PlaneRef -> PlaneData -> DB ()
 dbPutPlane = dbPutObjectComposable db_planes $
     \x db_base_type -> db_base_type { db_planes = x }
 
@@ -375,7 +375,7 @@ getMonster = getObjectComposable "MonsterRef" db_creatures
 -- |
 -- Gets a Plane from a PlaneRef
 --
-getPlane :: PlaneRef -> DB_BaseType -> Plane
+getPlane :: PlaneRef -> DB_BaseType -> PlaneData
 getPlane = getObjectComposable "PlaneRef" db_planes
 
 -- |
@@ -400,7 +400,7 @@ dbModObjectComposable getter putter f ref = (putter ref . f) =<< (getter ref)
 -- |
 -- Modifies a Plane based on a PlaneRef.
 --
-dbModPlane :: (Plane -> Plane) -> PlaneRef -> DB ()
+dbModPlane :: (PlaneData -> PlaneData) -> PlaneRef -> DB ()
 dbModPlane = dbModObjectComposable (asks . getPlane) dbPutPlane
 
 -- |
@@ -452,7 +452,7 @@ dbUnwieldMonster c = mapM_ (maybe (return ()) setLocation . returnToInventory) =
 -- Moves an object, returning the location of the object before and after
 -- the move.
 --
-move :: (LocationConstructor l, ReferenceTypeOf l ~ e, ReferenceType e) => Reference e -> l -> DB (Location,Location)
+move :: (LocationConstructor l, ChildTypeOf l ~ e, ReferenceType e) => Reference e -> l -> DB (Location,Location)
 move ref location_data =
     do old <- asks $ whereIs ref
        let new = constructLocation ref location_data (Just old)
@@ -463,7 +463,7 @@ move ref location_data =
            setTime ref =<< getTime (parentReference new)
        return (old,new)
 
-moveAllWithin :: (LocationConstructor l, ReferenceTypeOf l ~ ()) =>
+moveAllWithin :: (LocationConstructor l, ChildTypeOf l ~ ()) =>
                  Reference e ->
                  (forall m. (DBReadable m) => Reference () -> m l) ->
                  DB [(Location,Location)]

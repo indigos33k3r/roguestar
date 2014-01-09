@@ -19,6 +19,7 @@ import Roguestar.Lib.Random as Random
 import qualified Test.HUnit.Base as HUnit
 import qualified Roguestar.Lib.Graph.Tests as GraphTests
 import qualified Roguestar.Lib.Core.Tests as CoreTests
+import qualified Roguestar.Lib.Core2.Tests as Core2Tests
 import qualified Roguestar.Lib.Utility.HierarchicalDatabase as HDatabaseTests
 
 runTests :: IO (T.Text,Bool)
@@ -62,6 +63,7 @@ testcases = HUnit.TestLabel "root" $ HUnit.TestList [
     HUnit.TestLabel "database"              $ HUnit.TestList $ [testSetPlayerState, testLocal],
     HUnit.TestLabel "clear-site"            $ testPickRandomClearSite,
     HUnit.TestLabel "Roguestar.Lib.Graph"   $ GraphTests.testcases,
+    HUnit.TestLabel "Roguestar.Lib.Core2"   $ Core2Tests.testcases,
     HUnit.TestLabel "Roguestar.Lib.Core"    $ CoreTests.testcases,
     HUnit.TestLabel "Roguestar.Lib.Utility.HierarchicalDatabase" $ HDatabaseTests.testcases]
 

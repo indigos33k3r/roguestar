@@ -62,7 +62,7 @@ activateBuilding (PowerUp pud) creature_ref building_ref =
     do captureNode pud creature_ref building_ref
        return True
 activateBuilding (TwoWayStargate _) creature_ref building_ref =
-    do (Parent _ :: Parent Plane,building_position :: Position) <- liftM detail $ getPlanarLocation building_ref
+    do (Parent _ :: Parent PlaneData,building_position :: Position) <- liftM detail $ getPlanarLocation building_ref
        (creature_position :: Position) <- liftM detail $ getPlanarLocation creature_ref
        case () of
            () | distanceBetweenChessboard creature_position building_position == 1 ->
@@ -71,7 +71,7 @@ activateBuilding (TwoWayStargate _) creature_ref building_ref =
                do throwError $ DBErrorFlag BuildingApproachWrongAngle
        return True
 activateBuilding (OneWayStargate region) creature_ref building_ref =
-    do (Parent plane_ref :: Parent Plane,Position (_,by))
+    do (Parent plane_ref :: Parent PlaneData,Position (_,by))
             <- liftM detail $ getPlanarLocation building_ref
        (Position (_,cy)) <- liftM detail $ getPlanarLocation creature_ref
        _ <- case () of

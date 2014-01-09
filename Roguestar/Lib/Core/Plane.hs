@@ -39,11 +39,11 @@ import Roguestar.Lib.Data.BuildingData
 import Roguestar.Lib.Logging
 import Control.Monad.Maybe
 
-dbNewPlane :: (LocationConstructor l, ReferenceTypeOf l ~ Plane) => B.ByteString -> TerrainGenerationData -> l -> DB PlaneRef
+dbNewPlane :: (LocationConstructor l, ChildTypeOf l ~ PlaneData) => B.ByteString -> TerrainGenerationData -> l -> DB PlaneRef
 dbNewPlane name tg_data l =
     do rns <- getRandoms
        random_id <- getRandomR (1,1000000)
-       dbAddPlane (Plane { plane_biome = tg_biome tg_data,
+       dbAddPlane (PlaneData { plane_biome = tg_biome tg_data,
                            plane_terrain = generateTerrain tg_data rns,
                            plane_random_id = random_id,
                            plane_planet_name = name}) l
@@ -106,8 +106,8 @@ distanceBetweenSquared :: (DBReadable db,
                             AlwaysHasIndirectPlanarLocation b) =>
     Reference a -> Reference b -> db (Maybe Integer)
 distanceBetweenSquared a_ref b_ref =
-    do (Parent a_parent :: Parent Plane, a_multiposition :: MultiPosition) <- liftM detail $ getPlanarLocation a_ref
-       (Parent b_parent :: Parent Plane, b_multiposition :: MultiPosition) <- liftM detail $ getPlanarLocation b_ref
+    do (Parent a_parent :: Parent PlaneData, a_multiposition :: MultiPosition) <- liftM detail $ getPlanarLocation a_ref
+       (Parent b_parent :: Parent PlaneData, b_multiposition :: MultiPosition) <- liftM detail $ getPlanarLocation b_ref
        return $
            do guard $ a_parent == b_parent
               return $ Position.distanceBetweenSquared a_multiposition b_multiposition
