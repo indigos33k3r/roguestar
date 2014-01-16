@@ -21,6 +21,7 @@ import qualified Roguestar.Lib.Graph.Tests as GraphTests
 import qualified Roguestar.Lib.Core.Tests as CoreTests
 import qualified Roguestar.Lib.Core2.Tests as Core2Tests
 import qualified Roguestar.Lib.Utility.HierarchicalDatabase as HDatabaseTests
+import qualified Roguestar.Lib.Utility.SearchTests as SearchTests
 
 runTests :: IO (T.Text,Bool)
 runTests =
@@ -38,9 +39,9 @@ pathOf (HUnit.State { HUnit.path = p }) = List.concat $ List.map (nodeToString) 
 captureTestResults :: HUnit.Test -> IO (HUnit.Counts, T.Text)
 captureTestResults test =
         do (counts, test_result) <- HUnit.performTest report_start report_problem report_problem (TestResult []) test
-           return (counts, T.concat $ List.intersperse "\n\n" $ List.reverse $ test_result_text test_result)
-    where report_start state test_result = return $ test_result { test_result_text = (T.pack $ "\n" ++ pathOf state) : test_result_text test_result }
-          report_problem msg state test_result = return $ test_result { test_result_text = (T.pack $ pathOf state ++ ": " ++ msg) : test_result_text test_result }
+           return (counts, T.concat $ List.intersperse "\n" $ List.reverse $ test_result_text test_result)
+    where report_start state test_result = return $ test_result { test_result_text = (T.pack $ pathOf state) : test_result_text test_result }
+          report_problem msg state test_result = return $ test_result { test_result_text = (T.pack $ "\n" ++ pathOf state ++ ": " ++ msg ++ "\n") : test_result_text test_result }
 
 -- Generate N random planes and run tests against them.
 runWithRandomPlanes :: Int -> String -> (PlaneRef -> DB HUnit.Assertion) -> HUnit.Test
@@ -65,7 +66,8 @@ testcases = HUnit.TestLabel "root" $ HUnit.TestList [
     HUnit.TestLabel "Roguestar.Lib.Graph"   $ GraphTests.testcases,
     HUnit.TestLabel "Roguestar.Lib.Core2"   $ Core2Tests.testcases,
     HUnit.TestLabel "Roguestar.Lib.Core"    $ CoreTests.testcases,
-    HUnit.TestLabel "Roguestar.Lib.Utility.HierarchicalDatabase" $ HDatabaseTests.testcases]
+    HUnit.TestLabel "Roguestar.Lib.Utility.HierarchicalDatabase" $ HDatabaseTests.testcases,
+    HUnit.TestLabel "Roguestar.Lib.Utility.SearchTests" $ SearchTests.testcases]
 
 testSessionAliveBeforeTimeout :: HUnit.Test
 testSessionAliveBeforeTimeout = HUnit.TestCase $

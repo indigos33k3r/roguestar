@@ -3,11 +3,8 @@ module Roguestar.Lib.Graph.Tests
      equestria, picard, twilight, zathras)
     where
 
-import qualified Roguestar.Lib.Data.ReferenceTypes as References
-import Roguestar.Lib.Graph.Graph
 import Roguestar.Lib.Graph.Classes
 import Roguestar.Lib.Graph.TestExampleEntities
-import qualified Data.Set as Set
 import Test.HUnit
 
 testcases :: Test

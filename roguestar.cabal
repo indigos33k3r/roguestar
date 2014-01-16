@@ -37,7 +37,9 @@ executable roguestar-server
     ghc-options: -threaded -fno-warn-type-defaults
   other-modules:  
                   Roguestar.Lib.HTML.Mustache,
-                  Roguestar.Lib.Core2.Tests
+                  Roguestar.Lib.Core2.Tests,
+                  Roguestar.Lib.Utility.Search,
+                  Roguestar.Lib.Utility.SearchTests
 
 library
   hs-source-dirs: .
@@ -49,6 +51,7 @@ library
                   hslogger >=1.1.0,
                   bytestring >=0.9.1.5,
                   parallel >=2.2.0.1,
+                  PSQueue,
                   stm >=2.1.1.2,
                   data-memocombinators >=0.4.0,
                   MonadRandom >=0.1.4,
@@ -116,7 +119,9 @@ library
                   Roguestar.Lib.Data.VisibilityData,
                   Roguestar.Lib.HTML.Mustache,
                   Roguestar.Lib.Core2.Tests,
-                  Roguestar.Lib.Core2.Location
+                  Roguestar.Lib.Core2.Location,
+                  Roguestar.Lib.Utility.Search,
+                  Roguestar.Lib.Utility.SearchTests
   ghc-prof-options: -prof -auto-all
   ghc-shared-options: -prof -auto-all
   if impl(ghc >= 7.0)
