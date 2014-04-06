@@ -11,15 +11,31 @@
 
 <div id="messagebox" class="roguebox">
   {{#messages}}
-    <p>{{{text}}}</p>
+    <p>{{text}}</p>
   {{/messages}}
 </div>
 
 <div id="controls" class="roguebox">
 
+<div id="status-block" class="webgl-container">
 {{#statsblock}}
-  <pre>{{{text}}}</pre>
+<pre>
+Health: {{#health}}{{absolute-health}}/{{max-health}}{{/health}}
+Compass: {{compass}}
+</pre>
+<script class="webgl-payload" type="application/json">
+{
+  "compass" : "{{compass}}"
+  {{#health}}
+  , "health" : {
+    "absolute-health" : {{absolute-health}},
+    "max-health" : {{max-health}}
+  }
+  {{/health}}
+}
+</script> 
 {{/statsblock}}
+</div>
 
 {{#controls}}
 <form action="/play/move" method="post">

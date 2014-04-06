@@ -1,4 +1,4 @@
---Data
+{-# LANGUAGE OverloadedStrings #-}
 module Roguestar.Lib.Data.MonsterData
     (MonsterData(..),
      MonsterTrait(..),
@@ -15,7 +15,9 @@ module Roguestar.Lib.Data.MonsterData
 
 import Roguestar.Lib.Data.PersistantData
 import Data.Ratio
+import qualified Data.Text as Text
 import Data.Maybe
+import Data.Aeson
 import Roguestar.Lib.Data.FactionData
 import Data.Monoid
 import qualified Data.Map as Map
@@ -66,6 +68,13 @@ data MonsterHealth = MonsterHealth {
     creature_absolute_damage :: Integer,
     creature_health :: Rational,
     creature_max_health :: Integer }
+
+instance ToJSON MonsterHealth where
+    toJSON health = object [
+      "absolute-health" .= creature_absolute_health health,
+      "absolute-damage" .= creature_absolute_damage health,
+      "fraction-health" .= (fromRational $ creature_health health :: Double),
+      "max-health"      .= creature_max_health health ]
 
 -- | The seven aptitudes.
 data MonsterTrait =

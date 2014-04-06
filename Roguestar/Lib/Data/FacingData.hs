@@ -11,6 +11,7 @@ module Roguestar.Lib.Data.FacingData
     where
 
 import Roguestar.Lib.Position
+import Data.Aeson
 import Data.Ord
 import Data.List
 import qualified Data.ByteString.Char8 as B
@@ -25,6 +26,9 @@ data Facing = North
             | NorthWest
             | Here
               deriving (Eq,Ord,Enum,Bounded,Read,Show)
+
+instance ToJSON Facing where
+  toJSON = toJSON . show
 
 -- |
 -- Takes an abbreviation (n,e,sw, etc) and answers a facing.

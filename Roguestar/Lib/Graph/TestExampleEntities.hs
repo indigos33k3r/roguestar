@@ -4,9 +4,7 @@ module Roguestar.Lib.Graph.TestExampleEntities
 
 import qualified Roguestar.Lib.Data.ReferenceTypes as References
 import Roguestar.Lib.Graph.Graph
-import Roguestar.Lib.Graph.Classes
 import qualified Data.Set as Set
-import Test.HUnit
 
 equestria :: Plane
 equestria = Plane {

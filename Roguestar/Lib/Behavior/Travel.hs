@@ -28,7 +28,6 @@ import Roguestar.Lib.Core2.Monster
 import Roguestar.Lib.Core.Plane as Plane
 import Roguestar.Lib.DB as DB
 import Roguestar.Lib.Data.FacingData
-import Roguestar.Lib.Data.FactionData
 import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.ReferenceTypes
 import Roguestar.Lib.Data.TerrainData
@@ -36,7 +35,6 @@ import Roguestar.Lib.Data.TravelData
 import Roguestar.Lib.Graph
 import Roguestar.Lib.Core2.Realization
 import Roguestar.Lib.Logging
-import Roguestar.Lib.PlaneVisibility
 import Roguestar.Lib.Position as Position
 import Roguestar.Lib.Time
 import Roguestar.Lib.Utility.DetailedLocation
@@ -221,12 +219,12 @@ resolveStepWithHolographicTrail facing monster_ref =
     do when (not $ facing `elem` [North,South,East,West]) $
            throwError $ DBError "resolveStepWithHolographicTrail: only allowed in the four NSEW directions"
        move_outcome <- stepMonster facing monster_ref
-       let (plane_ref :: PlaneRef, position :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)
-       old_terrain_type <- terrainAt plane_ref position
+       let (plane_ref :: PlaneRef, pos :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)
+       old_terrain_type <- terrainAt plane_ref pos
        return $ OutcomeWithEffect
             move_outcome
             (move_outcome,
-             if old_terrain_type `elem` difficult_terrains then Nothing else Just $ SetTerrainEffect position plane_ref ForceField)
+             if old_terrain_type `elem` difficult_terrains then Nothing else Just $ SetTerrainEffect pos plane_ref ForceField)
             (getDuration move_outcome)
 
 --------------------------------------------------------------------------------
@@ -236,14 +234,11 @@ resolveStepWithHolographicTrail facing monster_ref =
 resolveStepWithTemporalWeb :: (MonadRandom db, DBReadable db) => Facing -> MonsterRef -> db (OutcomeWithEffect MoveOutcome (MoveOutcome,Set.Set SlowMonsterEffect))
 resolveStepWithTemporalWeb facing monster_ref =
     do move_outcome <- stepMonster facing monster_ref
-       let (plane_ref :: PlaneRef, position :: Position) = (standing_plane $ move_from move_outcome, standing_position $ move_from move_outcome)
        t <- getDuration move_outcome
-       faction <- getMonsterFaction monster_ref
-       (vobs :: [MonsterRef]) <- liftM (mapMaybe coerceReference) $ dbGetVisibleObjectsForFaction (const $ return True) faction plane_ref
        me <- realizeMonsterM monster_ref
-       let slowByDistance :: Monster -> Monster -> SlowMonsterEffect
-           slowByDistance me enemy = SlowMonsterEffect (toReference enemy) $ t / fromInteger (Position.distanceBetweenSquared me enemy)
-           slows = Set.map (slowByDistance me) $ enemies me
+       let slowByDistance :: Monster -> SlowMonsterEffect
+           slowByDistance enemy = SlowMonsterEffect (toReference enemy) $ t / fromInteger (Position.distanceBetweenSquared me enemy)
+           slows = Set.map slowByDistance $ enemies me
        return $ OutcomeWithEffect
            move_outcome
            (move_outcome, slows)

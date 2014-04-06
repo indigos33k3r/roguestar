@@ -6,7 +6,6 @@ module Roguestar.Lib.Core2.Monster
 
 import Roguestar.Lib.Graph
 import Roguestar.Lib.Data.FactionData
-import Roguestar.Lib.Data.MonsterData
 import qualified Data.Set as Set
 
 -- | Monsters, other than this monster, on the same plane as this monster.
@@ -16,9 +15,6 @@ comonsters m = Set.filter (/= m) $ monsters $ plane m
 -- | All enemies of this monster, on the same plane as this monster.
 enemies :: Monster -> Set.Set Monster
 enemies me = Set.filter (isEnemy me) $ comonsters me
-
-instance GetFaction Monster where
-    getFaction = getFaction . monster_to_data
 
 -- | True if two monsters are from enemy factions.
 isEnemy :: Monster -> Monster -> Bool

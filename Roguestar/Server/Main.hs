@@ -409,26 +409,15 @@ generateMapContent_ player_state (width,height) (MapData visible_terrain visible
                                 () | otherwise -> object [ "t" .= ' ' ]
                      in rendered_json
 
-data StatsData = StatsData {
-    stats_health :: MonsterHealth,
-    stats_compass :: Facing }
-
-createStatsBlock :: Handler App App [T.Text]
+createStatsBlock :: Handler App App Aeson.Value
 createStatsBlock =
     do g <- getGame
-       stats <- oops $ liftIO $ perceiveSnapshot g $
+       oops $ liftIO $ perceiveSnapshot g $
            do health <- myHealth
               facing <- compass
-              return $ StatsData {
-                  stats_health = health,
-                  stats_compass = facing }
-       return $ [
-           T.concat ["Health: ",
-                     T.pack $ show $ creature_absolute_health $ stats_health stats,
-                     "/",
-                     T.pack $ show $ creature_max_health $ stats_health stats],
-           T.concat ["Compass: ",
-                     T.pack $ show $ stats_compass stats]]
+              return $ object [
+                 "health" .= health,
+                 "compass" .= facing ]
 
 getValidControls :: Handler App App Aeson.Value
 getValidControls =

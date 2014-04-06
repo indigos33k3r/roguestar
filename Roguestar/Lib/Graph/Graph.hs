@@ -11,6 +11,7 @@ import qualified Roguestar.Lib.Data.MonsterData as MonsterData
 import Roguestar.Lib.Data.PlaneData as PlaneData
 import Roguestar.Lib.Data.ReferenceTypes as References
 import Roguestar.Lib.Position
+import Roguestar.Lib.Data.FactionData
 
 data Monster = Monster {
     monster_to_reference :: References.MonsterRef,
@@ -77,4 +78,7 @@ instance ToPosition Monster where
 
 instance ToMultiPosition Monster where
     toMultiPosition = toMultiPosition . toPosition
-   
+
+instance GetFaction Monster where
+    getFaction = getFaction . monster_to_data
+

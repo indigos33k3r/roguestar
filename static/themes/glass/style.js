@@ -13,14 +13,11 @@ $('document').ready(function() {
     return false;
   });
 
-  //When the user selects an action type, disable all but the four cardinal directions on the direction pad.
+  //Some action types can only be used in the four cardinal directions.
+  //If that action type is selected, disable all the other movement directions.
   $("input[name=mode]").change( function() {
     $(".diagonal-direction-button").prop("disabled", $(".four-directions:checked").size() > 0 );
   });;
-
-  //Form buttons that need to be automatically submitted, possibly after a pause while we do an animation.
-  $('.autosubmit').hide();
-  $('.autosubmit-after-pause').hide();
 
   //Set up user interface elements.
   $('.roguestar-accordion').accordion( { heightStyle: "content", collapsible:true } );
@@ -30,6 +27,10 @@ $('document').ready(function() {
       hide: 0.25,
       tooltipClass: "tooltip-box"
     });
+
+  //Form buttons that need to be automatically submitted, possibly after a pause while we do an animation.
+  $('.autosubmit').hide();
+  $('.autosubmit-after-pause').hide();
 
   setTimeout(
     function() {
