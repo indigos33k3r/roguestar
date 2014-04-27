@@ -3,3 +3,4 @@
 .hsproject
 .project
 dist
+/.dist-buildwrapper

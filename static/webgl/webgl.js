@@ -10,15 +10,22 @@ RSGL.DEFAULT_COMPASS = {
     inner_thickness : 1,
     rim_diameter : 12,
     rim_thickness : 1,
-    color : 0xffffff,
+    color : 0xcccccc,
   },
   
   needle : {
     needle_width : 1,
     needle_length : 9,
-    color : 0xff0000,
+    color : 0x993333,
   }
 };
+
+RSGL.DEFAULT_HEALTH_BAR = {
+  width : 20,
+  height : 5,
+  color : 0x993333,
+  line_width : 3
+}
 
 RSGL.facingToRadians = function( str )
 {
@@ -52,13 +59,17 @@ RSGL.createCompass = function( compass_description )
   compass_needle.position.z = 0.1;
   compass_needle.rotation.z = Math.PI;
 
-  return function(scene, environment) {
-    var animated_needle = new THREE.Object3D();
-    animated_needle.add(compass_needle);
+  var animated_needle = new THREE.Object3D();
+  animated_needle.add(compass_needle);
+
+  var compass_group = new THREE.Object3D();
+  compass_group.add( compass_body );
+  compass_group.add( animated_needle );
+
+  return function(environment) {
     animated_needle.applyMatrix(new THREE.Matrix4().makeRotationZ( -RSGL.facingToRadians( environment.payload.compass ) ) );
     
-    scene.add( compass_body );
-    scene.add( animated_needle );
+    return compass_group;
   };
 }
 
@@ -107,19 +118,102 @@ RSGL.createCompassNeedle = function( needle_description ) {
   return new THREE.Mesh( needle_geom, new THREE.MeshPhongMaterial( { color: 0xff0000 } ) );
 }
 
+/**
+ * Returns a rectangular geometry, centered at the origin, with the specified width and height.
+ *
+ * This geometry will be suitable for the Line*Materials.
+ */
+RSGL.createOutlineRectangle = function( width, height ) {
+  var outline = new THREE.Geometry();
+  outline.vertices.push( new THREE.Vector3( -width/2, -height/2, 0 ) );
+  outline.vertices.push( new THREE.Vector3(  width/2, -height/2, 0 ) );
+  outline.vertices.push( new THREE.Vector3(  width/2,  height/2, 0 ) );
+  outline.vertices.push( new THREE.Vector3( -width/2,  height/2, 0 ) );
+  outline.vertices.push( new THREE.Vector3( -width/2, -height/2, 0 ) );
+  outline.computeLineDistances();
+  
+  return outline;
+}
+
+/**
+ * Returns a rectangular geometry, centered at the origin, with the specified width and height.
+ *
+ * This geometry will be suitable for the Mesh*Materials. At the time of this writing I do
+ * not understand why geometries need to be built in a different way for line -vs- mesh materials.
+ */
+RSGL.createFilledRectangle = function( width, height ) {
+  var shape = new THREE.Shape();
+  shape.moveTo( -width/2, -height/2 );
+  shape.lineTo( width/2, -height/2 );
+  shape.lineTo( width/2, height/2 );
+  shape.lineTo( -width/2, height/2 );
+  shape.lineTo( -width/2, -height/2 );
+  
+  return new THREE.ShapeGeometry( shape );
+}
+
+RSGL.createHealthBar = function( health_bar_description, fraction_filled ) {
+  var width = health_bar_description.width;
+  var height = health_bar_description.height;
+  var color = health_bar_description.color;
+  var line_width = health_bar_description.line_width;
+  
+  var outline = RSGL.createOutlineRectangle( width, height );
+  var fill = RSGL.createFilledRectangle( width, height );
+  
+  var outline_mesh = new THREE.Line( outline, new THREE.LineDashedMaterial( { color : color, linewidth : line_width, dashSize : 0.5, gapSize : 0.5 } ) );
+  var fill_mesh = new THREE.Mesh( fill, new THREE.MeshBasicMaterial( { color : color } ) );
+
+  var scene = new THREE.Object3D();
+  scene.add( outline_mesh );
+  scene.add( fill_mesh );
+
+  return function( environment ) {
+    var percent_health = environment.payload.health["absolute-health"] / environment.payload.health["max-health"];
+    
+    fill_mesh.position.x = width / 2 * (1.0-percent_health);
+    fill_mesh.scale.x = percent_health;
+    fill_mesh.updateMatrix();
+  
+    return scene;
+  }
+}
+
+RSGL.createStatusBlock = function() {
+  var compass = RSGL.createCompass( RSGL.DEFAULT_COMPASS );
+  var health_bar = RSGL.createHealthBar( RSGL.DEFAULT_HEALTH_BAR );
+  
+  return function(environment) {
+    var status_block = new THREE.Object3D();
+  
+    var animated_compass = compass(environment);
+    var animated_health_bar = health_bar(environment);
+    
+    animated_compass.position.x = 10;
+    animated_health_bar.position.x = -14;
+    
+    status_block.add(animated_compass);
+    status_block.add(animated_health_bar);
+    
+    return status_block;
+  }
+}
+
 RSGL.createCamera = function(width, height) {
-  var camera = new THREE.PerspectiveCamera(
-    65,      //fov degrees
-    width/height, //aspect ratio
-    1,     //near
-    100    //far
-    );
+  var camera_world_width = 25;
+  var camera = new THREE.OrthographicCamera(
+    -camera_world_width,
+    camera_world_width,
+    camera_world_width/width*height,
+    -camera_world_width/width*height,
+    1,
+    100 );
 
   camera.position.set( 0, 20, 20/RSGL.GOLDEN_RATIO );
   camera.up.set( 0, 0, 1 );
   
-  return function(scene, environment) {
-    camera.lookAt( scene.position );
+  return function(environment) {
+    camera.lookAt( new THREE.Vector3(0,0,0) );
     return camera;
   }
 }
@@ -131,9 +225,12 @@ RSGL.createLighting = function() {
   var skylight = new THREE.HemisphereLight( 0x666688, 0x663300 );
   skylight.position.set(0,0,100);
   
-  return function( scene, environment ) {
-    scene.add( sunlight );
-    scene.add( skylight );
+  var light_group = new THREE.Object3D();
+  light_group.add(sunlight);
+  light_group.add(skylight);
+  
+  return function( environment ) {
+    return light_group;
   };
 }
 
@@ -154,10 +251,10 @@ RSGL.initialize = function(container) {
   
   container.replaceWith(renderer.domElement);
   
-  RSGL.createLighting()(scene, environment);
-  RSGL.createCompass( RSGL.DEFAULT_COMPASS )(scene, environment);
+  scene.add( RSGL.createLighting()(environment) );
+  scene.add( RSGL.createStatusBlock()(environment) );
 
-  renderer.render( scene, RSGL.createCamera(width, height)(scene, environment) );
+  renderer.render( scene, RSGL.createCamera(width, height)(environment) );
 }
 
 $('.webgl-container').each(function(i,container){ RSGL.initialize($(container)) });
