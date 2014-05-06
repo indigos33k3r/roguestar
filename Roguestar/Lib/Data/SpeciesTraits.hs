@@ -22,7 +22,15 @@ speciesInfo RedRecreant = SpeciesData
      (Speed,      10)]
     [Hover,
      Teleportation]
-speciesInfo BlueRecreant = speciesInfo RedRecreant
+speciesInfo LavaLarva = SpeciesData
+    [(Aggression, 20),
+     (Bulk,       2),
+     (Caution,    2),
+     (Dexterity,  20),
+     (Fortitude,  2),
+     (Perception, 2),
+     (Speed,      2)]
+    []
 speciesInfo Anachronid = SpeciesData
     [(Aggression, 3),
      (Bulk,       3),

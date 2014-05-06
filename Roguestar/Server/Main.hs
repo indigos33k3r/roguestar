@@ -40,8 +40,6 @@ data App = App {
     _app_game_state :: GameState,
     _globals :: Aeson.Value }
 
---makeLenses [''App]
-
 appInit :: SnapletInit App App
 appInit = makeSnaplet "roguestar-server-snaplet" "Roguestar Server" Nothing $
     do the_globals <- liftIO makeGlobals
@@ -441,7 +439,7 @@ styleToCSS Plants = "p"
 styleToCSS Dusty = "d"
 styleToCSS Sandy = "s"
 styleToCSS Wet = "w"
-styleToCSS Molten = "o"
+styleToCSS Molten = "m"
 styleToCSS Gloomy = "g"
 styleToCSS Magic = "a"
 styleToCSS StrongMagic = "B a"
@@ -489,7 +487,7 @@ instance Charcoded Tool where
 
 instance Charcoded Species where
     codedRepresentation _ RedRecreant =        ('r',Strong)
-    codedRepresentation _ BlueRecreant =       ('r',Strong)
+    codedRepresentation _ LavaLarva =          ('l',Strong)
     codedRepresentation _ Anachronid =         ('X',Strong)
     codedRepresentation _ TabularMonstrosity = ('m',Strong)
 

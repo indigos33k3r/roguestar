@@ -1,6 +1,7 @@
 var roguestar_preferences = {
     animation_thread_interval : 100,
     magic_colors : ['999933', '339999', 'CC44CC'],
+    molten_colors : ['993333', 'FF0000', '993333', 'FF8800'],
     water_colors : ['0055FF', '1155FF', '2255FF', '3355FF', '4455FF', '5555FF', '4455FF', '3355FF', '2255FF', '1155FF' ]
   }
 
@@ -66,6 +67,7 @@ function runAnimationThread() {
 
   animateViaCSS( '.a', 'color', roguestar_preferences.magic_colors, date );
   animateViaCSS( '.w', 'color', roguestar_preferences.water_colors, date );
+  animateViaCSS( '.m', 'color', roguestar_preferences.molten_colors, date );
 
   setTimeout( runAnimationThread, roguestar_preferences.animation_thread_interval );
 }

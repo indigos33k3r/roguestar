@@ -31,6 +31,7 @@ data Biome = TemperateForest
            | RelaxingPond
            | BareMountain
            | CraterInterior
+           | LavaPool
              deriving (Read,Show,Eq,Ord,Enum,Bounded)
 
 -- |
@@ -140,6 +141,8 @@ terrainInterpFn biomes = case biomes of
     (RelaxingPond,_)                -> weightedSet [(2,Water),(1,Sand)]
     (CraterInterior,CraterInterior) -> weightedSet [(1,RockyGround)]
     (CraterInterior,_)              -> weightedSet [(1,RockFace)]
+    (LavaPool,LavaPool)             -> weightedSet [(2,Lava),(1,Glass)]
+    (LavaPool,_)                    -> weightedSet [(1,RockFace),(1,Glass)]
 
 terrainInterpMap :: Map (MetaTerrain,MetaTerrain) (WeightedSet MetaTerrain)
 terrainInterpMap =

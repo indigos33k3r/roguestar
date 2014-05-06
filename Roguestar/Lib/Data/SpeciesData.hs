@@ -4,7 +4,7 @@ module Roguestar.Lib.Data.SpeciesData
     where
 
 data Species =
-     BlueRecreant
+     LavaLarva
    | RedRecreant
    | Anachronid
    | TabularMonstrosity
