@@ -152,30 +152,41 @@ RSGL.createFilledRectangle = function( width, height ) {
   return new THREE.ShapeGeometry( shape );
 }
 
-RSGL.createHealthBar = function( health_bar_description, fraction_filled ) {
+RSGL.createHealthBar = function( health_bar_description ) {
   var width = health_bar_description.width;
   var height = health_bar_description.height;
   var color = health_bar_description.color;
   var line_width = health_bar_description.line_width;
   
-  var outline = RSGL.createOutlineRectangle( width, height );
-  var fill = RSGL.createFilledRectangle( width, height );
-  
-  var outline_mesh = new THREE.Line( outline, new THREE.LineDashedMaterial( { color : color, linewidth : line_width, dashSize : 0.5, gapSize : 0.5 } ) );
-  var fill_mesh = new THREE.Mesh( fill, new THREE.MeshBasicMaterial( { color : color } ) );
+  var outline = RSGL.createOutlineRectangle( width+1, height+RSGL.GOLDEN_RATIO );
+  var outline_mesh = new THREE.Line( outline, new THREE.LineBasicMaterial( { color : color, linewidth : line_width } ) );
 
-  var scene = new THREE.Object3D();
-  scene.add( outline_mesh );
-  scene.add( fill_mesh );
+  var fill_rectangle = RSGL.createFilledRectangle( 1, height );
+  var fill_material = new THREE.MeshBasicMaterial( { color : color } );
+  
+  var createFillMesh = function() {
+    return new THREE.Mesh( fill_rectangle, fill_material );
+  }
 
   return function( environment ) {
-    var percent_health = environment.payload.health["absolute-health"] / environment.payload.health["max-health"];
+    var health_box_count = environment.payload.health["absolute-health"];
+    var health_box_size = width / environment.payload.health["max-health"];
     
-    fill_mesh.position.x = width / 2 * (1.0-percent_health);
-    fill_mesh.scale.x = percent_health;
-    fill_mesh.updateMatrix();
+    var composite = new THREE.Object3D();
+    
+    composite.add(outline_mesh);
+    
+    for( var i = 0; i < health_box_count; i++ ) {
+      var fill_mesh = createFillMesh();
+      fill_mesh.position.x = width / 2 - health_box_size*(i + 0.5);
+      fill_mesh.scale.x = health_box_size-0.5;
+      fill_mesh.updateMatrix();
+      console.log(fill_mesh.position.x);
+      console.log(fill_mesh.scale.x);
+      composite.add(fill_mesh);
+    }
   
-    return scene;
+    return composite;
   }
 }
 
@@ -235,15 +246,20 @@ RSGL.createLighting = function() {
 }
 
 RSGL.initialize = function(container) {
-  var width = container.width();
-  var height = container.height();
-  if( height < width / 2 )
-    height = width / 2;
-
   var environment = {
     payload : JSON.parse(container.find('.webgl-payload').html() )};
-  
   console.log( "Payload is: " + JSON.stringify(environment) );
+
+  var aspect_ratio = RSGL.GOLDEN_RATIO;
+  if( environment.payload["aspect-ratio"] != undefined )
+    aspect_ratio = environment.payload["aspect-ratio"];
+  
+  console.log("using aspect ratio of " + aspect_ratio);
+
+  var width = container.width();
+  var height = container.height();
+  if( height < width / aspect_ratio )
+    height = width / aspect_ratio;
   
   var renderer = new THREE.WebGLRenderer();
   var scene = new THREE.Scene();

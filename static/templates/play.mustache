@@ -17,7 +17,11 @@
 
 <div id="controls" class="roguebox">
 
-<div id="status-block" class="webgl-container">
+<div id="status-block" class="controlbox"
+     {{#statsblock}}
+     title="Your compass reads {{compass}}.&#10;{{#health}}You have {{absolute-health}} health point(s) out of {{max-health}} ({{percent-health}}%){{/health}}."
+     {{/statsblock}}>
+<div class="webgl-container">
 {{#statsblock}}
 <pre>
 Health: {{#health}}{{absolute-health}}/{{max-health}}{{/health}}
@@ -25,23 +29,26 @@ Compass: {{compass}}
 </pre>
 <script class="webgl-payload" type="application/json">
 {
+  "aspect-ratio" : 3.2,
   "compass" : "{{compass}}"
   {{#health}}
   , "health" : {
     "absolute-health" : {{absolute-health}},
-    "max-health" : {{max-health}}
+    "max-health" : {{max-health}},
+    "fraction-health" : {{fraction-health}}
   }
   {{/health}}
 }
 </script> 
 {{/statsblock}}
 </div>
+</div>
 
 {{#controls}}
 <form action="/play/move" method="post">
 <div id="movement-controls">
 
-<div id="movement-modes">
+<div id="movement-modes" class="controlbox">
 <input type="radio" name="mode" id="modeNormal" value="normal" checked="checked"/><label for="modeNormal" title="Use the direction pad to move one square at a time. Bumping into a creature attacks. Bumping into blocked terrain digs through that terrain. Bumping into the central point of the stargate activates it.">Normal</label>
 {{#teleport}}
 <input type="radio" name="mode" id="modeJump" value="jump"/><label for="modeJump" title="Use the direction pad to instantly move 5-7 squares. Exact point of landing is very random. Small chance of failure, leaving you vulnerable.">Teleport</label>
@@ -55,7 +62,7 @@ Compass: {{compass}}
 
 </div>
 
-<div id="directional-controls">
+<div id="directional-controls" class="controlbox">
 <div class="buttonrow">
 <button type="submit" name="direction" class="diagonal-direction-button" value="nw" class="up-left"><img src="/static/themes/glass/button-up-left.svg"/></button>
 <button type="submit" name="direction" value="n" class="up"><img src="/static/themes/glass/button-up.svg"/></button>

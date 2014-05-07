@@ -49,12 +49,8 @@
 }
 
 .tooltip-corners {
-    border-radius: @corner-roundness*2;
-    -moz-border-radius: @corner-roundness*2;
-    border-top-left-radius: @corner-roundness;
-    border-top-right-radius: @corner-roundness;
-    -moz-border-radius-topleft: @corner-roundness;
-    -moz-border-radius-topright: @corner-roundness;
+    border-radius: @corner-roundness;
+    -moz-border-radius: @corner-roundness;
 }
 
 .rounded-corners {
@@ -350,10 +346,7 @@ h1, h2, h3, h4, h5, h6 {
 .tooltip-box {
     width: 4.5in;
     padding: 1em;
-    border-style: solid;
-    border-width: 2px;
     color: @white;
-    border-color: @orange;
     background-color: @darkblue;
     .half-shiny;
     .tooltip-corners;

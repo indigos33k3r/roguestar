@@ -23,7 +23,7 @@ $('document').ready(function() {
   //Set up user interface elements.
   $('.roguestar-accordion').accordion( { heightStyle: "content", collapsible:true } );
   $('.roguestar-tabs').tabs();
-  $("label, button, input, a").tooltip( {
+  $("label, button, input, a, div").tooltip( {
     position: { my: "right center", at: "left-2 center", collision: "flipfit" },
       hide: 0.25,
       tooltipClass: "tooltip-box"

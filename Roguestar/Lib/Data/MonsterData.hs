@@ -74,6 +74,7 @@ instance ToJSON MonsterHealth where
       "absolute-health" .= creature_absolute_health health,
       "absolute-damage" .= creature_absolute_damage health,
       "fraction-health" .= (fromRational $ creature_health health :: Double),
+      "percent-health"  .= (round $ creature_health health * 100 :: Integer),
       "max-health"      .= creature_max_health health ]
 
 -- | The seven aptitudes.
