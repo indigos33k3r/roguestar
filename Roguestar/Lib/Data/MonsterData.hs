@@ -15,7 +15,6 @@ module Roguestar.Lib.Data.MonsterData
 
 import Roguestar.Lib.Data.PersistantData
 import Data.Ratio
-import qualified Data.Text as Text
 import Data.Maybe
 import Data.Aeson
 import Roguestar.Lib.Data.FactionData

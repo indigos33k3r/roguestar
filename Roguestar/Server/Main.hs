@@ -2,8 +2,8 @@
 
 import Prelude
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import Data.Text.Encoding
 import Control.Exception (SomeException)
 import qualified Control.Monad.CatchIO as CatchIO
@@ -25,7 +25,6 @@ import Roguestar.Lib.Perception
 import Roguestar.Lib.Data.SpeciesData
 import Roguestar.Lib.Data.ToolData
 import Roguestar.Lib.Data.TerrainData as TerrainData
-import Roguestar.Lib.Data.MonsterData
 import Roguestar.Lib.Data.FacingData
 import Roguestar.Lib.Logging
 import Roguestar.Lib.UnitTests
@@ -68,14 +67,15 @@ makeGlobals =
 
 handle500 :: MonadSnap m => m a -> m ()
 handle500 m = (m >> return ()) `CatchIO.catch` \(e::SomeException) -> do
-    let t = LBS8.pack $ show e
+    let t = LT.pack $ show e
     putResponse r
-    writeBS "<html><head><title>Internal Server Error</title></head>"
-    writeBS "<body><h1>Internal Server Error</h1>"
-    writeBS "<p>A web handler threw an exception. Details:</p>"
-    writeBS "<pre>\n"
-    writeLBS $ htmlEscape t
-    writeBS "\n</pre></body></html>"
+    writeText "<html><head><title>oh noes</title></head>"
+    writeText "<body style=\"background:black; color:white;\"><h1>theirs a porblem</h1>"
+    writeText "<p>i'm so sorry the website broke a little</p>"
+    writeText "<img src=\"static/art/TabularMonstrosity.svg\"/>"
+    writeText "<pre>\n"
+    writeLazyText $ htmlEscape t
+    writeText "\n</pre></body></html>"
   where
     r = setContentType "text/html" $
         setResponseStatus 500 "Internal Server Error" emptyResponse
@@ -121,7 +121,10 @@ postFeedback = method POST $ ifTop $
 
 getMemoryStatistics :: IO String
 getMemoryStatistics =
-    do ok <- getGCStatsEnabled
+    do -- this requires ghc 7.6 but I'm still living in 7.4 world
+       -- just disable for now
+       -- ok <- getGCStatsEnabled
+       let ok = False
        if ok then liftM show $ getGCStats
              else return "(Memory statistics disabled. Use +RTS -T -RTS to collect memory statistics.)"
 
@@ -344,12 +347,13 @@ oops action =
                   return $ error "oops:  Unreachable code."
            Left (DBError bad) ->
                do putResponse r
-                  writeBS "<html><head><title>Gameplay Error</title></head>"
-                  writeBS "<body><h1>Gameplay Error</h1>"
-                  writeBS "<p>Roguestar returned an error condition. Details:</p>"
-                  writeBS "<pre>\n"
-                  writeLBS $ htmlEscape $ LBS8.pack bad
-                  writeBS "\n</pre></body></html>"
+                  writeText "<html><head><title>gameplay error</title></head>"
+                  writeText "<body style=\"background:black; color:white;\"><h1>oh oh the game is confused</h1>"
+                  writeText "<p>some things happened and i didn't know what do</p>"
+                  writeText "<img src=\"static/art/TabularMonstrosity.svg\"/>"
+                  writeText "<pre>\n"
+                  writeLazyText $ htmlEscape $ LT.pack bad
+                  writeText "\n</pre></body></html>"
                   finishWith =<< getResponse
   where
     r = setContentType "text/html" $
